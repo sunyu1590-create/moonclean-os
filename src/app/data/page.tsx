@@ -1,0 +1,432 @@
+"use client";
+import { useRef, useState } from "react";
+import {
+  FileUp,
+  Plus,
+  Pencil,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { useApp } from "@/components/app-provider";
+import { SkuDailyPanel } from "@/components/sku-daily-panel";
+import {
+  PageHead,
+  SectionCard,
+  ExportButton,
+  downloadText,
+} from "@/components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { dailySchema } from "@/lib/repository";
+import { exportDailyCsv, parseDailyCsv } from "@/lib/csv";
+import { formatMoney } from "@/lib/finance";
+import { storeToday } from "@/lib/analytics";
+import type { DailyMetric } from "@/lib/model";
+const empty = (date: string): DailyMetric => ({
+  id: crypto.randomUUID(),
+  date,
+  sales: "0",
+  refunds: "0",
+  orders: 0,
+  productCost: "0",
+  packagingCost: "0",
+  logisticsCost: "0",
+  platformFees: "0",
+  otherExpenses: "0",
+  productSales: {},
+});
+const fields = [
+  ["sales", "销售额"],
+  ["refunds", "退款金额"],
+  ["productCost", "商品成本"],
+  ["packagingCost", "包装费用"],
+  ["logisticsCost", "物流费用"],
+  ["platformFees", "平台费用"],
+  ["otherExpenses", "其他经营费用"],
+] as const;
+export default function DataPage() {
+  const { data, update, role, saving } = useApp();
+  const canEdit = role !== "viewer";
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<DailyMetric | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState<ReturnType<
+    typeof parseDailyCsv
+  > | null>(null);
+  const [overwrite, setOverwrite] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  if (!data) return <p>正在加载数据…</p>;
+  function edit(row?: DailyMetric) {
+    setDraft(
+      row
+        ? structuredClone(row)
+        : empty(storeToday(data!.settings.store.timezone)),
+    );
+    setEditing(row?.id || null);
+    setError("");
+    setOpen(true);
+  }
+  async function save() {
+    if (!draft) return;
+    const parsed = dailySchema.safeParse(draft);
+    if (!parsed.success) {
+      setError(
+        parsed.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("；"),
+      );
+      return;
+    }
+    if (
+      data!.daily.some((row) => row.date === draft.date && row.id !== editing)
+    ) {
+      setError("该日期已有经营数据，请编辑已有记录");
+      return;
+    }
+    try {
+      await update((current) => ({
+        ...current,
+        daily: [
+          ...current.daily.filter((row) => row.id !== editing),
+          { ...parsed.data, isDemo: false },
+        ].sort((a, b) => a.date.localeCompare(b.date)),
+      }));
+      setOpen(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "保存失败");
+    }
+  }
+  async function importFile(file: File) {
+    const content = await file.text();
+    setPreview(parseDailyCsv(content, data!.daily));
+    setOverwrite(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+  async function confirmImport() {
+    if (!preview || preview.errors.length) return;
+    const dates = new Set(preview.rows.map((r) => r.date));
+    if (preview.duplicates.length && !overwrite) return;
+    try {
+      await update((current) => ({
+        ...current,
+        daily: [
+          ...current.daily.filter((r) => !dates.has(r.date)),
+          ...preview.rows.map((r) => ({
+            ...r,
+            id: crypto.randomUUID(),
+            isDemo: false,
+          })),
+        ].sort((a, b) => a.date.localeCompare(b.date)),
+      }));
+      setPreview(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "导入失败");
+    }
+  }
+  const filtered = [...data.daily]
+    .filter((r) => !query || r.date.includes(query))
+    .reverse();
+  return (
+    <>
+      <PageHead
+        eyebrow="DATA HUB / 数据中心"
+        title="让经营数据有据可查"
+        description="每日录入、编辑与 CSV 批量导入，数据会保存在当前浏览器。"
+        action={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton
+              label="导出 CSV"
+              onClick={() =>
+                downloadText(
+                  "moonclean-daily.csv",
+                  exportDailyCsv(data.daily),
+                  "text/csv;charset=utf-8",
+                )
+              }
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileRef.current?.click()}
+              disabled={!canEdit}
+            >
+              <FileUp size={16} />
+              导入 CSV
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) =>
+                e.target.files?.[0] && importFile(e.target.files[0])
+              }
+            />
+            <Button onClick={() => edit()} disabled={!canEdit}>
+              <Plus size={16} />
+              录入数据
+            </Button>
+          </div>
+        }
+      />
+      <div className="mb-5 rounded-2xl border border-[#dcebf8] bg-[#eef7ff] p-4 text-sm text-[#557692]">
+        CSV 字段：date, sales, refunds, orders, productCost, packagingCost,
+        logisticsCost, platformFees, otherExpenses,
+        productSales。建议先导出样例，再按相同格式填写；productSales 是商品 ID
+        与销售额的 JSON 对象。
+      </div>
+      <SectionCard
+        title="历史经营数据"
+        sub={`共 ${data.daily.length} 条日记录 · 可按日期筛选`}
+        action={
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-2.5 text-[#9aabba]"
+              size={15}
+            />
+            <Input
+              className="w-40 pl-9"
+              placeholder="搜索日期"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[840px] text-left text-sm">
+            <thead className="border-b text-xs text-[#8ca0b3]">
+              <tr>
+                <th className="py-3">日期</th>
+                <th>销售额</th>
+                <th>退款</th>
+                <th>订单量</th>
+                <th>商品成本</th>
+                <th>物流费用</th>
+                <th>其他费用</th>
+                <th>来源</th>
+                <th className="text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-[#edf2f7] last:border-0"
+                >
+                  <td className="py-3 font-semibold">{row.date}</td>
+                  <td>{formatMoney(row.sales)}</td>
+                  <td>{formatMoney(row.refunds)}</td>
+                  <td>{row.orders}</td>
+                  <td>{formatMoney(row.productCost)}</td>
+                  <td>{formatMoney(row.logisticsCost)}</td>
+                  <td>{formatMoney(row.otherExpenses)}</td>
+                  <td className="text-xs text-[#92a4b5]">
+                    {row.isDemo ? "模拟数据" : "用户数据"}
+                  </td>
+                  <td className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => edit(row)}
+                      disabled={!canEdit}
+                    >
+                      <Pencil size={14} />
+                      编辑
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!filtered.length && (
+            <p className="py-10 text-center text-sm text-[#9aabba]">
+              没有匹配的记录
+            </p>
+          )}
+        </div>
+      </SectionCard>
+      <SkuDailyPanel />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[680px]">
+          <DialogHeader>
+            <DialogTitle>{editing ? "编辑" : "录入"}每日经营数据</DialogTitle>
+          </DialogHeader>
+          {draft && (
+            <div className="space-y-5 pt-2">
+              {draft.costSource === "sku" && <p className="rounded-xl bg-[#fff8ed] p-3 text-xs text-[#a77743]">此日期使用 SKU 历史成本自动核算。下方商品、包装、物流和平台汇总成本仅供查看，编辑销售数据不会覆盖成本版本。</p>}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>日期</Label>
+                  <Input
+                    type="date"
+                    className="mt-1.5"
+                    disabled={draft.costSource === "sku"}
+                    value={draft.date}
+                    onChange={(e) =>
+                      setDraft({ ...draft, date: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>订单量</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="mt-1.5"
+                    value={draft.orders}
+                    onChange={(e) =>
+                      setDraft({ ...draft, orders: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                {fields.map(([key, label]) => (
+                  <div key={key}>
+                    <Label>{label}（元）</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="mt-1.5"
+                      disabled={draft.costSource === "sku" && ["productCost","packagingCost","logisticsCost","platformFees"].includes(key)}
+                    value={draft[key]}
+                      onChange={(e) =>
+                        setDraft({ ...draft, [key]: e.target.value })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="mb-1 text-sm font-semibold">商品销售额分配</h3>
+                <p className="mb-3 text-xs text-[#92a4b5]">
+                  用于商品排行，可留空；不会重复计入总销售额。
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.products.map((product) => (
+                    <div key={product.id}>
+                      <Label>{product.name}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="mt-1.5"
+                        value={draft.productSales[product.id] || "0"}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            productSales: {
+                              ...draft.productSales,
+                              [product.id]: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {error && <p className="text-sm text-[#e85d65]">{error}</p>}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  取消
+                </Button>
+                <Button onClick={() => void save()} disabled={saving}>
+                  {saving ? "保存中…" : "保存数据"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!preview} onOpenChange={(v) => !v && setPreview(null)}>
+        <DialogContent className="sm:max-w-[670px]">
+          <DialogHeader>
+            <DialogTitle>CSV 导入预览</DialogTitle>
+          </DialogHeader>
+          {preview && (
+            <div className="space-y-4">
+              {error && <p role="alert" className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{error}</p>}
+              <div className="rounded-xl bg-[#f2f8ff] p-4 text-sm">
+                识别 {preview.rows.length} 条有效记录，
+                {preview.duplicates.length} 条日期与现有数据重复，
+                {preview.errors.length} 个错误。
+              </div>
+              {preview.errors.length > 0 && (
+                <div className="max-h-36 overflow-auto rounded-xl bg-[#fff4f4] p-3 text-xs text-[#cf5960]">
+                  {preview.errors.map((e, i) => (
+                    <p key={i} className="mb-1 flex gap-2">
+                      <AlertCircle size={14} />
+                      {e}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {preview.duplicates.length > 0 && (
+                <label className="flex items-start gap-2 rounded-xl border border-[#f5e5d6] bg-[#fffbf6] p-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={overwrite}
+                    onChange={(e) => setOverwrite(e.target.checked)}
+                    className="mt-1"
+                  />
+                  用 CSV 记录覆盖已有日期：
+                  {preview.duplicates.slice(0, 5).join("、")}
+                  {preview.duplicates.length > 5 ? "等" : ""}
+                </label>
+              )}
+              <div className="max-h-48 overflow-auto rounded-xl border">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#f7fbff]">
+                    <tr>
+                      <th className="p-2">日期</th>
+                      <th>销售额</th>
+                      <th>订单量</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.rows.map((row) => (
+                      <tr key={row.date} className="border-t">
+                        <td className="p-2">{row.date}</td>
+                        <td>{formatMoney(row.sales)}</td>
+                        <td>{row.orders}</td>
+                        <td>
+                          {preview.duplicates.includes(row.date)
+                            ? "日期重复"
+                            : "可导入"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Button
+                className="w-full"
+                disabled={
+                  !!preview.errors.length ||
+                  !preview.rows.length ||
+                  (preview.duplicates.length > 0 && !overwrite)
+                }
+                onClick={() => void confirmImport()}
+              >
+                <CheckCircle2 size={16} />
+                确认导入 {preview.rows.length} 条
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
