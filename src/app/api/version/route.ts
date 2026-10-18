@@ -37,28 +37,37 @@ function getCurrentCommit() {
 export async function GET() {
   const dispatcher = new EnvHttpProxyAgent();
   try {
-    const githubRequest = (url: string) =>
+    const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const githubRequest = (url: string, accept = "application/vnd.github+json") =>
       fetch(url, {
-        headers: { Accept: "application/vnd.github+json" },
+        headers: {
+          Accept: accept,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         cache: "no-store",
+        signal: AbortSignal.timeout(12_000),
         dispatcher,
       } as RequestInit & { dispatcher: EnvHttpProxyAgent });
-    const commitResponse = await githubRequest(
-      `https://api.github.com/repos/${repository}/commits/main`,
-    );
-    if (!commitResponse.ok) throw new Error("暂时无法读取 GitHub 最新提交");
+    const [commitResponse, packageResponse] = await Promise.all([
+      githubRequest(`https://api.github.com/repos/${repository}/commits/main`),
+      githubRequest(
+        `https://raw.githubusercontent.com/${repository}/main/package.json`,
+        "application/json",
+      ),
+    ]);
+    if (!commitResponse.ok) {
+      if (commitResponse.status === 403 || commitResponse.status === 429) {
+        throw new Error(
+          "GitHub 暂时限制了版本查询。请稍后重试；Codespaces 配置 GITHUB_TOKEN 后可提高查询额度。",
+        );
+      }
+      throw new Error(`GitHub 暂时无法读取最新提交（HTTP ${commitResponse.status}）。`);
+    }
+    if (!packageResponse.ok) {
+      throw new Error(`GitHub 暂时无法读取版本号（HTTP ${packageResponse.status}）。`);
+    }
     const latestCommit = (await commitResponse.json()) as GitHubCommit;
-    const packageResponse = await githubRequest(
-      `https://api.github.com/repos/${repository}/contents/package.json?ref=${latestCommit.sha}`,
-    );
-    if (!packageResponse.ok) throw new Error("暂时无法读取 GitHub 最新版本号");
-    const packageFile = (await packageResponse.json()) as {
-      content?: string;
-      encoding?: string;
-    };
-    const latestPackage = JSON.parse(
-      Buffer.from(packageFile.content || "", packageFile.encoding === "base64" ? "base64" : "utf8").toString("utf8"),
-    ) as { version?: string };
+    const latestPackage = (await packageResponse.json()) as { version?: string };
     const currentCommit = getCurrentCommit();
     const currentShort = currentCommit.slice(0, 7);
     const latestShort = latestCommit.sha.slice(0, 7);
@@ -80,11 +89,15 @@ export async function GET() {
         currentCommit === "unknown" ? null : currentCommit === latestCommit.sha,
     });
   } catch (error) {
+    const message = error instanceof Error && error.name === "TimeoutError"
+      ? "连接 GitHub 超时，请检查 Codespaces 网络后重试。"
+      : error instanceof TypeError
+        ? "Codespaces 暂时无法连接 GitHub，请检查网络后重试。"
+        : error instanceof Error
+          ? error.message
+          : "检查更新失败，请稍后重试。";
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "检查更新失败，请稍后重试。",
-      },
+      { error: message },
       { status: 503 },
     );
   } finally {
