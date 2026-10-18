@@ -29,6 +29,7 @@ import {
   SectionCard,
 } from "@/components/common";
 import { Button } from "@/components/ui/button";
+import { OperationsWidget } from "@/components/operations-widget";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 export default function Dashboard() {
@@ -257,6 +258,7 @@ export default function Dashboard() {
           ))}
         </div>
       </SectionCard>
+      <OperationsWidget />
     </>
   );
 }

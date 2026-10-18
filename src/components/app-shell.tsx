@@ -18,6 +18,9 @@ import {
   Plug,
   ListChecks,
   Menu,
+  ShoppingCart,
+  Boxes,
+  ClipboardCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -30,6 +33,9 @@ const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
   { href: "/products", label: "商品管理", icon: Package },
+  { href: "/orders", label: "订单中心", icon: ShoppingCart },
+  { href: "/inventory", label: "库存管理", icon: Boxes },
+  { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
   { href: "/finance", label: "财务利润", icon: Wallet },
   { href: "/data", label: "数据中心", icon: Database },
   { href: "/settings", label: "系统设置", icon: Settings },
@@ -200,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             工作空间
           </p>
           <nav className="space-y-1">
-            {nav.slice(0, 6).map(({ href, label, icon: Icon }) => (
+            {nav.slice(0, 9).map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
@@ -220,7 +226,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
           <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]", collapsed && "sr-only")}>平台与同步</p>
           <nav className="space-y-1">
-            {nav.slice(6).map(({ href, label, icon: Icon }) => (
+            {nav.slice(9).map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} title={label} className={cn(
                 "flex h-11 items-center gap-3 rounded-[13px] px-3 text-sm font-medium transition-colors",
                 pathname === href ? "bg-[#eaf2fd] font-semibold text-[#287fe2]" : "text-[#6f7d8d] hover:bg-[#f5f7f9] hover:text-[#202936]",

@@ -10,6 +10,7 @@ const migrations = [
   "202610170005_trigger_permissions.sql",
   "202610180001_mock_sync.sql",
   "202610180002_refund_guard.sql",
+  "202610180003_operations.sql",
 ];
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
@@ -53,5 +54,8 @@ describe("PostgreSQL 迁移与权限", () => {
   }, 15_000);
   it("模拟同步幂等、并发保护、租户隔离和 Viewer 限权", async () => {
     await db.exec(file("supabase/tests/mock_sync.sql"));
+  }, 15_000);
+  it("库存和待办保持租户隔离与权限约束", async () => {
+    await db.exec(file("supabase/tests/operations.sql"));
   }, 15_000);
 });
