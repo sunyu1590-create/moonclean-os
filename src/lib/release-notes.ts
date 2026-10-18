@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.8.6";
+export const APP_VERSION = "0.8.7";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.8.7",
+    date: "2026-10-18",
+    title: "字体与图表加载优化",
+    changes: [
+      "OPPO Sans 字体改用完整字形的 WOFF2，并启用版本化长期缓存。",
+      "经营、财务、推广和报告图表按需加载；统一基础设计 Token。",
+    ],
+  },
   {
     version: "0.8.6",
     date: "2026-10-18",

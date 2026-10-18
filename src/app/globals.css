@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: "OPPO Sans 4.0";
-  src: url("/fonts/OPPOSans4-SC.ttf") format("truetype");
+  src: url("/fonts/OPPOSans4-SC-6b9ec61a.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 700;
   font-display: swap;
@@ -167,6 +167,41 @@
   --chart-3: #8bc4f7;
   --chart-4: #f8bd79;
   --chart-5: #e85d65;
+  /* MoonClean design tokens: spacing follows a 4px scale. */
+  --mc-color-page: #f6f7f9;
+  --mc-color-surface: #ffffff;
+  --mc-color-text: #202936;
+  --mc-color-muted: #6d7a8b;
+  --mc-color-brand: #287fe2;
+  --mc-color-success: #16a085;
+  --mc-color-danger: #e85d65;
+  --mc-color-border: #e6eaf0;
+  --mc-type-xs: 12px;
+  --mc-type-sm: 14px;
+  --mc-type-card: 16px;
+  --mc-type-section: 20px;
+  --mc-type-page: 28px;
+  --mc-type-metric: 32px;
+  --mc-line-body: 1.6;
+  --mc-line-heading: 1.25;
+  --mc-space-1: 4px;
+  --mc-space-2: 8px;
+  --mc-space-3: 12px;
+  --mc-space-4: 16px;
+  --mc-space-5: 20px;
+  --mc-space-6: 24px;
+  --mc-space-8: 32px;
+  --mc-space-10: 40px;
+  --mc-space-12: 48px;
+  --mc-radius-control: 12px;
+  --mc-radius-card: 24px;
+  --mc-radius-panel: 20px;
+  --mc-shadow-card: 0 12px 36px rgba(29, 43, 62, 0.045), 0 2px 8px rgba(29, 43, 62, 0.018);
+  --mc-motion-fast: 150ms;
+  --mc-motion-normal: 180ms;
+  --mc-z-navigation: 30;
+  --mc-z-feedback: 100;
+  --mc-z-overlay: 400;
 }
 @theme inline {
   --font-sans: "OPPO Sans 4.0", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -175,8 +210,8 @@
   box-sizing: border-box;
 }
 body {
-  background: #f6f7f9;
-  color: #202936;
+  background: var(--mc-color-page);
+  color: var(--mc-color-text);
   font-family: "OPPO Sans 4.0", "PingFang SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -184,11 +219,11 @@ button {
   cursor: pointer;
 }
 .glass-card {
-  background: #fff;
-  border: 1px solid rgba(221, 227, 234, 0.82);
-  border-radius: 24px;
-  box-shadow: 0 12px 36px rgba(29, 43, 62, 0.045), 0 2px 8px rgba(29, 43, 62, 0.018);
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  background: var(--mc-color-surface);
+  border: 1px solid color-mix(in srgb, var(--mc-color-border) 82%, transparent);
+  border-radius: var(--mc-radius-card);
+  box-shadow: var(--mc-shadow-card);
+  transition: transform var(--mc-motion-normal) ease, box-shadow var(--mc-motion-normal) ease, border-color var(--mc-motion-normal) ease;
 }
 .glass-card:hover {
   transform: translateY(-1px);
@@ -463,13 +498,13 @@ html[data-motion="simple"] .motion-switch-panel { border-radius: 18px !important
   color: #e85d65;
 }
 .page-title {
-  font-size: clamp(28px, 2.2vw, 36px);
+  font-size: clamp(var(--mc-type-page), 2.2vw, 36px);
   font-weight: 750;
   letter-spacing: -0.045em;
-  line-height: 1.22;
+  line-height: var(--mc-line-heading);
 }
 .section-title {
-  font-size: 17px;
+  font-size: var(--mc-type-card);
   font-weight: 700;
   letter-spacing: -0.025em;
 }

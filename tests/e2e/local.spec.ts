@@ -249,3 +249,19 @@ test("本地数据只显示 AI 接入说明，不向 DeepSeek 自动发送", asy
   await page.waitForTimeout(300);
   expect(aiRequests).toBe(0);
 });
+
+test("分析图表接近视口后加载并保持图表区域可用", async ({ page }) => {
+  test.skip(
+    process.env.NEXT_PUBLIC_DATA_MODE !== "local",
+    "仅在显式本地演示模式运行",
+  );
+  await page.setViewportSize({ width: 1280, height: 400 });
+  for (const route of ["/dashboard", "/finance", "/advertising", "/reports"]) {
+    await page.goto(route);
+    const chartHost = page.locator('[aria-label$="图表"]').first();
+    await expect(chartHost).toBeVisible();
+    await expect(page.locator(".recharts-surface")).toHaveCount(0);
+    await chartHost.scrollIntoViewIfNeeded();
+    await expect(page.locator(".recharts-surface").first()).toBeVisible();
+  }
+});

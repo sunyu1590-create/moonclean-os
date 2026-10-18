@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   CalendarDays,
@@ -11,15 +12,6 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { useApp } from "@/components/app-provider";
 import { downloadText, MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -27,6 +19,9 @@ import { financialSummary, formatMoney } from "@/lib/finance";
 import { periodRows, storeToday } from "@/lib/analytics";
 import { weeklyReportInsights } from "@/lib/report-insights";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
+const ReportTrendChart = dynamic(() => import("@/components/charts/report-trend-chart"));
 
 export default function ReportsPage() {
   const { data } = useApp();
@@ -109,19 +104,9 @@ export default function ReportsPage() {
           <div className="rounded-2xl border border-[#edf1f5] bg-white p-4">
             <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-[#293d52]">销售与推广趋势</h3><span className="text-[11px] text-[#91a0af]">金额（元）</span></div>
             {weekTrend.length ? (
-              <div className="h-[240px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weekTrend} margin={{ top: 8, right: 12, left: -15, bottom: 0 }}>
-                    <CartesianGrid stroke="#edf1f5" strokeDasharray="4 4" />
-                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#8b99a8" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#9aa7b4" }} axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(value) => formatMoney(Number(value ?? 0))} contentStyle={{ borderRadius: 12, border: "1px solid #e7edf3", fontSize: 12 }} />
-                    <Line type="monotone" dataKey="净销售额" stroke="#3b91eb" strokeWidth={2.5} dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                    <Line type="monotone" dataKey="广告消耗" stroke="#e7a84b" strokeWidth={2} dot={{ r: 2 }} />
-                    <Line type="monotone" dataKey="估算利润" stroke="#16a085" strokeWidth={2} dot={{ r: 2 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <DeferredChart className="h-[240px] w-full" label="近七天销售与推广趋势图表">
+                <ReportTrendChart data={weekTrend} />
+              </DeferredChart>
             ) : <p className="py-12 text-center text-sm text-[#91a0af]">录入经营日报后显示趋势</p>}
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-[#718397]"><span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-[#3b91eb]" />净销售额</span><span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-[#e7a84b]" />广告消耗</span><span className="flex items-center gap-1.5"><i className="size-2 rounded-full bg-[#16a085]" />估算利润</span></div>
           </div>

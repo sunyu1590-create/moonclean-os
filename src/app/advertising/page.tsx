@@ -1,17 +1,9 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Plus, Pencil, TrendingUp, Target, Wallet, Ratio } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
@@ -30,6 +22,9 @@ import { numeric, periodRows, storeToday } from "@/lib/analytics";
 import type { AdvertisingMetric } from "@/lib/model";
 import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
+const AdvertisingChart = dynamic(() => import("@/components/charts/advertising-chart"));
 const schema = z.object({
   date: z.iso.date(),
   spend: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额"),
@@ -252,39 +247,9 @@ export default function Advertising() {
           title="推广趋势"
           sub="广告消耗与归因成交额；悬停查看具体数值"
         >
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={adTrend} margin={{ left: -15, right: 8 }}>
-                <CartesianGrid vertical={false} stroke="#edf3f9" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#9aabba" }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#9aabba" }}
-                />
-                <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="spend"
-                  name="广告消耗"
-                  fill="#9bcdf6"
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar
-                  isAnimationActive={false}
-                  dataKey="attributedSales"
-                  name="归因成交额"
-                  fill="#3b91eb"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <DeferredChart label="推广趋势图表">
+            <AdvertisingChart data={adTrend} />
+          </DeferredChart>
         </SectionCard>
         <SectionCard title="推广效率分析" sub="用于判断投入产出与成本安全线">
           <div className="space-y-4">

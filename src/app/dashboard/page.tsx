@@ -1,16 +1,8 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Decimal from "decimal.js";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -34,6 +26,9 @@ import { DashboardIntelligence } from "@/components/dashboard-intelligence";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
+const DashboardTrendChart = dynamic(() => import("@/components/charts/dashboard-trend-chart"));
 export default function Dashboard() {
   const { data } = useApp();
   const [days, setDays] = useState<7 | 30>(7);
@@ -158,60 +153,9 @@ export default function Dashboard() {
       <AiInsightPanel feature="dashboard" autoRefresh context={{ periodDays: 7, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => row.costComplete === false).length }} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={trend(rows, ads)}
-                margin={{ top: 10, right: 10, left: -13, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="sales-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b91eb" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="#3b91eb" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#edf3f9" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "#9aabba", fontSize: 11 }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fill: "#9aabba", fontSize: 11 }}
-                />
-                <Tooltip
-                  formatter={(v, name) => [
-                    formatMoney(Number(v)),
-                    name === "sales" ? "净销售额" : "估算利润",
-                  ]}
-                  contentStyle={{
-                    borderRadius: 14,
-                    border: "1px solid #e5edf5",
-                    boxShadow: "0 10px 30px #16487715",
-                  }}
-                />
-                <Area
-                  isAnimationActive={false}
-                  type="monotone"
-                  dataKey="sales"
-                  stroke="#3b91eb"
-                  strokeWidth={3}
-                  fill="url(#sales-fill)"
-                />
-                <Area
-                  isAnimationActive={false}
-                  type="monotone"
-                  dataKey="profit"
-                  stroke="#16a085"
-                  strokeWidth={2.5}
-                  fill="transparent"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <DeferredChart label="经营趋势图表">
+            <DashboardTrendChart data={trend(rows, ads)} />
+          </DeferredChart>
         </SectionCard>
         <SectionCard title="商品销售排行" sub={`近 ${days} 天各商品录入销售额`}>
           <div className="space-y-5 pt-1">

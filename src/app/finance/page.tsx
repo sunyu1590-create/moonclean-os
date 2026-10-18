@@ -1,17 +1,6 @@
 "use client";
 import { useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import dynamic from "next/dynamic";
 import { BadgePercent, CircleDollarSign, Receipt, Wallet } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
@@ -19,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { financialSummary, formatMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
+const FinanceTrendChart = dynamic(() => import("@/components/charts/finance-charts").then((module) => module.FinanceTrendChart));
+const FinanceCostChart = dynamic(() => import("@/components/charts/finance-charts").then((module) => module.FinanceCostChart));
 export default function Finance() {
   const { data } = useApp();
   const [days, setDays] = useState<7 | 30>(30);
@@ -105,71 +98,15 @@ export default function Finance() {
       </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_1fr]">
         <SectionCard title="历史利润趋势" sub="每日净销售额与估算经营利润">
-          <div className="chart-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={trend(daily, ads)}
-                margin={{ left: -12, right: 8 }}
-              >
-                <CartesianGrid vertical={false} stroke="#edf3f9" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#9aabba" }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: "#9aabba" }}
-                />
-                <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                <Area
-                  isAnimationActive={false}
-                  dataKey="sales"
-                  name="净销售额"
-                  type="monotone"
-                  stroke="#3b91eb"
-                  strokeWidth={2.5}
-                  fill="#3b91eb"
-                  fillOpacity={0.09}
-                />
-                <Area
-                  isAnimationActive={false}
-                  dataKey="profit"
-                  name="估算利润"
-                  type="monotone"
-                  stroke="#16a085"
-                  strokeWidth={2.5}
-                  fill="#16a085"
-                  fillOpacity={0.08}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <DeferredChart label="历史利润趋势图表">
+            <FinanceTrendChart trend={trend(daily, ads)} />
+          </DeferredChart>
         </SectionCard>
         <SectionCard title="成本结构" sub="不同经营成本在总成本中的占比">
           <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <div className="h-[240px] w-full sm:w-1/2">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    isAnimationActive={false}
-                    data={cost}
-                    dataKey="value"
-                    innerRadius={65}
-                    outerRadius={96}
-                    paddingAngle={3}
-                    stroke="none"
-                  >
-                    {cost.map((item) => (
-                      <Cell key={item.name} fill={item.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <DeferredChart className="h-[240px] w-full sm:w-1/2" label="成本结构图表">
+              <FinanceCostChart costs={cost} />
+            </DeferredChart>
             <div className="grid w-full gap-3 sm:w-1/2">
               {cost.map((item) => (
                 <div
