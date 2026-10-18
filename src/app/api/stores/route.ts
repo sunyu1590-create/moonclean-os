@@ -35,13 +35,12 @@ export async function POST(request: Request) {
   if (!auth.ok) return auth.error;
   try {
     const input = storeSchema.parse(await request.json());
-    const { data, error } = await auth.supabase
+    const id = crypto.randomUUID();
+    const { error } = await auth.supabase
       .from("stores")
-      .insert({ ...input, created_by: auth.user.id })
-      .select("id")
-      .single();
+      .insert({ id, ...input, created_by: auth.user.id });
     if (error) throw error;
-    return NextResponse.json({ id: data.id }, { status: 201 });
+    return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
     return apiError(error);
   }

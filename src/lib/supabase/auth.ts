@@ -51,7 +51,11 @@ export async function requireStore(
   return { ...auth, role };
 }
 export function apiError(error: unknown, fallback = "操作失败") {
-  const message = error instanceof Error ? error.message : fallback;
+  const message =
+    error && typeof error === "object" && "message" in error &&
+    typeof error.message === "string"
+      ? error.message
+      : fallback;
   return NextResponse.json({ error: message }, { status: 400 });
 }
 export function rejectCrossOriginMutation(request: Request): NextResponse | null {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./server", () => ({ createServerSupabaseClient: vi.fn() }));
-import { rejectCrossOriginMutation } from "./auth";
+import { apiError, rejectCrossOriginMutation } from "./auth";
 
 const request = (headers: Record<string, string>) =>
   new Request("http://127.0.0.1:3000/api/stores", {
@@ -48,4 +48,10 @@ describe("mutation origin protection behind a proxy", () => {
       )?.status,
     ).toBe(403);
   });
+});
+
+it("returns the message from a Supabase database error", async () => {
+  const response = apiError({ code: "42501", message: "permission denied" });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "permission denied" });
 });
