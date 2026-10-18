@@ -28,6 +28,7 @@ import {
 import { addMoney, adRoas, financialSummary, formatMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday } from "@/lib/analytics";
 import type { AdvertisingMetric } from "@/lib/model";
+import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
 const schema = z.object({
   date: z.iso.date(),
   spend: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额"),
@@ -100,6 +101,14 @@ export default function Advertising() {
         message: cause instanceof Error ? cause.message : "保存失败",
       });
     }
+  }
+  async function importImage(row:ImageReportDraft):Promise<boolean|void>{
+    if(row.kind!=="advertising")return false;
+    const existing=data!.advertising.find(item=>item.date===row.date);
+    if(existing?.source==="mock_pinduoduo"||existing?.source==="official_pinduoduo")throw new Error("该日期已有平台同步推广数据，请勿用截图覆盖。");
+    if(existing&&!window.confirm(`${row.date} 已有推广数据，确认用截图识别值替换吗？`))return false;
+    const parsed=schema.parse({date:row.date,spend:row.spend,attributedSales:row.attributedSales,attributedOrders:Number(row.attributedOrders)});
+    await update(current=>({...current,advertising:[...current.advertising.filter(item=>item.date!==row.date),{id:existing?.id||crypto.randomUUID(),...parsed,isDemo:false,source:"image_import" as const}].sort((a,b)=>a.date.localeCompare(b.date))}));
   }
   return (
     <>
@@ -199,6 +208,7 @@ export default function Advertising() {
           ) : null
         }
       />
+      <div className="mb-5"><ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/></div>
       <div className="mb-5 flex gap-2">
         {([7, 30] as const).map((v) => (
           <Button
@@ -327,7 +337,7 @@ export default function Advertising() {
                   <td>{formatMoney(ad.attributedSales)}</td>
                   <td>{adRoas([ad]) !== null ? adRoas([ad]) + "x" : "—"}</td>
                   <td className="text-xs text-[#8ca0b2]">
-                    {ad.isDemo ? "模拟数据" : ad.source === "csv_import" ? "CSV 导入" : "手动录入"}
+                    {ad.isDemo ? "模拟数据" : ad.source === "image_import" ? "截图识别" : ad.source === "csv_import" ? "CSV 导入" : "手动录入"}
                   </td>
                   <td className="text-right">
                     <Button

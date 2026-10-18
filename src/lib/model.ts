@@ -47,7 +47,7 @@ export interface DailyMetric {
   isDemo?: boolean;
   costComplete?: boolean;
   costSource?: "manual" | "sku";
-  source?: "manual" | "csv_import" | "mock_pinduoduo" | "official_pinduoduo";
+  source?: "manual" | "csv_import" | "image_import" | "mock_pinduoduo" | "official_pinduoduo";
 }
 export interface AdvertisingMetric {
   id: string;
@@ -56,7 +56,7 @@ export interface AdvertisingMetric {
   attributedSales: Money;
   attributedOrders?: number;
   isDemo?: boolean;
-  source?: "manual" | "csv_import" | "mock_pinduoduo" | "official_pinduoduo";
+  source?: "manual" | "csv_import" | "image_import" | "mock_pinduoduo" | "official_pinduoduo";
 }
 export interface SKUDailyMetric { id: string; skuId: string; date: string; quantitySold: number; grossSales: Money; refundAmount: Money }
 export interface FinancialSummary {

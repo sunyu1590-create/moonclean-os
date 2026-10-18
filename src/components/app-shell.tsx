@@ -21,6 +21,10 @@ import {
   ShoppingCart,
   Boxes,
   ClipboardCheck,
+  ChartNoAxesCombined,
+  Calculator,
+  ReceiptText,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -36,6 +40,10 @@ const nav = [
   { href: "/orders", label: "订单中心", icon: ShoppingCart },
   { href: "/inventory", label: "库存管理", icon: Boxes },
   { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
+  { href: "/product-insights", label: "商品诊断", icon: ChartNoAxesCombined },
+  { href: "/pricing", label: "定价模拟", icon: Calculator },
+  { href: "/after-sales", label: "售后分析", icon: ReceiptText },
+  { href: "/reports", label: "经营报告", icon: FileText },
   { href: "/finance", label: "财务利润", icon: Wallet },
   { href: "/data", label: "数据中心", icon: Database },
   { href: "/settings", label: "系统设置", icon: Settings },
@@ -196,7 +204,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <PanelLeftClose size={18} />
           </button>
         </div>
-        <div className="px-4 pt-7">
+        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-7">
           <p
             className={cn(
               "mb-3 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]",
@@ -224,7 +232,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]", collapsed && "sr-only")}>平台与同步</p>
+          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]", collapsed && "sr-only")}>经营工具与连接</p>
           <nav className="space-y-1">
             {nav.slice(9).map(({ href, label, icon: Icon }) => (
               <Link key={href} href={href} title={label} className={cn(

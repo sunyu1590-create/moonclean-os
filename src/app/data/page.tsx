@@ -29,6 +29,8 @@ import { dailySchema } from "@/lib/repository";
 import { exportDailyCsv, parseDailyCsv } from "@/lib/csv";
 import { formatMoney } from "@/lib/finance";
 import { storeToday } from "@/lib/analytics";
+import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
+import { QuickMetricEntry, type QuickDailyRow } from "@/components/quick-metric-entry";
 import type { DailyMetric } from "@/lib/model";
 const empty = (date: string): DailyMetric => ({
   id: crypto.randomUUID(),
@@ -134,6 +136,37 @@ export default function DataPage() {
       setError(cause instanceof Error ? cause.message : "导入失败");
     }
   }
+  async function importImage(row:ImageReportDraft):Promise<boolean|void>{
+    if(row.kind!=="daily")return false;
+    const existing=data!.daily.find(item=>item.date===row.date&&item.source!=="mock_pinduoduo"&&item.source!=="official_pinduoduo");
+    if(data!.daily.some(item=>item.date===row.date&&(item.source==="mock_pinduoduo"||item.source==="official_pinduoduo")))throw new Error("该日期包含平台同步数据，请在平台连接中心查看；请勿用截图覆盖同步记录。");
+    if(existing&&!window.confirm(`${row.date} 已有手工数据，确认用截图识别值替换销售额、退款和订单数吗？成本字段会保留。`))return false;
+    const parsed=dailySchema.parse({
+      id:existing?.id||crypto.randomUUID(),date:row.date,sales:row.sales,refunds:row.refunds,orders:Number(row.orders),
+      productCost:existing?.productCost||"",packagingCost:existing?.packagingCost||"",logisticsCost:existing?.logisticsCost||"",platformFees:existing?.platformFees||"",
+      otherExpenses:existing?.otherExpenses||"0",productSales:existing?.productSales||{},source:"image_import",isDemo:false,
+      costComplete:existing?.costComplete??false,
+    });
+    await update(current=>({...current,daily:[...current.daily.filter(item=>item.date!==row.date||item.source==="mock_pinduoduo"||item.source==="official_pinduoduo"),parsed].sort((a,b)=>a.date.localeCompare(b.date))}));
+  }
+  async function importPasted(rows:QuickDailyRow[],overwrite:boolean){
+    const byDate=new Map(rows.map(row=>[row.date,row]));
+    const protectedDate=rows.find(row=>data!.daily.some(item=>item.date===row.date&&(item.source==="mock_pinduoduo"||item.source==="official_pinduoduo")));
+    if(protectedDate)throw new Error(`${protectedDate.date} 已有平台同步数据，不能用批量粘贴覆盖。`);
+    const conflicts=rows.filter(row=>data!.daily.some(item=>item.date===row.date));
+    if(conflicts.length&&!overwrite&&!window.confirm(`有 ${conflicts.length} 天已有记录，确认覆盖这些手工数据吗？`))return false;
+    const parsedRows=rows.map(row=>{
+      const old=data!.daily.find(item=>item.date===row.date);
+      return dailySchema.parse({id:old?.id||crypto.randomUUID(),...row,
+        productCost:row.productCost||old?.productCost||"",packagingCost:row.packagingCost||old?.packagingCost||"",
+        logisticsCost:row.logisticsCost||old?.logisticsCost||"",platformFees:row.platformFees||old?.platformFees||"",
+        otherExpenses:row.otherExpenses||old?.otherExpenses||"0",productSales:old?.productSales||{},
+        source:"csv_import",isDemo:false,costComplete:old?.costComplete??false,
+      });
+    });
+    await update(current=>({...current,daily:[...current.daily.filter(item=>!byDate.has(item.date)),...parsedRows].sort((a,b)=>a.date.localeCompare(b.date))}));
+    return true;
+  }
   const filtered = [...data.daily]
     .filter((r) => !query || r.date.includes(query))
     .reverse();
@@ -143,8 +176,8 @@ export default function DataPage() {
         eyebrow="DATA HUB / 数据中心"
         title="让经营数据有据可查"
         description={mode === "cloud"
-          ? "每日录入、编辑与 CSV 批量导入，保存成功后数据会同步到云端店铺。"
-          : "每日录入、编辑与 CSV 批量导入，演示数据保存在当前浏览器。"}
+          ? "支持报表截图识别、表格粘贴、CSV 导入和逐日编辑，确认保存后同步到云端店铺。"
+          : "支持报表截图识别、表格粘贴、CSV 导入和逐日编辑，数据保存在当前浏览器。"}
         action={
           <div className="flex flex-wrap gap-2">
             <ExportButton
@@ -187,6 +220,8 @@ export default function DataPage() {
         productSales。建议先导出样例，再按相同格式填写；productSales 是商品 ID
         与销售额的 JSON 对象。
       </div>
+      <div className="mb-5"><ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/></div>
+      <div className="mb-5"><QuickMetricEntry rows={data.daily} disabled={!canEdit} onImport={importPasted}/></div>
       <SectionCard
         title="历史经营数据"
         sub={`共 ${data.daily.length} 条日记录 · 可按日期筛选`}
@@ -234,7 +269,7 @@ export default function DataPage() {
                   <td>{formatMoney(row.logisticsCost)}</td>
                   <td>{formatMoney(row.otherExpenses)}</td>
                   <td className="text-xs text-[#92a4b5]">
-                    {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
+                    {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "image_import" ? "截图识别" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
                   </td>
                   <td className="text-right">
                     <Button

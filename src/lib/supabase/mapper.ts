@@ -53,7 +53,7 @@ export interface CloudSnapshot {
     shipping_cost: string | null;
     platform_fee: string | null;
     cost_source: "manual" | "sku";
-    data_source?: "manual" | "csv_import";
+    data_source?: "manual" | "csv_import" | "image_import";
     is_demo?: boolean;
   }[];
   ads: {
@@ -63,7 +63,7 @@ export interface CloudSnapshot {
     attributed_revenue: string;
     attributed_orders: number;
     is_demo?: boolean;
-    data_source?: "manual" | "csv_import";
+    data_source?: "manual" | "csv_import" | "image_import";
   }[];
   skuDaily: {
     id: string;

@@ -11,16 +11,16 @@ export const dailySchema = z
     sales: money,
     refunds: money,
     orders: z.number().int().nonnegative(),
-    productCost: money,
-    packagingCost: money,
-    logisticsCost: money,
-    platformFees: money,
+    productCost: money.or(z.literal("")),
+    packagingCost: money.or(z.literal("")),
+    logisticsCost: money.or(z.literal("")),
+    platformFees: money.or(z.literal("")),
     otherExpenses: money,
     productSales: z.record(z.string(), money),
     isDemo: z.boolean().optional(),
     costComplete: z.boolean().optional(),
     costSource: z.enum(["manual", "sku"]).optional(),
-    source: z.enum(["manual", "csv_import"]).optional(),
+    source: z.enum(["manual", "csv_import", "image_import"]).optional(),
   })
   .refine((v) => new Decimal(v.refunds).lte(v.sales), {
     message: "退款不能超过销售额",
@@ -33,7 +33,7 @@ export const advertisingSchema = z.object({
   attributedSales: money,
   attributedOrders: z.number().int().nonnegative().optional(),
   isDemo: z.boolean().optional(),
-  source: z.enum(["manual", "csv_import"]).optional(),
+  source: z.enum(["manual", "csv_import", "image_import"]).optional(),
 });
 export const productSchema = z.object({
   id: z.string(),
