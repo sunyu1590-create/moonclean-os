@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.8.3";
+export const APP_VERSION = "0.8.4";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.8.4",
+    date: "2026-10-18",
+    title: "夜间模式入口调整",
+    changes: [
+      "将夜间模式开关移入“更多”面板首位，顶栏恢复紧凑布局。",
+      "保留夜间配色与当前设备记忆，刷新后继续使用上次选择。",
+    ],
+  },
   {
     version: "0.8.3",
     date: "2026-10-18",

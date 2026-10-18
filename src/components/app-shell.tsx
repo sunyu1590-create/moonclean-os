@@ -417,9 +417,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-medium text-[#45617d]">{currentLabel}</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-            <button type="button" aria-label={nightMode ? "切换日间模式" : "切换夜间模式"} aria-pressed={nightMode} title={nightMode ? "切换日间模式" : "切换夜间模式"} onClick={toggleNightMode} className="grid size-8 shrink-0 place-items-center rounded-full border border-[#e5eaf0] bg-white/80 text-[#52677b] transition-colors hover:bg-[#f2f7fb] sm:size-9">
-              {nightMode ? <Sun size={16}/> : <Moon size={16}/>}
-            </button>
             {mode === "cloud" && stores.length > 0 && (
               <AppSelect
                 aria-label="切换店铺"
@@ -523,6 +520,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SheetTitle className="text-xl">更多功能</SheetTitle>
             <p className="text-sm text-[#8192a3]">常用经营工具与系统管理</p>
           </SheetHeader>
+          <button type="button" aria-label={nightMode ? "切换日间模式" : "切换夜间模式"} aria-pressed={nightMode} onClick={toggleNightMode} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-[#e5edf5] bg-white p-3.5 text-left transition-colors hover:bg-[#f7fbff]">
+            <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-[#3189e8]">{nightMode ? <Sun size={18}/> : <Moon size={18}/>}</span><span><span className="block text-sm font-semibold text-[#203751]">夜间模式</span><span className="mt-0.5 block text-xs text-[#8294a8]">{nightMode ? "已开启 · 点击切换日间" : "已关闭 · 点击切换夜间"}</span></span></span>
+            <span className={cn("relative h-6 w-11 rounded-full transition-colors", nightMode ? "bg-[#3189e8]" : "bg-[#d5dee7]")}><span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform", nightMode ? "translate-x-[22px]" : "translate-x-0.5")}/></span>
+          </button>
           <button type="button" onClick={() => setCustomizingNav((value) => !value)} className="mb-5 flex w-full items-center justify-between rounded-2xl border border-[#dcecff] bg-gradient-to-r from-[#f1f8ff] to-white p-4 text-left transition-colors hover:bg-[#eaf4ff]">
             <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-white text-[#3189e8] shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-[#203751]">自定义底栏</span><span className="mt-0.5 block text-xs text-[#8294a8]">选择常用入口，最多显示 4 个</span></span></span>
             <ChevronRight size={18} className={cn("text-[#8ba0b4] transition-transform", customizingNav && "rotate-90")}/>
