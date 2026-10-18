@@ -1,6 +1,16 @@
-export const APP_VERSION = "0.2.0";
+export const APP_VERSION = "0.3.1";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.3.1",
+    date: "2026-10-18",
+    title: "云端备份与版本检查优化",
+    changes: [
+      "新增完整云端业务数据备份导出，便于后续迁移到自有服务器。",
+      "版本检查优先读取公开 GitHub main 最新提交，并提供 Vercel 正式部署版本备用检查。",
+      "改进版本检查的错误反馈和检查来源提示。",
+    ],
+  },
   {
     version: "0.2.0",
     date: "2026-10-18",
