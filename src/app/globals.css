@@ -129,50 +129,61 @@
   }
 }
 :root {
-  --background: #f7fbff;
-  --foreground: #172b45;
-  --primary: #3b91eb;
+  --background: #f6f7f9;
+  --foreground: #202936;
+  --primary: #287fe2;
   --primary-foreground: #fff;
-  --secondary: #e8f5ff;
-  --secondary-foreground: #172b45;
-  --accent: #e8f5ff;
-  --accent-foreground: #172b45;
-  --muted: #f2f7fc;
-  --muted-foreground: #71849b;
-  --border: #dfeaf4;
-  --input: #dfeaf4;
-  --ring: #3b91eb;
+  --secondary: #eaf2fd;
+  --secondary-foreground: #202936;
+  --accent: #eaf2fd;
+  --accent-foreground: #202936;
+  --muted: #f2f4f7;
+  --muted-foreground: #6d7a8b;
+  --border: #e6eaf0;
+  --input: #dfe5ec;
+  --ring: #287fe2;
   --card: #fff;
-  --card-foreground: #172b45;
-  --radius: 0.75rem;
+  --card-foreground: #202936;
+  --radius: 0.875rem;
   --sidebar: #fff;
-  --sidebar-foreground: #172b45;
+  --sidebar-foreground: #202936;
   --destructive: #e85d65;
-  --chart-1: #3b91eb;
+  --chart-1: #287fe2;
   --chart-2: #16a085;
   --chart-3: #8bc4f7;
   --chart-4: #f8bd79;
   --chart-5: #e85d65;
 }
 @theme inline {
-  --font-sans: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 * {
   box-sizing: border-box;
 }
 body {
-  background: #f7fbff;
-  color: #172b45;
-  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f6f7f9;
+  color: #202936;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 button {
   cursor: pointer;
 }
 .glass-card {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid #e4edf6;
-  border-radius: 18px;
-  box-shadow: 0 8px 34px rgba(27, 79, 125, 0.055);
+  background: #fff;
+  border: 1px solid rgba(221, 227, 234, 0.82);
+  border-radius: 24px;
+  box-shadow: 0 12px 36px rgba(29, 43, 62, 0.045), 0 2px 8px rgba(29, 43, 62, 0.018);
+}
+.glass-card table tbody tr {
+  transition: background-color 150ms ease;
+}
+.glass-card table tbody tr:hover {
+  background-color: #f8fafc;
+}
+select:focus-visible {
+  outline: 2px solid #98c3f5;
+  outline-offset: 2px;
 }
 .number {
   font-variant-numeric: tabular-nums;
@@ -184,13 +195,15 @@ button {
   color: #e85d65;
 }
 .page-title {
-  font-size: 29px;
+  font-size: clamp(28px, 2.2vw, 36px);
   font-weight: 750;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.045em;
+  line-height: 1.22;
 }
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: -0.025em;
 }
 .chart-wrap {
   height: 300px;
@@ -198,7 +211,7 @@ button {
 }
 @media (max-width: 640px) {
   .page-title {
-    font-size: 25px;
+    font-size: 27px;
   }
   .chart-wrap {
     height: 240px;

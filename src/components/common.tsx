@@ -15,13 +15,13 @@ export function PageHead({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-5 md:mb-8">
       <div>
-        <p className="mb-2 text-xs font-bold tracking-[.2em] text-[#3b91eb]">
+        <p className="mb-3 flex items-center gap-2 text-[11px] font-bold tracking-[.18em] text-[#287fe2] before:h-px before:w-6 before:bg-[#287fe2]">
           {eyebrow}
         </p>
         <h1 className="page-title">{title}</h1>
-        <p className="mt-2 text-sm text-[#8396a9]">{description}</p>
+        <p className="mt-3 text-sm leading-6 text-[#68798b]">{description}</p>
       </div>
       {action}
     </div>
@@ -41,27 +41,27 @@ export function MetricCard({
   icon?: React.ReactNode;
 }) {
   const colors = {
-    blue: "bg-[#e9f5ff] text-[#3b91eb]",
+    blue: "bg-[#eaf2fd] text-[#287fe2]",
     green: "bg-[#e8f7f2] text-[#16a085]",
     red: "bg-[#ffedf0] text-[#e85d65]",
-    neutral: "bg-[#eef4fa] text-[#6a849d]",
+    neutral: "bg-[#f0f2f5] text-[#6a7887]",
   };
   return (
-    <div className="glass-card p-5 md:p-6">
-      <div className="mb-5 flex items-start justify-between gap-2">
-        <span className="text-[13px] font-medium text-[#7a8ea3]">{label}</span>
+    <div className="glass-card min-w-0 p-5 md:p-6">
+      <div className="mb-6 flex items-start justify-between gap-2">
+        <span className="text-[13px] font-medium text-[#677789]">{label}</span>
         {icon && (
           <span
-            className={`grid size-9 place-items-center rounded-xl ${colors[tone]}`}
+            className={`grid size-10 place-items-center rounded-[14px] ${colors[tone]}`}
           >
             {icon}
           </span>
         )}
       </div>
-      <div className="number text-[26px] font-bold tracking-tight text-[#172b45] md:text-[30px]">
+      <div className="number break-all text-[27px] font-bold tracking-[-.045em] text-[#202936] md:text-[31px]">
         {value}
       </div>
-      <p className="mt-2 min-h-4 text-xs text-[#9aacbc]">
+      <p className="mt-2 min-h-4 text-xs text-[#79899a]">
         {sub || "基于当前筛选周期"}
       </p>
     </div>
@@ -81,11 +81,11 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`glass-card p-5 md:p-6 ${className}`}>
-      <div className="mb-5 flex items-start justify-between gap-3">
+    <section className={`glass-card min-w-0 p-5 md:p-6 ${className}`}>
+      <div className="mb-5 flex items-start justify-between gap-3 border-b border-[#eef1f4] pb-4">
         <div>
           <h2 className="section-title">{title}</h2>
-          {sub && <p className="mt-1 text-xs text-[#94a6b7]">{sub}</p>}
+          {sub && <p className="mt-1.5 text-xs leading-5 text-[#758597]">{sub}</p>}
         </div>
         {action}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import Decimal from "decimal.js";
 import {
   Area,
@@ -13,6 +14,7 @@ import {
 import {
   AlertCircle,
   ArrowUpRight,
+  ArrowRight,
   BadgePercent,
   ChartNoAxesCombined,
   ShoppingBag,
@@ -89,7 +91,27 @@ export default function Dashboard() {
           </div>
         }
       />
-      <div className="mb-5">
+      <section className="relative mb-5 overflow-hidden rounded-[28px] bg-[#202936] p-6 text-white shadow-[0_22px_48px_rgba(32,41,54,0.16)] md:p-9">
+        <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-12 -top-16 size-52 rounded-full border border-white/10" />
+        <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-medium tracking-[.1em] text-[#c5d4e5]"><span className="size-1.5 rounded-full bg-[#72b6ff]" />近 {days} 天经营快照</span>
+            <h2 className="mt-5 text-[26px] font-semibold tracking-[-.04em] md:text-[32px]">好生意，心中有数。</h2>
+            <p className="mt-2 text-sm leading-6 text-[#aebdd0]">销售、成本与推广变化，在这里清晰呈现。</p>
+            <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-5">
+              <div><p className="mb-1.5 text-xs text-[#b6c4d4]">期间净销售额</p><p className="number text-[34px] font-semibold tracking-[-.05em] md:text-[42px]">{formatMoney(summary.netSales)}</p></div>
+              <div><p className="mb-1.5 text-xs text-[#b6c4d4]">估算经营利润</p><p className={`number text-[25px] font-semibold tracking-[-.04em] md:text-[30px] ${Number(summary.profit)<0?"text-[#ffb5b9]":"text-[#a9dcce]"}`}>{formatMoney(summary.profit)}</p></div>
+            </div>
+          </div>
+          <div className="rounded-[20px] border border-white/10 bg-white/[.07] p-5 backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-[#b6c4d4]">本月销售目标</p><p className="number mt-2 text-[24px] font-semibold tracking-tight">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="rounded-full bg-[#6daff7]/15 p-2.5 text-[#9dceff]"><Target size={17}/></span></div>
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#76b8ff]" style={{width:`${targetProgress}%`}}/></div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[#c1cfde]"><span>已完成 {formatMoney(monthSales)} / 目标 {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-white hover:text-[#a9d5ff]">查看数据 <ArrowRight size={13}/></Link></div>
+          </div>
+        </div>
+      </section>
+      <div className="mb-5 px-1">
         <DemoNote hasDemo={data.daily.some((r) => r.isDemo)} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -218,33 +240,6 @@ export default function Dashboard() {
           </div>
         </SectionCard>
       </div>
-      <SectionCard
-        title="本月经营目标"
-        sub="根据已录入的净销售额计算月销售目标完成度"
-        className="mt-5"
-      >
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-2xl font-bold number">
-              {formatMoney(monthSales)}
-            </p>
-            <p className="mt-1 text-xs text-[#9aabba]">
-              已完成 / 目标 {formatMoney(data.settings.salesTarget)}
-            </p>
-          </div>
-          <p className="number text-xl font-bold text-[#3b91eb]">
-            {targetPercent
-              ? `${targetPercent.toFixed(1)}%`
-              : "未设置"}
-          </p>
-        </div>
-        <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-[#eaf3fb]">
-          <div
-            className="h-full rounded-full bg-[#3b91eb]"
-            style={{ width: `${targetProgress}%` }}
-          />
-        </div>
-      </SectionCard>
       <SectionCard
         title="经营异常提醒"
         sub="根据当前录入数据与设置阈值自动识别"
