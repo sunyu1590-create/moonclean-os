@@ -54,9 +54,19 @@ export function apiError(error: unknown, fallback = "操作失败") {
   const message = error instanceof Error ? error.message : fallback;
   return NextResponse.json({ error: message }, { status: 400 });
 }
-export function rejectCrossOriginMutation(request:Request):NextResponse|null{
-  const origin=request.headers.get("origin");
-  const site=request.headers.get("sec-fetch-site");
-  if((origin&&origin!==new URL(request.url).origin)||site==="cross-site")return NextResponse.json({error:"跨站请求被拒绝"},{status:403});
-  return null;
+export function rejectCrossOriginMutation(request: Request): NextResponse | null {
+  const denied = () =>
+    NextResponse.json({ error: "跨站请求被拒绝" }, { status: 403 });
+  const site = request.headers.get("sec-fetch-site");
+  if (site === "cross-site") return denied();
+
+  const origin = request.headers.get("origin");
+  const url = new URL(request.url);
+  const host = request.headers.get("host");
+  // Reverse proxies may give Next.js an internal request URL while preserving
+  // the browser-facing Host and Fetch Metadata headers (as in Codespaces).
+  if (origin === url.origin || (host && origin === `${url.protocol}//${host}`))
+    return null;
+  if (site === "same-origin") return null;
+  return denied();
 }
