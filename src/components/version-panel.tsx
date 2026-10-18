@@ -53,7 +53,7 @@ export function VersionPanel() {
   return (
     <SectionCard
       title="版本与更新"
-      sub="对比当前预览运行版本与 GitHub main 最新版本"
+      sub="对比当前预览与 main 分支最新正式部署版本"
       action={<RefreshCw size={19} className="text-[#3b91eb]" />}
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -65,7 +65,7 @@ export function VersionPanel() {
           </div>
           {result && (
             <div>
-              <p className="text-xs text-[#8a9aaa]">GitHub 最新版本</p>
+              <p className="text-xs text-[#8a9aaa]">最新正式部署版本</p>
               <p className="mt-1 font-semibold text-[#172b45]">v{result.latest.version}</p>
               <p className="mt-1 text-xs text-[#8a9aaa]">提交 {result.latest.shortCommit}</p>
             </div>
