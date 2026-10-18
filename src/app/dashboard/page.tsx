@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { OperationsWidget } from "@/components/operations-widget";
 import { DashboardIntelligence } from "@/components/dashboard-intelligence";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 export default function Dashboard() {
@@ -154,6 +155,7 @@ export default function Dashboard() {
         />
       </div>
       <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} />
+      <AiInsightPanel feature="dashboard" autoRefresh context={{ periodDays: 7, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => row.costComplete === false).length }} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
           <div className="chart-wrap">

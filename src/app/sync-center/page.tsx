@@ -6,6 +6,7 @@ import { useApp } from "@/components/app-provider";
 import { PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/integrations/pinduoduo/client";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 
 const kindLabel = {orders:"订单",products:"商品",refunds:"退款"};
 const statusLabel:Record<string,string>={pending:"等待中",running:"运行中",success:"成功",partial_success:"部分成功",failed:"失败",cancelled:"已取消"};
@@ -30,10 +31,11 @@ export default function SyncCenter(){
     finally{setBusy(false);}
   }
   const jobs=(data?.jobs||[]).filter(job=>filter==="all"||job.kind===filter);
-  if(mode==="local")return <><PageHead eyebrow="SYNC CENTER / 同步任务" title="同步任务中心" description="云端平台连接的同步进度与历史记录。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">同步任务保存在云端店铺。当前本地工作区不会访问云端接口，也不会发起任何同步。请从顶部数据源菜单切换到云端数据。</div></>;
+  if(mode==="local")return <><PageHead eyebrow="SYNC CENTER / 同步任务" title="同步任务中心" description="云端平台连接的同步进度与历史记录。"/><AiInsightPanel feature="integrations" context={{ jobCount: 0, failedJobs: 0 }}/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">同步任务保存在云端店铺。当前本地工作区不会访问云端接口，也不会发起任何同步。请从顶部数据源菜单切换到云端数据。</div></>;
   return <>
     <PageHead eyebrow="SYNC CENTER / 同步任务" title="同步任务中心"
       description="模拟平台任务在服务端执行，进度、游标和错误持久保存在云端。" />
+    <AiInsightPanel feature="integrations" context={{ connected: Boolean(connection), jobCount: data?.jobs.length || 0, pendingJobs: jobs.filter(job=>job.status==="pending").length, runningJobs: jobs.filter(job=>job.status==="running").length, failedJobs: jobs.filter(job=>job.status==="failed"||job.status==="partial_success").length, successfulJobs: jobs.filter(job=>job.status==="success").length }} />
     <div className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">
       这里的订单、商品和退款全部来自 Mock Adapter；尚未向拼多多官方接口发送请求。
     </div>

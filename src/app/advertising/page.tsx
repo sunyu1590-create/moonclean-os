@@ -29,6 +29,7 @@ import { addMoney, adRoas, financialSummary, formatMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday } from "@/lib/analytics";
 import type { AdvertisingMetric } from "@/lib/model";
 import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 const schema = z.object({
   date: z.iso.date(),
   spend: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额"),
@@ -208,6 +209,7 @@ export default function Advertising() {
           ) : null
         }
       />
+      <AiInsightPanel feature="advertising" context={{ days, adSpend: Number(summary.adSpend), attributedRevenue: Number(addMoney(ads.map(row => row.attributedSales))), attributedOrders: ads.reduce((sum, row) => sum + (row.attributedOrders || 0), 0), roas: summary.roas ?? "数据不足", breakEvenRoas: summary.breakEvenRoas ?? "成本数据不足", totalStoreSales: Number(summary.netSales) }} />
       <div className="mb-5"><ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/></div>
       <div className="mb-5 flex gap-2">
         {([7, 30] as const).map((v) => (

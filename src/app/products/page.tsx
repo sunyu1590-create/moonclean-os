@@ -26,6 +26,7 @@ import {
 import { addMoney, formatMoney, skuContribution } from "@/lib/finance";
 import { productSchema } from "@/lib/repository";
 import type { Product, SKU } from "@/lib/model";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 const blankSku = (): SKU => ({
   id: crypto.randomUUID(),
   name: "",
@@ -116,6 +117,7 @@ export default function Products() {
           ) : null
         }
       />
+      <AiInsightPanel feature="products" context={{ productCount: data.products.length, skuCount: data.products.reduce((sum, product) => sum + product.skus.length, 0), incompleteSkuCosts: data.products.flatMap(product => product.skus).filter(sku => sku.costComplete === false).length }} />
       <div className="mb-5 flex items-center gap-2 text-xs text-[#8fa3b6]">
         <Package size={15} />
         已收录 {data.products.length} 个商品 ·{" "}

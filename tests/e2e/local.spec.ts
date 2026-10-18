@@ -130,12 +130,13 @@ test("经营目标接受千位逗号并在刷新后保留", async ({ page }) => 
 test("动效切换展示版本与效果，调试浮窗可启停", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
   await page.goto("/settings");
   await page.getByRole("button", { name: /精致/ }).click();
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(transition).toContainText("切换到精致模式");
   await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
-  await expect(transition).toContainText("v0.8.4");
+  await expect(transition).toContainText("v0.8.5");
   await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
   const refreshOption = page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]");
@@ -182,6 +183,7 @@ test("经营建议可以转成待办并在刷新后保留分析基线", async ({
 test("精致与简单动效快速切换并在刷新后保留", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
   await page.goto("/settings");
   await page.getByRole("button", { name: /精致/ }).click();
   const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
@@ -214,11 +216,25 @@ test("更多面板夜间模式开关生效并在刷新后保留", async ({ page 
   await page.getByRole("button", { name: "切换夜间模式" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
   await expect(page.getByRole("button", { name: "切换日间模式" })).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(() => page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(14, 22, 34)");
-  await expect.poll(() => page.locator(".glass-card").first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(23, 35, 50)");
+  await expect.poll(() => page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(23, 33, 46)");
+  await expect.poll(() => page.locator(".glass-card").first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(32, 45, 60)");
+  await expect.poll(() => page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element, "::before").content)).toBe("none");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
   await page.getByRole("button", { name: "更多功能" }).click();
   await page.getByRole("button", { name: "切换日间模式" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
+});
+
+test("本地数据只显示 AI 接入说明，不向 DeepSeek 自动发送", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  let aiRequests = 0;
+  page.on("request", request => { if (request.url().includes("/ai/insights")) aiRequests += 1; });
+  await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
+  await page.goto("/dashboard");
+  const panel = page.getByRole("region", { name: "DeepSeek 智能建议" });
+  await expect(panel).toContainText("本地数据不会发送给 AI");
+  await expect(panel.getByRole("button", { name: "生成建议" })).toBeDisabled();
+  await page.waitForTimeout(300);
+  expect(aiRequests).toBe(0);
 });

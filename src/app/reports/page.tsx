@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { financialSummary, formatMoney } from "@/lib/finance";
 import { periodRows, storeToday } from "@/lib/analytics";
 import { weeklyReportInsights } from "@/lib/report-insights";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 
 export default function ReportsPage() {
   const { data } = useApp();
@@ -94,6 +95,7 @@ export default function ReportsPage() {
         description={`${data.settings.store.name} · 截止 ${today} · 销售额、推广和估算利润统一汇总。`}
         action={<div className="flex gap-2"><Button variant="outline" onClick={exportCsv}><Download size={16} />导出 CSV</Button><Button onClick={() => window.print()}><Printer size={16} />打印 / 保存 PDF</Button></div>}
       />
+      <AiInsightPanel feature="reports" context={{ periodDays: days, reportDays: daily.length, grossSales: Number(summary.grossSales), netSales: Number(summary.netSales), refunds: Number(summary.refunds), orderCount: daily.reduce((sum, row) => sum + row.orders, 0), adSpend: Number(summary.adSpend), attributedAdRevenue: ads.reduce((sum, row) => sum + Number(row.attributedSales), 0), adRoas: summary.roas ?? "数据不足", estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", costIncomplete }} />
 
       <SectionCard title="近 7 天经营快照" sub={`基于 ${weekDaily.length}/7 天经营日报 · 自动生成分析与行动建议`}>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

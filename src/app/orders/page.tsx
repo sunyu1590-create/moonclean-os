@@ -7,6 +7,7 @@ import { useApp } from "@/components/app-provider";
 import { downloadText, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { operationsRequest } from "@/lib/operations";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 type Order={id:string;external_id:string;status:string;placed_at:string;gross_sales:string;is_demo:boolean};
 type Item={order_id:string;external_sku_id:string;quantity:number;gross_sales:string};
 type Refund={order_id:string;external_id:string;amount:string;status:string};
@@ -36,9 +37,10 @@ export default function OrdersPage(){
     })];
     downloadText(`moonclean-orders-page-${page}.csv`,`\uFEFF${rows.join("\n")}`,"text/csv;charset=utf-8");
   }
-  if(mode==="local")return <><PageHead eyebrow="ORDERS / 订单中心" title="订单进展，一处查看" description="当前本地工作区不保存平台同步订单。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">订单和退款来自平台连接中心，当前设备没有本地订单记录。切换到云端数据后可读取已同步的模拟订单；本地经营日报仍可在数据中心管理。</div></>;
+  if(mode==="local")return <><PageHead eyebrow="ORDERS / 订单中心" title="订单进展，一处查看" description="当前本地工作区不保存平台同步订单。"/><AiInsightPanel feature="orders" context={{ orderCount: 0, refundCount: 0 }}/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">订单和退款来自平台连接中心，当前设备没有本地订单记录。切换到云端数据后可读取已同步的模拟订单；本地经营日报仍可在数据中心管理。</div></>;
   return <>
     <PageHead eyebrow="ORDERS / 订单中心" title="订单进展，一处查看" description="查看平台同步的订单、商品明细和退款。当前拼多多连接为模拟模式，所有订单均为模拟数据。" action={<div className="flex gap-2"><Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button><Button variant="outline" onClick={exportPage} disabled={!visible.length}><Download size={16}/>导出本页</Button></div>}/>
+    <AiInsightPanel feature="orders" context={{ totalOrders: snapshot?.count || 0, loadedOrders: snapshot?.orders.length || 0, paidOrders: (snapshot?.orders || []).filter(order=>order.status==="paid").length, shippedOrders: (snapshot?.orders || []).filter(order=>order.status==="shipped").length, completedOrders: (snapshot?.orders || []).filter(order=>order.status==="completed").length, refundedOrders: (snapshot?.orders || []).filter(order=>order.status==="refunded").length, cancelledOrders: (snapshot?.orders || []).filter(order=>order.status==="cancelled").length, otherStatusOrders: (snapshot?.orders || []).filter(order=>!Object.hasOwn(statusName,order.status)).length, grossSales: (snapshot?.orders || []).reduce((sum, order)=>sum+Number(order.gross_sales),0), refundCount: snapshot?.refunds.length || 0, pendingRefunds: (snapshot?.refunds || []).filter(refund=>refund.status==="pending").length }} />
     <div className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">此页面的模拟订单不会自动计入经营总览或扣减库存。真实经营数据请在数据中心录入。<Link href="/integrations" className="ml-2 font-semibold text-[#287fe2] underline">前往平台连接</Link></div>
     {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-white p-4 text-sm text-[#8194a8]">订单中心使用云端同步数据，配置 Supabase 并登录后可使用。</p>}
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}

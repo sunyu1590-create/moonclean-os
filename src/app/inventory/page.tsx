@@ -7,6 +7,7 @@ import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type InventoryBalance, type InventoryMovement, operationsRequest } from "@/lib/operations";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 
 type Snapshot = {balances:InventoryBalance[];movements:InventoryMovement[]};
 export default function InventoryPage(){
@@ -71,6 +72,7 @@ export default function InventoryPage(){
       <MetricCard label="已设库存" value={String(balances.length)} icon={<ClipboardList size={19}/>}/>
       <MetricCard label="低库存预警" value={String(low.length)} tone={low.length?"red":"green"} icon={<AlertTriangle size={19}/>} sub="已设库存且数量低于或等于预警线"/>
     </div>
+    <AiInsightPanel feature="inventory" context={{ skuCount: skus.length, trackedSkuCount: balances.length, lowStockCount: low.length, untrackedSkuCount: Math.max(0, skus.length - balances.length) }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
       <SectionCard title="SKU 库存" sub="未设置库存的规格显示为“未录入”，不视为零库存">
         {loading?<p className="text-sm text-[#8194a8]">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-[#8194a8]">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">

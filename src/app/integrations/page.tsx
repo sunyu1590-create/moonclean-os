@@ -7,6 +7,7 @@ import { PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/integrations/pinduoduo/client";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 
 export default function IntegrationsPage(){
   const {activeStoreId,role,retry,data,mode}=useApp();
@@ -52,10 +53,11 @@ export default function IntegrationsPage(){
     finally{setBusy(false);}
   }
   const internalNames=new Map(data?.products.flatMap(p=>p.skus.map(s=>[s.id,`${p.name} · ${s.name}`] as const))||[]);
-  if(mode==="local")return <><PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心" description="平台授权与定时同步属于云端功能。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">当前正在使用本地数据。切换到云端数据后，才能管理平台连接、查看同步任务或运行模拟同步。切换不会上传本地数据。</div></>;
+  if(mode==="local")return <><PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心" description="平台授权与定时同步属于云端功能。"/><AiInsightPanel feature="integrations" context={{ connectionCount: 0 }}/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">当前正在使用本地数据。切换到云端数据后，才能管理平台连接、查看同步任务或运行模拟同步。切换不会上传本地数据。</div></>;
   return <>
     <PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心"
       description="当前为模拟同步模式，尚未连接拼多多官方开放平台。" />
+    <AiInsightPanel feature="integrations" context={{ connectionCount: snapshot?.connections.length || 0, connected: Boolean(connection), autoSync: Boolean(connection?.auto_sync), hasRecentSync: Boolean(connection?.last_result), jobCount: snapshot?.jobs.length || 0, failedJobs: (snapshot?.jobs || []).filter(job=>job.status==="failed"||job.status==="partial_success").length }} />
     <div className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">
       所有模拟订单、销售额与退款均为演示数据，不代表真实店铺业绩。官方接入状态：等待拼多多开放平台资质及应用授权。
     </div>

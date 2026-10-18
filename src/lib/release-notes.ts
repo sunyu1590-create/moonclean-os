@@ -1,6 +1,16 @@
-export const APP_VERSION = "0.8.4";
+export const APP_VERSION = "0.8.5";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.8.5",
+    date: "2026-10-18",
+    title: "DeepSeek 智能建议与夜间主题优化",
+    changes: [
+      "移除手机底栏横向白色流光和选中块白色反光，柔化夜间蓝灰配色及主题过渡。",
+      "DeepSeek 建议入口覆盖经营总览、推广、商品、财务、数据、订单、库存、待办、定价、诊断、报告及同步页面；总览按 10 分钟自动更新并缓存结果。",
+      "AI 分析仅发送脱敏汇总指标，由服务端鉴权并读取已配置的 DeepSeek 密钥；本地数据不会发送给模型。",
+    ],
+  },
   {
     version: "0.8.4",
     date: "2026-10-18",

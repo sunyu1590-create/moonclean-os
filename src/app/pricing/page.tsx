@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { formatMoney } from "@/lib/finance";
 import { calculatePricing, isMoneyInput, isRateInput } from "@/lib/pricing";
 import type { SKUCost } from "@/lib/model";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 
 type TemporarySku = { name: string; skuName: string; price: string; cost: SKUCost };
 const zeroCost = (): SKUCost => ({ production: "0.00", packaging: "0.00", logistics: "0.00", platform: "0.00" });
@@ -94,6 +95,7 @@ export default function PricingPage() {
 
   return <>
     <PageHead eyebrow="PRICING LAB / 定价模拟" title="先算清每件商品能留下多少" description="可选择在售 SKU，也可临时创建一条规格试算；临时 SKU 和模拟价格都不会写入商品或云端数据。" />
+    <AiInsightPanel feature="pricing" context={{ sellingPrice: isMoneyInput(priceValue) ? Number(priceValue) : "未填写", productionCost: current ? Number(current.cost.production) : "未填写", packagingCost: current ? Number(current.cost.packaging) : "未填写", shippingCost: current ? Number(current.cost.logistics) : "未填写", platformCost: current ? Number(current.cost.platform) : "未填写", platformRatePercent: Number(feeRate), targetMarginPercent: Number(targetMargin), estimatedContribution: result?.contribution.toNumber() ?? "数据不足", actualMarginPercent: result?.margin?.toNumber() ?? "数据不足", targetPrice: result?.targetPrice?.toNumber() ?? "数据不足" }} />
     <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[#e2edf7] bg-white p-3 shadow-[0_4px_16px_rgba(40,73,105,.04)]">
       <label htmlFor="pricing-sku" className="shrink-0 text-xs font-semibold text-[#61778c]">计算对象</label>
       <AppSelect id="pricing-sku" className="h-9 min-w-0 flex-1 rounded-xl border border-[#e3eaf1] bg-white px-3 text-xs sm:max-w-md sm:text-sm" value={skuId === "temporary" ? "temporary" : current && "id" in current ? current.id : ""} onChange={(event) => choose(event.target.value)}>

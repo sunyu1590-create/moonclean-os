@@ -32,6 +32,7 @@ import { storeToday } from "@/lib/analytics";
 import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
 import { QuickMetricEntry, type QuickDailyRow } from "@/components/quick-metric-entry";
 import type { DailyMetric } from "@/lib/model";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 const empty = (date: string): DailyMetric => ({
   id: crypto.randomUUID(),
   date,
@@ -230,6 +231,7 @@ export default function DataPage() {
           </div>
         }
       />
+      <AiInsightPanel feature="data" context={{ recordCount: data.daily.length, daysMissingCosts: data.daily.filter(row => row.costComplete === false).length, daysWithProductSales: data.daily.filter(row => Object.keys(row.productSales || {}).length > 0).length, latest7DaysSales: data.daily.slice(-7).reduce((sum, row) => sum + Number(row.sales || 0), 0), latest7DaysOrders: data.daily.slice(-7).reduce((sum, row) => sum + row.orders, 0) }} />
       <div className="mb-5">
         <ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/>
       </div>

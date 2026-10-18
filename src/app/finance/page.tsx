@@ -18,6 +18,7 @@ import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { financialSummary, formatMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 export default function Finance() {
   const { data } = useApp();
   const [days, setDays] = useState<7 | 30>(30);
@@ -74,6 +75,7 @@ export default function Finance() {
           </div>
         }
       />
+      <AiInsightPanel feature="finance" context={{ periodDays: days, grossSales: Number(s.grossSales), refunds: Number(s.refunds), netSales: Number(s.netSales), productCost: Number(s.productCost), packagingCost: Number(s.packagingCost), logisticsCost: Number(s.logisticsCost), platformFees: Number(s.platformFees), adSpend: Number(s.adSpend), otherExpenses: Number(s.otherExpenses), estimatedProfit: Number(s.profit), profitMargin: s.margin ?? "数据不足", costIncompleteDays: daily.filter(row => row.costComplete === false).length }} />
       {daily.some(row => row.source === "mock_pinduoduo") && <div role="status" className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">所选日期包含拼多多模拟同步订单。演示销售额和利润不代表真实店铺业绩。</div>}
       {daily.some(row => row.costComplete === false) && <div role="status" className="mb-5 rounded-2xl border border-[#f3dfc8] bg-[#fff9f1] p-4 text-sm text-[#a77743]">部分日期缺少可靠成本版本，以下利润为不完整估算；盈亏平衡 ROAS 暂不显示。</div>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

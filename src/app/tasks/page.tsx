@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { type OperationTask, operationsRequest } from "@/lib/operations";
+import { AiInsightPanel } from "@/components/ai-insight-panel";
 type Status=OperationTask["status"];
 type Priority=OperationTask["priority"];
 const statusName:Record<Status,string>={todo:"待处理",doing:"进行中",done:"已完成"};
@@ -78,6 +79,7 @@ export default function TasksPage(){
   }
   const open=tasks.filter(task=>task.status!=="done");
   const overdue=open.filter(task=>task.due_date&&task.due_date<today);
+  const dueSoonLimit = today ? (() => { const date = new Date(`${today}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 3); return date.toISOString().slice(0,10); })() : "";
   const visible=tasks.filter(task=>filter==="all"||task.status===filter);
   return <>
     <PageHead eyebrow="TASKS / 运营待办" title="让每天的运营更有条理" description={mode==="local"?"任务仅保存在当前设备，可随本地数据备份或迁移到云端。":"记录补货、推广、售后等任务，按店铺同步给团队成员。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
@@ -87,6 +89,7 @@ export default function TasksPage(){
       <MetricCard label="已逾期" value={String(overdue.length)} tone={overdue.length?"red":"green"} icon={<Clock3 size={19}/>}/>
       <MetricCard label="已完成" value={String(tasks.length-open.length)} tone="green" icon={<CheckCircle2 size={19}/>}/>
     </div>
+    <AiInsightPanel feature="tasks" context={{ totalTasks: tasks.length, openTasks: open.length, overdueTasks: overdue.length, doingTasks: tasks.filter(task=>task.status==="doing").length, highPriorityOpen: open.filter(task=>task.priority==="high").length, dueSoon: open.filter(task=>task.due_date&&task.due_date>=today&&task.due_date<=dueSoonLimit).length }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
       <SectionCard title="任务列表" sub="按当前店铺查看，已完成任务保留记录" action={<AppSelect aria-label="筛选任务状态" value={filter} onChange={e=>setFilter(e.target.value as Status|"all")} className="rounded-xl border border-[#e3eaf1] bg-white px-3 py-2 text-xs"><option value="all">全部</option>{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect>}>
         {loading?<p className="text-sm text-[#8194a8]">正在读取云端待办…</p>:visible.length===0?<p className="text-sm text-[#8194a8]">暂无任务，可在右侧创建。</p>:<div className="space-y-3">{visible.map(task=>{const late=task.status!=="done"&&!!task.due_date&&task.due_date<today;return <div key={task.id} className="rounded-2xl border border-[#e9eef3] p-4">
