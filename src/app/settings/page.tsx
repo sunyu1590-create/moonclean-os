@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -135,7 +136,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <Label>经营平台</Label>
-                <select
+                <AppSelect
                   disabled={!canManage}
                   className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
                   value={draft.store.platform}
@@ -152,11 +153,11 @@ export default function SettingsPage() {
                   <option value="pinduoduo">拼多多</option>
                   <option value="douyin">抖音电商</option>
                   <option value="other">其他平台</option>
-                </select>
+                </AppSelect>
               </div>
               <div>
                 <Label>货币单位</Label>
-                <select
+                <AppSelect
                   disabled={!canManage}
                   className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
                   value={draft.store.currency}
@@ -172,14 +173,14 @@ export default function SettingsPage() {
                 >
                   <option value="CNY">人民币（CNY / ¥）</option>
                   <option value="USD">美元（USD / $）</option>
-                </select>
+                </AppSelect>
                 <p className="mt-1 text-xs text-[#9aabba]">
                   只改变显示符号，不进行汇率换算。
                 </p>
               </div>
               <div>
                 <Label>店铺时区</Label>
-                <select
+                <AppSelect
                   disabled={!canManage}
                   className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
                   value={draft.store.timezone || "Asia/Shanghai"}
@@ -195,7 +196,7 @@ export default function SettingsPage() {
                   </option>
                   <option value="Asia/Hong_Kong">香港时间</option>
                   <option value="UTC">UTC</option>
-                </select>
+                </AppSelect>
               </div>
             </div>
           </SectionCard>

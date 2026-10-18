@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import { useMemo, useState } from "react";
 import Decimal from "decimal.js";
 import { Calculator, CircleHelp, Target } from "lucide-react";
@@ -25,7 +26,7 @@ export default function PricingPage(){
   return <>
     <PageHead eyebrow="PRICING LAB / 定价模拟" title="调价之前，先算一遍利润" description="选择 SKU 后调整售价和比例费用，实时查看单件贡献利润与保本 ROAS；模拟结果不会修改商品售价。"/>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,.9fr)]"><SectionCard title="模拟条件" sub="SKU 固定成本取商品管理中的当前成本版本">
-      <div className="space-y-5"><div><label htmlFor="pricing-sku" className="text-sm font-medium">商品规格</label><select id="pricing-sku" className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm" value={current?.id||""} onChange={e=>choose(e.target.value)}><option value="">选择 SKU</option>{skus.map(({product,sku})=><option key={sku.id} value={sku.id}>{product.name} · {sku.name}</option>)}</select></div>
+      <div className="space-y-5"><div><label htmlFor="pricing-sku" className="text-sm font-medium">商品规格</label><AppSelect id="pricing-sku" className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm" value={current?.id||""} onChange={e=>choose(e.target.value)}><option value="">选择 SKU</option>{skus.map(({product,sku})=><option key={sku.id} value={sku.id}>{product.name} · {sku.name}</option>)}</AppSelect></div>
         <div><label htmlFor="pricing-price" className="text-sm font-medium">模拟售价（元）</label><Input id="pricing-price" type="number" min="0" step="0.01" value={price===""?(current?.price||""):price} onChange={e=>setPrice(e.target.value)} className="mt-2"/><p className="mt-1 text-xs text-[#8999a9]">当前 SKU 售价：{formatMoney(current?.price||0)}</p></div>
         <div><label htmlFor="pricing-fee" className="text-sm font-medium">额外比例费用（%）</label><Input id="pricing-fee" type="number" min="0" max="99" step="0.1" value={feeRate} onChange={e=>setFeeRate(e.target.value)} className="mt-2"/><p className="mt-1 text-xs text-[#8999a9]">可填写活动扣点等按成交额比例收取的费用；广告费用按 ROAS 单独衡量。</p></div>
         <div><label htmlFor="pricing-margin" className="text-sm font-medium">目标贡献利润率（%）</label><Input id="pricing-margin" type="number" min="0" max="90" step="1" value={targetMargin} onChange={e=>setTargetMargin(e.target.value)} className="mt-2"/></div>

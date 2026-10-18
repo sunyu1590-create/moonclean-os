@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import {
   ArrowUpCircle,
+  ChevronDown,
   CheckCircle2,
   CircleAlert,
   LoaderCircle,
@@ -100,20 +101,25 @@ export function VersionPanel() {
       )}
 
       <div className="mt-6 border-t border-[#eef1f4] pt-5">
-        <p className="mb-3 text-sm font-semibold text-[#172b45]">系统更新日志</p>
-        <div className="space-y-4">
-          {RELEASE_NOTES.map((release) => (
-            <article key={release.version} className="border-l-2 border-[#b8dafb] pl-3">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <h3 className="text-sm font-semibold text-[#172b45]">v{release.version} · {release.title}</h3>
-                <time className="text-xs text-[#98a7b6]">{release.date}</time>
-              </div>
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-[#758597]">
-                {release.changes.map((change) => <li key={change}>{change}</li>)}
-              </ul>
-            </article>
-          ))}
-        </div>
+        <details className="group rounded-2xl border border-[#e7eef5] bg-[#fbfdff] p-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-[#172b45] [&::-webkit-details-marker]:hidden">
+            <span>系统更新日志 <span className="ml-1 text-xs font-normal text-[#8a9aaa]">{RELEASE_NOTES.length} 个版本</span></span>
+            <ChevronDown size={17} className="shrink-0 text-[#8295a8] transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-4 space-y-4 border-t border-[#edf1f5] pt-4">
+            {RELEASE_NOTES.map((release) => (
+              <article key={release.version} className="border-l-2 border-[#b8dafb] pl-3">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <h3 className="text-sm font-semibold text-[#172b45]">v{release.version} · {release.title}</h3>
+                  <time className="text-xs text-[#98a7b6]">{release.date}</time>
+                </div>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-[#758597]">
+                  {release.changes.map((change) => <li key={change}>{change}</li>)}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </details>
       </div>
     </SectionCard>
   );

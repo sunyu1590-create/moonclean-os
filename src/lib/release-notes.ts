@@ -1,6 +1,16 @@
-export const APP_VERSION = "0.3.2";
+export const APP_VERSION = "0.3.3";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.3.3",
+    date: "2026-10-18",
+    title: "蓝色导航与站内选择菜单",
+    changes: [
+      "底部导航改为轻量蓝色背景，并使用平滑移动的活动项高亮。",
+      "将平台、店铺、筛选等下拉选择统一为站内菜单，减少对浏览器原生弹窗的依赖。",
+      "品牌标志改为透明背景紧裁资源，系统更新日志默认收起。",
+    ],
+  },
   {
     version: "0.3.2",
     date: "2026-10-18",

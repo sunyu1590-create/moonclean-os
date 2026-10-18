@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Link2, Plus, RotateCcw, AlertTriangle } from "lucide-react";
 import { useApp } from "@/components/app-provider";
@@ -81,10 +82,10 @@ export default function IntegrationsPage(){
           </Button>}
         </div>
         <div className="mt-4 flex items-center gap-3 text-xs text-[#8194a8]">
-          <span>故障模拟：</span><select aria-label="故障模拟" className="rounded-lg border bg-white p-2" value={fault} onChange={e=>setFault(e.target.value)}>
+          <span>故障模拟：</span><AppSelect aria-label="故障模拟" className="rounded-lg border bg-white p-2" value={fault} onChange={e=>setFault(e.target.value)}>
             <option value="">正常</option><option value="timeout">网络超时</option><option value="rate_limit">限流</option>
             <option value="token_expired">令牌过期</option><option value="partial_batch">第二批次失败</option>
-          </select>
+          </AppSelect>
         </div>
       </SectionCard>
       <SectionCard title="模拟平台操作" sub="先修改模拟平台源数据，再点击对应同步按钮">
@@ -93,19 +94,19 @@ export default function IntegrationsPage(){
             externalId:`mock-order-user-${crypto.randomUUID()}`,status:"paid",placedAt:new Date().toISOString(),
             updatedAt:new Date().toISOString(),grossSales:"39.90",items:[{externalSkuId:"mock-sku-2",quantity:1,grossSales:"39.90"}],
           }})}><Plus size={15}/>新增模拟订单 ¥39.90</Button>
-          <select aria-label="选择模拟订单" value={orderToUpdate} onChange={e=>setOrderToUpdate(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
+          <AppSelect aria-label="选择模拟订单" value={orderToUpdate} onChange={e=>setOrderToUpdate(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
             <option value="">选择订单</option>{snapshot?.orders.map(o=><option key={o.id} value={o.external_id}>{o.external_id}</option>)}
-          </select>
-          <select aria-label="订单状态" value={orderStatus} onChange={e=>setOrderStatus(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
+          </AppSelect>
+          <AppSelect aria-label="订单状态" value={orderStatus} onChange={e=>setOrderStatus(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
             <option value="paid">已付款</option><option value="shipped">已发货</option><option value="completed">已完成</option>
             <option value="refunded">已退款</option><option value="cancelled">已取消</option>
-          </select>
+          </AppSelect>
           <Button variant="outline" disabled={busy||!canEdit||!orderToUpdate} onClick={()=>void act({action:"setOrderStatus",connectionId:connection.id,externalId:orderToUpdate,status:orderStatus})}>更新模拟订单状态</Button>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <select aria-label="退款订单" value={refundOrder} onChange={e=>setRefundOrder(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
+          <AppSelect aria-label="退款订单" value={refundOrder} onChange={e=>setRefundOrder(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
             <option value="">选择退款订单</option>{snapshot?.orders.map(o=><option key={o.id} value={o.external_id}>{o.external_id}</option>)}
-          </select>
+          </AppSelect>
           <Input className="w-28" aria-label="退款金额" value={refundAmount} onChange={e=>setRefundAmount(e.target.value)}/>
           <Button variant="outline" disabled={busy||!canEdit||!refundOrder||!/^\d+(\.\d{1,2})?$/.test(refundAmount)} onClick={()=>void act({
             action:"addRefund",connectionId:connection.id,refund:{externalId:`mock-refund-user-${crypto.randomUUID()}`,
@@ -113,12 +114,12 @@ export default function IntegrationsPage(){
           })}>新增模拟退款</Button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <select aria-label="选择模拟退款" value={refundToUpdate} onChange={e=>setRefundToUpdate(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
+          <AppSelect aria-label="选择模拟退款" value={refundToUpdate} onChange={e=>setRefundToUpdate(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
             <option value="">选择退款</option>{snapshot?.refunds.map(refund=><option key={refund.id} value={refund.external_id}>{refund.external_id}</option>)}
-          </select>
-          <select aria-label="退款状态" value={refundStatus} onChange={e=>setRefundStatus(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
+          </AppSelect>
+          <AppSelect aria-label="退款状态" value={refundStatus} onChange={e=>setRefundStatus(e.target.value)} className="rounded-lg border bg-white p-2 text-sm">
             <option value="pending">处理中</option><option value="succeeded">成功</option><option value="rejected">拒绝</option>
-          </select>
+          </AppSelect>
           <Button variant="outline" disabled={busy||!canEdit||!refundToUpdate} onClick={()=>void act({action:"setRefundStatus",connectionId:connection.id,externalId:refundToUpdate,status:refundStatus})}>更新模拟退款状态</Button>
         </div>
       </SectionCard>
@@ -130,9 +131,9 @@ export default function IntegrationsPage(){
               <div><strong>{sku.name}</strong> · {sku.sku_code||sku.external_id}<span className="ml-2 text-[#8fa1b3]">模拟平台 SKU</span></div>
               <div className="flex items-center gap-2">{mapping?<><span>{internalNames.get(mapping.sku_id)||"已归档内部 SKU"}</span>
                 <Button size="sm" variant="outline" disabled={busy||!canEdit} onClick={()=>void act({action:"unbindSku",connectionId:connection.id,externalSkuId:sku.id})}>解除</Button></>:
-                <select aria-label={`绑定 ${sku.external_id}`} disabled={!canEdit||busy} defaultValue="" className="rounded-lg border bg-white p-2" onChange={e=>{if(e.target.value)void act({action:"bindSku",connectionId:connection.id,externalSkuId:sku.id,skuId:e.target.value});}}>
+                <AppSelect aria-label={`绑定 ${sku.external_id}`} disabled={!canEdit||busy} defaultValue="" className="rounded-lg border bg-white p-2" onChange={e=>{if(e.target.value)void act({action:"bindSku",connectionId:connection.id,externalSkuId:sku.id,skuId:e.target.value});}}>
                   <option value="">选择内部 SKU 绑定</option>{[...internalNames].map(([id,name])=><option key={id} value={id}>{name}</option>)}
-                </select>}</div>
+                </AppSelect>}</div>
             </div>;
           })}</div>}
         <p className="mt-4 text-xs text-[#8fa1b3]">未匹配：{(snapshot?.skus.length||0)-(snapshot?.mappings.length||0)} 个；历史绑定记录：{snapshot?.history.length||0} 条。重复绑定同一内部 SKU 会被数据库拒绝。</p>

@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import { useEffect, useState } from "react";
 import { Users, UserPlus, Trash2, Crown, RefreshCw } from "lucide-react";
 import { useApp } from "./app-provider";
@@ -103,7 +104,7 @@ export function TeamPanel() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <select
+          <AppSelect
             aria-label="成员角色"
             className="h-9 rounded-md border border-[#dfeaf4] bg-white px-2 text-sm"
             value={newRole}
@@ -112,7 +113,7 @@ export function TeamPanel() {
             {role === "owner" && <option value="admin">管理员</option>}
             <option value="editor">编辑者</option>
             <option value="viewer">查看者</option>
-          </select>
+          </AppSelect>
           <Button
             disabled={busy || !email.trim()}
             onClick={() => void act({ action: "upsert", email, role: newRole })}

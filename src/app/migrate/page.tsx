@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -139,7 +140,7 @@ export default function MigratePage() {
                 <label htmlFor="target-store" className="text-sm font-semibold">
                   目标店铺
                 </label>
-                <select
+                <AppSelect
                   id="target-store"
                   className="mt-2 h-10 w-full rounded-lg border border-[#dce9f5] bg-white px-3 text-sm"
                   value={target}
@@ -153,7 +154,7 @@ export default function MigratePage() {
                       {store.name} · {store.role}
                     </option>
                   ))}
-                </select>
+                </AppSelect>
               </div>
               {preview && (
                 <>

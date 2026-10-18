@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -113,7 +114,7 @@ function StoreOnboarding() {
           <label htmlFor="store-platform" className="text-sm font-medium">
             经营平台
           </label>
-          <select
+          <AppSelect
             id="store-platform"
             className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
             value={platform}
@@ -122,7 +123,7 @@ function StoreOnboarding() {
             <option value="pinduoduo">拼多多</option>
             <option value="douyin">抖音电商</option>
             <option value="other">其他平台</option>
-          </select>
+          </AppSelect>
         </div>
         {error && (
           <p role="alert" className="text-sm text-[#e85d65]">
@@ -218,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href="/dashboard"
             className="flex items-center gap-3 overflow-hidden"
           >
-            <Image src="/yue-ming-jing-logo.jpg" alt="月明净" width={56} height={56} className="size-12 shrink-0 object-contain" priority />
+            <Image src="/yue-ming-jing-logo.png" alt="月明净" width={56} height={56} className="size-12 shrink-0 object-contain" priority />
             {!collapsed && (
               <span className="flex flex-col whitespace-nowrap">
                 <span className="text-[17px] font-bold tracking-[-.045em] text-[#202936]">MoonClean <span className="text-[#287fe2]">OS</span></span>
@@ -295,7 +296,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 border-b border-white/80 bg-white/82 px-3 py-1.5 shadow-[0_3px_18px_rgba(31,57,82,0.045)] backdrop-blur-2xl sm:px-5 md:h-[68px] md:px-9">
-          <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.jpg" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
+          <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.png" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
           <div className="hidden items-center gap-2 text-xs text-[#92a0ae] md:flex">
             <span>工作空间</span>
             <ChevronRight size={14} />
@@ -303,7 +304,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
             {mode === "cloud" && stores.length > 0 && (
-              <select
+              <AppSelect
                 aria-label="切换店铺"
                 className="max-w-[30vw] rounded-xl border border-[#e4e9ef] bg-white/75 px-2 py-1.5 text-[11px] font-medium text-[#39485a] sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
                 value={activeStoreId || ""}
@@ -314,7 +315,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {store.name}
                   </option>
                 ))}
-              </select>
+              </AppSelect>
             )}
             <span className={cn(
               "whitespace-nowrap rounded-full border border-[#d9f0e8] px-2 py-1.5 text-[10px] font-semibold sm:px-2.5 sm:text-[11px]",
@@ -376,23 +377,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 rounded-[22px] border border-white/80 bg-white/75 px-2 pb-2 pt-2 shadow-[0_8px_32px_rgba(31,57,82,0.14),0_1px_3px_rgba(31,57,82,0.06)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/65 md:hidden">
-        {nav.filter(item => mobilePrimary.includes(item.href)).map(({ href, label, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex min-w-0 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-medium",
-              pathname === href ? "text-[#287fe2]" : "text-[#8794a2]",
-            )}
-          >
-            <Icon size={20} strokeWidth={pathname === href ? 2.3 : 1.8} />
-            <span className="truncate">{label}</span>
-          </Link>
-        ))}
-        <button type="button" aria-label="更多功能" onClick={() => setMobileMenuOpen(true)} className={cn("flex min-w-0 flex-col items-center gap-1 rounded-xl py-1.5 text-[10px] font-medium", mobilePrimary.includes(pathname) ? "text-[#8794a2]" : "text-[#287fe2]")}>
-          <Menu size={20}/><span>更多</span>
-        </button>
+      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-[#78b5f1]/70 bg-[#358de2] p-1.5 shadow-[0_8px_26px_rgba(30,111,194,0.24),inset_0_1px_0_rgba(255,255,255,0.28)] md:hidden">
+        <div className="relative grid grid-cols-5">
+          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] bg-white shadow-[0_2px_8px_rgba(18,77,135,0.16)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${(mobileMenuOpen || !mobilePrimary.includes(pathname) ? 4 : mobilePrimary.indexOf(pathname)) * 100}%)` }} />
+          {nav.filter(item => mobilePrimary.includes(item.href)).map(({ href, label, icon: Icon }) => {
+            const active = pathname === href;
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-white/95")}>
+              <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
+            </Link>;
+          })}
+          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-[#287fe2]" : "text-white/95")}>
+            <Menu size={20}/><span>更多</span>
+          </button>
+        </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="bottom" className="max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden">

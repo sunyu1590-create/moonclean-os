@@ -1,4 +1,5 @@
 "use client";
+import { AppSelect } from "@/components/ui/app-select";
 
 import { useRef, useState } from "react";
 import { FileImage, LoaderCircle, ScanLine } from "lucide-react";
@@ -168,7 +169,7 @@ export function ReportImageImport({
       <SectionCard title="拼多多报表截图录入" sub="上传经营报表或推广报表截图，识别后在弹窗中核对并保存">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm font-medium" htmlFor="report-kind">报表类型</label>
-          <select
+          <AppSelect
             id="report-kind"
             disabled={busy || !!draft}
             className="h-10 rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm disabled:opacity-60"
@@ -177,7 +178,7 @@ export function ReportImageImport({
           >
             <option value="daily">经营报表</option>
             <option value="advertising">推广报表</option>
-          </select>
+          </AppSelect>
           <Button
             type="button"
             disabled={disabled || busy}
