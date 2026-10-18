@@ -221,6 +221,12 @@ select:focus-visible {
 }
 .mobile-primary-nav { isolation: isolate; }
 .mobile-active-indicator { transform-origin: center; }
+.mobile-primary-nav { touch-action: pan-y; }
+.mobile-primary-nav a,
+.mobile-primary-nav button { -webkit-user-drag: none; user-select: none; }
+/* While a pointer is over or dragging across the bar, remove easing so the
+   highlight stays directly under the finger. Easing returns for route changes. */
+.mobile-primary-nav.is-following .mobile-active-indicator { transition-duration: 0ms !important; }
 html[data-motion="refined"] main > * {
   animation: premium-page-enter 520ms cubic-bezier(.2,.86,.2,1) both;
 }
@@ -246,8 +252,8 @@ html[data-motion="refined"] .mobile-primary-nav-refined {
   border-color: rgba(255,255,255,.78);
   background: linear-gradient(145deg, rgba(255,255,255,.78), rgba(240,248,255,.59) 52%, rgba(255,255,255,.72));
   box-shadow: 0 18px 48px rgba(33,69,105,.19), 0 5px 15px rgba(31,69,111,.09), inset 0 1.5px 0 rgba(255,255,255,.96), inset 0 -1px 0 rgba(255,255,255,.48);
-  -webkit-backdrop-filter: blur(30px) saturate(1.8);
-  backdrop-filter: blur(30px) saturate(1.8);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
   animation: liquid-nav-arrive 620ms cubic-bezier(.16,.88,.28,1.08) both;
 }
 html[data-motion="refined"] .mobile-primary-nav-refined::before {
@@ -262,13 +268,33 @@ html[data-motion="refined"] .mobile-primary-nav-refined::before {
   animation: liquid-glint 5.8s ease-in-out infinite;
 }
 html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator {
-  overflow: hidden;
+  isolation: isolate;
+  overflow: visible;
   border-color: rgba(255,255,255,.94);
-  background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(225,242,255,.76) 54%, rgba(255,255,255,.86));
+  background: radial-gradient(ellipse at 50% var(--touch-light-y, 50%), rgba(255,255,255,.96), transparent 78%), linear-gradient(145deg, rgba(255,255,255,.92), rgba(225,242,255,.76) 54%, rgba(255,255,255,.86));
   box-shadow: 0 7px 22px rgba(39,111,177,.16), inset 0 1px 0 white, inset 0 -1px 0 rgba(255,255,255,.75);
-  -webkit-backdrop-filter: blur(18px) saturate(1.65);
-  backdrop-filter: blur(18px) saturate(1.65);
-  transition: transform 620ms cubic-bezier(.16,.88,.28,1.08), box-shadow 400ms ease;
+  -webkit-backdrop-filter: blur(12px) saturate(1.35);
+  backdrop-filter: blur(12px) saturate(1.35);
+  transition: transform 620ms cubic-bezier(.16,.88,.28,1.08), box-shadow 400ms ease, background-position 360ms ease;
+}
+html[data-motion="refined"] .mobile-active-indicator::after {
+  position: absolute;
+  z-index: -1;
+  inset: -9px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 50% var(--touch-light-y, 50%), rgba(91,169,255,.32), rgba(170,214,255,.12) 58%, transparent 78%);
+  content: "";
+  filter: blur(13px);
+  opacity: .58;
+  pointer-events: none;
+  transition: opacity 380ms ease, filter 380ms ease;
+}
+html[data-motion="refined"] .mobile-primary-nav-refined.is-following .mobile-active-indicator::after {
+  filter: blur(17px);
+  opacity: .94;
+}
+html[data-motion="refined"] .mobile-primary-nav-refined.is-pressed .mobile-active-indicator {
+  box-shadow: 0 12px 30px rgba(39,111,177,.25), inset 0 1px 0 white, inset 0 -1px 0 rgba(255,255,255,.75);
 }
 html[data-motion="refined"] .mobile-active-indicator::before {
   position: absolute;
@@ -298,6 +324,24 @@ html[data-motion="refined"] .mobile-active-indicator i:nth-child(2) { --spark-in
 html[data-motion="refined"] .mobile-active-indicator i:nth-child(3) { --spark-index: 2; animation-delay: .9s; top: 43%; }
 html[data-motion="refined"] .mobile-active-indicator i:nth-child(4) { --spark-index: 3; animation-delay: 1.25s; top: 78%; }
 html[data-motion="standard"] .mobile-active-indicator { transition: transform 300ms ease-out; }
+html[data-motion="refined"] .mobile-more-sheet[data-side="bottom"] {
+  transition-duration: 760ms !important;
+  transition-timing-function: cubic-bezier(.16,.9,.22,1) !important;
+}
+html[data-motion="refined"] .mobile-more-sheet[data-starting-style],
+html[data-motion="refined"] .mobile-more-sheet[data-ending-style] {
+  filter: blur(8px);
+  translate: 0 48px !important;
+  scale: .985;
+}
+html[data-motion="standard"] .mobile-more-sheet[data-side="bottom"] {
+  transition-duration: 500ms !important;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1) !important;
+}
+html[data-motion="standard"] .mobile-more-sheet[data-starting-style],
+html[data-motion="standard"] .mobile-more-sheet[data-ending-style] {
+  translate: 0 40px !important;
+}
 html[data-motion="simple"] *,
 html[data-motion="simple"] *::before,
 html[data-motion="simple"] *::after {

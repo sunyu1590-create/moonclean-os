@@ -5,8 +5,8 @@ import { Check, Sparkles, Zap } from "lucide-react";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
-  { id: "refined", label: "精致", short: "最大的特效", detail: "液态玻璃底栏、粒子光点、柔光层次、浮层入场与更丰富的点击反馈。", experience: "视觉最丰富 · 合成效果更多" },
-  { id: "standard", label: "标准", short: "中等的特效", detail: "保留当前的轻量淡入、卡片微动、底栏滑动和半透明材质。", experience: "轻盈克制 · 日常推荐" },
+  { id: "refined", label: "精致", short: "最大的特效", detail: "按压倾斜、手势跟随、柔光模糊渐变、粒子光点与更丰富的浮层滑动。", experience: "视觉最丰富 · 聚焦局部效果" },
+  { id: "standard", label: "标准", short: "中等的特效", detail: "保留轻量淡入、卡片反馈、底栏手势跟随与克制的半透明材质。", experience: "轻盈克制 · 日常推荐" },
   { id: "simple", label: "简单", short: "没有动效", detail: "关闭动效、毛玻璃、活动滑块和动态阴影，界面静态直切。", experience: "静态直接 · 最省资源" },
 ];
 
@@ -27,7 +27,7 @@ function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
   const previous = MOTION_LEVELS.find(item => item.id === transition.from)!;
   const detailed = [
     `从「${previous.label}」切换至「${target.label}」`,
-    target.id === "refined" ? "启用液态玻璃、柔光粒子与丰富的层级动效" : target.id === "standard" ? "启用轻量淡入、卡片反馈与底栏平滑位移" : "关闭动画、模糊材质与装饰性动态效果",
+    target.id === "refined" ? "启用按压倾斜、柔光模糊、粒子与丰富的浮层滑动" : target.id === "standard" ? "启用轻量淡入、卡片反馈与底栏手势跟随" : "关闭动画、模糊材质与装饰性动态效果",
     "同步更新手机底栏、导航菜单与全站交互",
     "设置已保存，可随时在系统设置中切换",
   ];
