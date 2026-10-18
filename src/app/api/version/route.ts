@@ -35,7 +35,12 @@ function getCurrentCommit() {
 }
 
 export async function GET() {
-  const dispatcher = new EnvHttpProxyAgent();
+  // Codespaces may require its configured outbound proxy. Vercel has its own
+  // networking and should use the native fetch implementation directly.
+  const useCodespacesProxy = Boolean(
+    process.env.CODESPACES || process.env.CODESPACE_NAME,
+  );
+  const dispatcher = useCodespacesProxy ? new EnvHttpProxyAgent() : undefined;
   try {
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
     const githubRequest = (
@@ -50,7 +55,7 @@ export async function GET() {
         },
         cache: "no-store",
         signal: AbortSignal.timeout(12_000),
-        dispatcher,
+        ...(dispatcher ? { dispatcher } : {}),
       } as RequestInit & { dispatcher: EnvHttpProxyAgent });
     let [commitResponse, packageResponse] = await Promise.all([
       githubRequest(`https://api.github.com/repos/${repository}/commits/main`),
@@ -61,7 +66,7 @@ export async function GET() {
     ]);
     if (
       token &&
-      [401, 403, 404].includes(commitResponse.status)
+      [401, 403].includes(commitResponse.status)
     ) {
       commitResponse = await githubRequest(
         `https://api.github.com/repos/${repository}/commits/main`,
@@ -69,7 +74,7 @@ export async function GET() {
         true,
       );
     }
-    if (token && [401, 403, 404].includes(packageResponse.status)) {
+    if (token && [401, 403].includes(packageResponse.status)) {
       packageResponse = await githubRequest(
         `https://raw.githubusercontent.com/${repository}/main/package.json`,
         "application/json",
@@ -122,6 +127,6 @@ export async function GET() {
       { status: 503 },
     );
   } finally {
-    await dispatcher.close();
+    await dispatcher?.close();
   }
 }
