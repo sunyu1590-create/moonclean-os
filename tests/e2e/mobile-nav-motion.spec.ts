@@ -25,17 +25,33 @@ for (const level of ["refined", "standard", "simple"] as const) {
       await page.mouse.down();
       await expect(nav).toHaveClass(/is-pressed/);
       await page.mouse.move(bounds!.x + bounds!.width * 0.7, bounds!.y + bounds!.height * 0.25, { steps: 5 });
-      await expect(indicator).toHaveAttribute("style", /rotateX\(3\.25deg\).*rotateY\(3\.2deg\)/);
+      await expect(indicator).toHaveAttribute("style", /scale\(0\.96\)/);
+      await expect(indicator).not.toHaveAttribute("style", /rotate[XY]/);
       await page.mouse.up();
     }
 
     await page.getByRole("button", { name: "更多功能" }).click();
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();
+    const sheetBounds = await sheet.boundingBox();
+    expect(sheetBounds?.height).toBeGreaterThan(800);
     if (level === "refined") {
-      await expect(sheet).toHaveCSS("transition-duration", "0.76s");
+      await expect(sheet).toHaveCSS("transition-duration", "0.98s");
     } else if (level === "standard") {
-      await expect(sheet).toHaveCSS("transition-duration", "0.5s");
+      await expect(sheet).toHaveCSS("transition-duration", "0.76s");
     }
   });
 }
+
+test("手机底栏点击入口后高亮停在目标项，不出现倾斜变换", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("moonclean-motion-level-v1", "refined"));
+  await page.goto("/dashboard");
+  const nav = page.getByRole("navigation", { name: "主导航" });
+  const indicator = nav.locator(".mobile-active-indicator");
+  await nav.getByRole("link", { name: "商品管理" }).click();
+  await expect(page).toHaveURL(/\/products/);
+  await expect(indicator).toHaveAttribute("style", /translateX\(100%\)/);
+  await expect(indicator).not.toHaveAttribute("style", /rotate[XY]/);
+});

@@ -3,6 +3,8 @@ import Decimal from "decimal.js";
 import { z } from "zod";
 import { requireStore, rejectCrossOriginMutation } from "@/lib/supabase/auth";
 import { refundReasonSchema, REFUND_REASONS } from "@/lib/after-sales";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
+import { decryptDeepSeekKey } from "@/lib/deepseek-credentials";
 
 const inputSchema = z.object({ days: z.union([z.literal(7), z.literal(30), z.literal(90)]) });
 const recentRequests = new Map<string, number>();
@@ -14,10 +16,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   if (!z.uuid().safeParse(storeId).success) return NextResponse.json({ error: "店铺 ID 无效" }, { status: 400 });
   const auth = await requireStore(storeId);
   if (!auth.ok) return auth.error;
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) return NextResponse.json({ error: "尚未配置 DeepSeek API Key。请在部署环境变量中添加 DEEPSEEK_API_KEY。" }, { status: 503 });
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "分析周期无效，请选择 7、30 或 90 天" }, { status: 400 });
+  let key = process.env.DEEPSEEK_API_KEY || "";
+  if (process.env.SUPABASE_SECRET_KEY) {
+    try {
+      const credentialDb = createServiceSupabaseClient();
+      const { data, error } = await credentialDb.from("store_ai_credentials").select("key_ciphertext").eq("store_id", storeId).maybeSingle();
+      if (error) throw error;
+      if (data?.key_ciphertext) key = decryptDeepSeekKey(data.key_ciphertext);
+    } catch {
+      if (!key) return NextResponse.json({ error: "DeepSeek 配置存储不可用。请先在系统设置中检查数据库迁移和服务端密钥。" }, { status: 503 });
+    }
+  }
+  if (!key) return NextResponse.json({ error: "尚未配置 DeepSeek API Key。请前往系统设置 → DeepSeek API 接入完成配置。" }, { status: 503 });
   const now = Date.now();
   const last = recentRequests.get(auth.user.id) || 0;
   if (now - last < 15_000) return NextResponse.json({ error: "请求过于频繁，请稍后再试" }, { status: 429 });

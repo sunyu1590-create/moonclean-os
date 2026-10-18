@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Activity, Copy, MemoryStick, Network, Smartphone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PERFORMANCE_DEBUG_EVENT, readPerformanceDebugEnabled } from "@/lib/debug-preferences";
+import { PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { APP_VERSION } from "@/lib/release-notes";
 import type { MotionLevel } from "@/components/motion-preferences";
 
@@ -38,19 +38,28 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
   const [metrics, setMetrics] = useState<DebugMetrics>(emptyMetrics);
+  const [visibleMetrics, setVisibleMetrics] = useState<DebugMetricId[]>([]);
 
   useEffect(() => {
     const update = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
       setEnabled(typeof detail === "boolean" ? detail : readPerformanceDebugEnabled());
     };
+    const updateMetrics = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      setVisibleMetrics(Array.isArray(detail) ? detail as DebugMetricId[] : readPerformanceDebugMetrics());
+    };
     const frame = window.requestAnimationFrame(() => setEnabled(readPerformanceDebugEnabled()));
+    const metricsFrame = window.requestAnimationFrame(() => setVisibleMetrics(readPerformanceDebugMetrics()));
     window.addEventListener("storage", update);
     window.addEventListener(PERFORMANCE_DEBUG_EVENT, update);
+    window.addEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
     return () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(metricsFrame);
       window.removeEventListener("storage", update);
       window.removeEventListener(PERFORMANCE_DEBUG_EVENT, update);
+      window.removeEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
     };
   }, []);
 
@@ -130,23 +139,25 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
     }
   }
   const heapPercent = metrics.heapUsed !== null && metrics.heapLimit ? Math.min(100, Math.round(metrics.heapUsed / metrics.heapLimit * 100)) : null;
+  const show = (id: DebugMetricId) => visibleMetrics.includes(id);
 
-  return <div className="performance-debug-root" aria-live="polite">
+  return <div className="performance-debug-root" aria-live="off">
     <button type="button" className="performance-debug-pill" aria-expanded={expanded} aria-label="网页性能调试信息" onClick={() => setExpanded((value) => !value)}>
       <span className={`performance-debug-dot ${metrics.fps !== null && metrics.fps < 40 ? "is-slow" : ""}`}/>
-      <Activity size={14}/><span>{metrics.fps === null ? "帧率 …" : `帧率 ${metrics.fps}`}</span>
+      <Activity size={14}/><span>{!show("fps") ? "运行诊断" : metrics.fps === null ? "帧率 …" : `帧率 ${metrics.fps}`}</span>
     </button>
     {expanded && <section className="performance-debug-panel" aria-label="性能调试面板">
       <header><span><strong>运行状态</strong><small>实时估算 · v{APP_VERSION}</small></span><button type="button" aria-label="关闭调试面板" onClick={() => setExpanded(false)}><X size={16}/></button></header>
       <div className="performance-debug-grid">
-        <DebugMetric label="页面帧率" value={metrics.fps === null ? "采集中…" : `约 ${metrics.fps} FPS`} detail={metrics.frameMs === null ? "等待采样" : `单帧 ${metrics.frameMs.toFixed(1)} ms`} icon={<Activity size={15}/>} />
-        <DebugMetric label="JS 堆内存" value={formatBytes(metrics.heapUsed)} detail={heapPercent === null ? "Chromium 专有 API，其他浏览器不开放" : `占堆上限 ${heapPercent}%`} icon={<MemoryStick size={15}/>} />
-        <DebugMetric label="设备与视口" value={metrics.viewport} detail={`DPR ${metrics.dpr} · ${metrics.cores === null ? "CPU 核数不可用" : `${metrics.cores} 个逻辑核`}${metrics.deviceMemory === null ? "" : ` · 设备内存约 ${metrics.deviceMemory} GB`}`} icon={<Smartphone size={15}/>} />
-        <DebugMetric label="屏幕刷新率" value={metrics.displayHz === null ? "浏览器未开放" : `${metrics.displayHz} Hz`} detail={metrics.fps === null ? "页面 FPS 正在采样" : `页面当前约 ${metrics.fps} FPS`} icon={<Activity size={15}/>} />
-        <DebugMetric label="网络连接" value={metrics.online ? "在线" : "离线"} detail={metrics.network} icon={<Network size={15}/>} />
-        <DebugMetric label="长任务监测" value={metrics.longTasks === null ? "浏览器未开放" : `${metrics.longTasks} 次`} detail={metrics.firstPaint === null ? "FCP 暂不可用" : `首次内容绘制 ${Math.round(metrics.firstPaint)} ms`} icon={<Activity size={15}/>} />
-        <DebugMetric label="当前工作区" value={dataMode === "cloud" ? "云端数据" : "本地数据"} detail={`动效：${motionLabels[motionLevel]}`} icon={<Network size={15}/>} />
+        {show("fps") && <DebugMetric label="页面帧率" value={metrics.fps === null ? "采集中…" : `约 ${metrics.fps} FPS`} detail={metrics.frameMs === null ? "等待采样" : `单帧 ${metrics.frameMs.toFixed(1)} ms`} icon={<Activity size={15}/>} />}
+        {show("heap") && <DebugMetric label="JS 堆内存" value={formatBytes(metrics.heapUsed)} detail={heapPercent === null ? "Chromium 专有 API，其他浏览器不开放" : `占堆上限 ${heapPercent}%`} icon={<MemoryStick size={15}/>} />}
+        {show("viewport") && <DebugMetric label="设备与视口" value={metrics.viewport} detail={`DPR ${metrics.dpr} · ${metrics.cores === null ? "CPU 核数不可用" : `${metrics.cores} 个逻辑核`}${metrics.deviceMemory === null ? "" : ` · 设备内存约 ${metrics.deviceMemory} GB`}`} icon={<Smartphone size={15}/>} />}
+        {show("refresh") && <DebugMetric label="屏幕刷新率" value={metrics.displayHz === null ? "浏览器未开放" : `${metrics.displayHz} Hz`} detail={metrics.fps === null ? "页面 FPS 正在采样" : `页面当前约 ${metrics.fps} FPS`} icon={<Activity size={15}/>} />}
+        {show("network") && <DebugMetric label="网络连接" value={metrics.online ? "在线" : "离线"} detail={metrics.network} icon={<Network size={15}/>} />}
+        {show("longtasks") && <DebugMetric label="长任务监测" value={metrics.longTasks === null ? "浏览器未开放" : `${metrics.longTasks} 次`} detail={metrics.firstPaint === null ? "FCP 暂不可用" : `首次内容绘制 ${Math.round(metrics.firstPaint)} ms`} icon={<Activity size={15}/>} />}
+        {show("workspace") && <DebugMetric label="当前工作区" value={dataMode === "cloud" ? "云端数据" : "本地数据"} detail={`动效：${motionLabels[motionLevel]}`} icon={<Network size={15}/>} />}
       </div>
+      {visibleMetrics.length === 0 && <p className="rounded-xl bg-[#f4f8fc] p-3 text-xs text-[#7f91a2]">尚未选择指标。请前往系统设置，自定义要显示的诊断信息。</p>}
       <p className="performance-debug-note">FPS 与帧耗时由页面动画帧估算；硬件内存和真实屏幕刷新率受浏览器权限限制，不可用时会如实标注。</p>
       <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => void copyDiagnostics()}><Copy size={14}/>{copied ? "已复制诊断信息" : "复制诊断信息"}</Button>
       {copyError && <p role="alert" className="mt-2 text-xs text-[#e85d65]">{copyError}</p>}

@@ -173,12 +173,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
   const mobileNavRef = useRef<HTMLElement>(null);
-  const pointerDrag = useRef<{ id: number; x: number; y: number } | null>(null);
+  const pointerDrag = useRef<{ id: number; x: number; y: number; dragging: boolean } | null>(null);
+  const navFollowResetTimer = useRef<number | null>(null);
   const suppressNavClick = useRef(false);
   const [trackingSlot, setTrackingSlot] = useState<number | null>(null);
   const [navPressed, setNavPressed] = useState(false);
-  const [navTilt, setNavTilt] = useState({ x: 0, y: 0 });
   const [navLightY, setNavLightY] = useState(50);
+  useEffect(() => () => { if (navFollowResetTimer.current !== null) window.clearTimeout(navFollowResetTimer.current); }, []);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
@@ -252,31 +253,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mobileIndicatorSlot = trackingSlot ?? activeIndicatorSlot;
   function getPointerPosition(clientX: number, clientY: number) {
     const rect = mobileNavRef.current?.querySelector(".relative.grid")?.getBoundingClientRect();
-    if (!rect || rect.width === 0 || rect.height === 0) return { slot: activeIndicatorSlot, tilt: { x: 0, y: 0 }, lightY: 50 };
+    if (!rect || rect.width === 0 || rect.height === 0) return { slot: activeIndicatorSlot, lightY: 50 };
     const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
     const slot = Math.max(0, Math.min(4, x * 5 - 0.5));
-    return { slot, tilt: { x: (0.5 - y) * 13, y: (x - 0.5) * 16 }, lightY: y * 100 };
+    return { slot, lightY: y * 100 };
   }
   function trackPointer(clientX: number, clientY: number) {
     const position = getPointerPosition(clientX, clientY);
     setTrackingSlot(position.slot);
     setNavLightY(position.lightY);
-    if (motionLevel === "refined" && pointerDrag.current) setNavTilt(position.tilt);
   }
   function onNavPointerDown(event: React.PointerEvent<HTMLElement>) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    pointerDrag.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    pointerDrag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, dragging: false };
     setNavPressed(true);
-    trackPointer(event.clientX, event.clientY);
+    if (event.pointerType === "mouse") trackPointer(event.clientX, event.clientY);
   }
   function onNavPointerMove(event: React.PointerEvent<HTMLElement>) {
     if (pointerDrag.current?.id === event.pointerId) {
       const drag = pointerDrag.current;
-      if (!event.currentTarget.hasPointerCapture(event.pointerId) && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 22) {
-        event.currentTarget.setPointerCapture(event.pointerId);
+      if (!drag.dragging && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 22) {
+        drag.dragging = true;
+        if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
       }
-      trackPointer(event.clientX, event.clientY);
+      if (drag.dragging) trackPointer(event.clientX, event.clientY);
     }
     else if (event.pointerType === "mouse") trackPointer(event.clientX, event.clientY);
   }
@@ -287,9 +288,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
     pointerDrag.current = null;
     setNavPressed(false);
-    setNavTilt({ x: 0, y: 0 });
+    if (distance < 22) {
+      // Keep the highlight on the tapped destination while Next updates the route.
+      // Clearing it on pointer-leave used to send the indicator back to the old route
+      // before it moved forward again, which looked like a click stutter.
+      setTrackingSlot(position.slot);
+      if (navFollowResetTimer.current !== null) window.clearTimeout(navFollowResetTimer.current);
+      navFollowResetTimer.current = window.setTimeout(() => {
+        setTrackingSlot(null);
+        navFollowResetTimer.current = null;
+      }, 520);
+      return;
+    }
     setTrackingSlot(null);
-    if (distance < 22) return;
     suppressNavClick.current = true;
     window.setTimeout(() => { suppressNavClick.current = false; }, 500);
     const destination = Math.round(position.slot);
@@ -300,7 +311,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pointerDrag.current?.id !== event.pointerId) return;
     pointerDrag.current = null;
     setNavPressed(false);
-    setNavTilt({ x: 0, y: 0 });
     setTrackingSlot(null);
   }
   function onNavClickCapture(event: React.MouseEvent<HTMLElement>) {
@@ -310,11 +320,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     suppressNavClick.current = false;
   }
   function onNavPointerLeave() {
-    if (pointerDrag.current) return;
+    if (pointerDrag.current || navFollowResetTimer.current !== null) return;
     setTrackingSlot(null);
-    setNavTilt({ x: 0, y: 0 });
   }
-  const indicatorTransform = `translateX(${mobileIndicatorSlot * 100}%) perspective(700px) rotateX(${motionLevel === "refined" && navPressed ? navTilt.x : 0}deg) rotateY(${motionLevel === "refined" && navPressed ? navTilt.y : 0}deg) scale(${motionLevel === "refined" && navPressed ? 0.955 : 1})`;
+  const indicatorTransform = `translateX(${mobileIndicatorSlot * 100}%) scale(${motionLevel === "refined" && navPressed ? 0.96 : 1})`;
   return (
     <div className="min-h-screen md:flex">
       <aside
@@ -491,6 +500,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav ref={mobileNavRef} aria-label="主导航" onPointerDown={onNavPointerDown} onPointerMove={onNavPointerMove} onPointerUp={onNavPointerUp} onPointerCancel={onNavPointerCancel} onPointerLeave={onNavPointerLeave} onDragStart={(event) => event.preventDefault()} onClickCapture={onNavClickCapture} className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`, trackingSlot !== null && "is-following", navPressed && "is-pressed")}>
         <div className="relative grid grid-cols-5">
           <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform, "--touch-light-y": `${navLightY}%` } as React.CSSProperties}>
+            {motionLevel === "refined" && <span className="mobile-active-spectrum"/>}
             {motionLevel === "refined" && <><i/><i/><i/><i/></>}
           </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
@@ -505,7 +515,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="bottom" className="mobile-more-sheet max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden">
+        <SheetContent side="bottom" className="mobile-more-sheet h-[100dvh] max-h-[100dvh] overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden">
           <SheetHeader className="px-1 pb-4 text-left">
             <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[#eaf4ff] text-[#3189e8]"><Sparkles size={21}/></div>
             <SheetTitle className="text-xl">更多功能</SheetTitle>

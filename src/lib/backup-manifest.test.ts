@@ -13,10 +13,12 @@ describe("full cloud backup coverage", () => {
     const publicTables = new Set(
       [...migrations.matchAll(/create\s+table(?:\s+if\s+not\s+exists)?\s+public\.(\w+)/gi)]
         .map((match) => match[1])
-        .filter((name) => !["stores", "store_members", "profiles"].includes(name)),
+      // Service-only credentials are deliberately excluded from portable business backups.
+      .filter((name) => !["stores", "store_members", "profiles", "store_ai_credentials"].includes(name)),
     );
 
     expect(new Set(BACKUP_STORE_TABLES)).toEqual(publicTables);
     expect(BACKUP_STORE_TABLES).not.toContain("platform_credentials");
+    expect(BACKUP_STORE_TABLES).not.toContain("store_ai_credentials");
   });
 });

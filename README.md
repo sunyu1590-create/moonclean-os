@@ -4,7 +4,9 @@
 
 ## DeepSeek 售后总结（可选）
 
-售后分析页提供人工问题分类和 DeepSeek 总结窗口。要启用 AI 总结，在 Vercel Project Settings → Environment Variables 中添加服务端变量 `DEEPSEEK_API_KEY`，选择 Production、Preview（按需）和 Development 环境后重新部署。可选变量 `DEEPSEEK_MODEL` 默认使用 `deepseek-chat`。不要添加 `NEXT_PUBLIC_` 前缀，也不要把密钥提交到仓库或发到浏览器。
+售后分析页提供人工问题分类和 DeepSeek 总结窗口。在系统设置的“DeepSeek API 接入”卡片中粘贴 API Key，点击“验证并保存”即可按店铺配置。密钥仅通过服务端验证，并使用 AES-256-GCM 加密后写入仅服务端可访问的表；浏览器不会收到已保存密钥。
+
+首次启用设置卡片前，需要将 `SUPABASE_SECRET_KEY`（Supabase 服务端 Secret Key）作为**非公开** Vercel 环境变量，并应用 `supabase/migrations/20261018151830_store_deepseek_credentials.sql`。此密钥同时作为加密根密钥，轮换前需先替换所有已保存的店铺 DeepSeek Key。也可使用服务器环境变量 `DEEPSEEK_API_KEY` 作为所有店铺的只读备用配置；`DEEPSEEK_MODEL` 默认 `deepseek-chat`。不要添加 `NEXT_PUBLIC_` 前缀，也不要把任何密钥提交到仓库或发到浏览器。
 
 AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSeek 提交统计周期、订单/退款数量、金额汇总和问题类别，不提交订单号、买家信息或客服备注。未配置密钥时，分析窗口会明确提示如何启用，其他售后统计与分类照常使用。
 
@@ -16,7 +18,7 @@ AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSee
 
 - 项目：`MoonClean OS`，组织：`m`，区域：Singapore (`ap-southeast-1`)
 - Project ID：`duolfhyodjhuatucjhtz`，URL：`https://duolfhyodjhuatucjhtz.supabase.co`
-- `supabase/migrations/` 中的七个迁移已按顺序应用到该项目。新增模拟同步业务表均已启用 RLS。`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
+- 原有的七个迁移已按顺序应用到该项目。新增加密 API Key 表时，还需在 SQL Editor 应用本次 `20261018151830_store_deepseek_credentials.sql` 迁移。新增业务表启用 RLS；`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
 - **邮箱回调还需设置**：在 [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/auth/url-configuration) 添加 Codespaces 端口 3000 的实际 HTTPS 转发域名，并将该域名下的 `/auth/callback` 与 `/auth/confirm` 加入 Redirect URLs。本地运行时使用 `http://localhost:3000` 对应路径。未完成前不要依赖邮件验证或密码重置流程。
 
 ## 配置与启动

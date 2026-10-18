@@ -37,9 +37,9 @@ import {
 import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
 import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
-import { PERFORMANCE_DEBUG_EVENT, readPerformanceDebugEnabled, setPerformanceDebugEnabled } from "@/lib/debug-preferences";
+import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 export default function SettingsPage() {
-  const { data, update, reset, mode, role, saving, exportBackup } = useApp();
+  const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
   const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -54,6 +54,11 @@ export default function SettingsPage() {
   const [localImportError, setLocalImportError] = useState("");
   const [localImportBusy, setLocalImportBusy] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [debugMetrics, setDebugMetrics] = useState<DebugMetricId[]>([]);
+  const [deepSeekKey, setDeepSeekKey] = useState("");
+  const [deepSeekState, setDeepSeekState] = useState<{ configured: boolean; source: string; canSave: boolean; updatedAt?: string | null; error?: string } | null>(null);
+  const [deepSeekBusy, setDeepSeekBusy] = useState(false);
+  const [deepSeekMessage, setDeepSeekMessage] = useState("");
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -64,15 +69,62 @@ export default function SettingsPage() {
       setDebugEnabled(typeof detail === "boolean" ? detail : readPerformanceDebugEnabled());
     };
     const frame = window.requestAnimationFrame(() => setDebugEnabled(readPerformanceDebugEnabled()));
+    const metricsFrame = window.requestAnimationFrame(() => setDebugMetrics(readPerformanceDebugMetrics()));
+    const updateMetrics = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      setDebugMetrics(Array.isArray(detail) ? detail as DebugMetricId[] : readPerformanceDebugMetrics());
+    };
     window.addEventListener(PERFORMANCE_DEBUG_EVENT, updateDebug);
     window.addEventListener("storage", updateDebug);
+    window.addEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
     return () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(metricsFrame);
       window.removeEventListener(PERFORMANCE_DEBUG_EVENT, updateDebug);
       window.removeEventListener("storage", updateDebug);
+      window.removeEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
     };
   }, []);
+  useEffect(() => {
+    if (mode !== "cloud" || !activeStoreId || !canManage) {
+      const frame = window.requestAnimationFrame(() => setDeepSeekState(null));
+      return () => window.cancelAnimationFrame(frame);
+    }
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      void fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { cache: "no-store" }).then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || "读取 DeepSeek 配置失败");
+        if (!cancelled) setDeepSeekState(body);
+      }).catch((cause) => { if (!cancelled) setDeepSeekState({ configured: false, source: "unset", canSave: false, error: cause instanceof Error ? cause.message : "读取 DeepSeek 配置失败" }); });
+    });
+    return () => { cancelled = true; window.cancelAnimationFrame(frame); };
+  }, [activeStoreId, canManage, mode]);
   if (!data || !draft) return <p>正在加载数据…</p>;
+  async function saveDeepSeekKey() {
+    if (!activeStoreId || !deepSeekKey.trim()) { setDeepSeekMessage("请先粘贴 DeepSeek API Key。"); return; }
+    setDeepSeekBusy(true); setDeepSeekMessage("");
+    try {
+      const response = await fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: deepSeekKey.trim() }) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "DeepSeek Key 验证失败");
+      setDeepSeekKey(""); setDeepSeekMessage("验证通过，密钥已加密保存到当前店铺。");
+      setDeepSeekState({ configured: true, source: "store", canSave: true });
+    } catch (cause) { setDeepSeekMessage(cause instanceof Error ? cause.message : "DeepSeek 配置失败"); }
+    finally { setDeepSeekBusy(false); }
+  }
+  async function deleteDeepSeekKey() {
+    if (!activeStoreId) return;
+    setDeepSeekBusy(true); setDeepSeekMessage("");
+    try {
+      const response = await fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { method: "DELETE", credentials: "same-origin" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "删除配置失败");
+      setDeepSeekState({ configured: body.configured, source: body.source, canSave: true });
+      setDeepSeekMessage(body.configured ? "店铺保存的 Key 已删除；服务器环境变量仍然生效。" : "已删除当前店铺的 DeepSeek Key。");
+    } catch (cause) { setDeepSeekMessage(cause instanceof Error ? cause.message : "删除配置失败"); }
+    finally { setDeepSeekBusy(false); }
+  }
   async function save() {
     if (!draft) return;
     if (!draft.store.name.trim()) {
@@ -191,14 +243,27 @@ export default function SettingsPage() {
                 </button>;
               })}
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效只保存在当前设备。精致包含流光与按压反馈；旧款手机可选择标准或简单。</p>
+            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效只保存在当前设备。精致包含流光边框与弹性回弹；旧款手机可选择标准或简单。</p>
           </SectionCard>
           <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。" action={<Activity size={19} className="text-[#3b91eb]" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-3 sm:p-4">
               <div className="min-w-0"><strong className="block text-sm text-[#263d54]">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-[#899aaa] sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
               <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !debugEnabled; setDebugEnabled(next); setPerformanceDebugEnabled(next); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-[#3b91eb]" : "bg-[#cbd5df]"}`}><span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
             </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {DEBUG_METRICS.map(({ id, label }) => <label key={id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#e8eef4] bg-white px-2.5 text-[10px] text-[#667b8f] sm:text-xs"><input type="checkbox" checked={debugMetrics.includes(id)} onChange={(event) => { const next = event.target.checked ? [...debugMetrics, id] : debugMetrics.filter((item) => item !== id); setDebugMetrics(next); setPerformanceDebugMetrics(next); }} className="size-3.5 accent-[#3b91eb]"/>{label}</label>)}
+            </div>
             <p className="mt-2 text-[10px] leading-4 text-[#96a4b2]">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
+          </SectionCard>
+          <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端，验证后加密保存，不会回传给浏览器。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
+            {mode !== "cloud" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#f4f8fb] p-3"><span className={`size-2 rounded-full ${deepSeekState?.configured ? "bg-[#16a085]" : "bg-[#b7c3ce]"}`}/><span className="text-sm font-medium text-[#425b72]">{deepSeekState?.configured ? deepSeekState.source === "environment" ? "已从服务器环境变量接入" : "当前店铺已配置" : "尚未配置"}</span>{deepSeekState?.updatedAt && <span className="text-xs text-[#8b9aaa]">更新于 {new Date(deepSeekState.updatedAt).toLocaleString("zh-CN")}</span>}</div>
+              <div><Label htmlFor="deepseek-api-key">DeepSeek API Key</Label><Input id="deepseek-api-key" type="password" autoComplete="new-password" value={deepSeekKey} onChange={(event) => setDeepSeekKey(event.target.value)} disabled={!deepSeekState?.canSave || deepSeekBusy} placeholder={deepSeekState?.configured ? "已安全保存；输入新 Key 可替换" : "粘贴 DeepSeek API Key"} className="mt-1.5"/></div>
+              <div className="flex flex-wrap items-center gap-2"><Button type="button" onClick={() => void saveDeepSeekKey()} disabled={!deepSeekState?.canSave || deepSeekBusy || !deepSeekKey.trim()}>{deepSeekBusy ? "正在验证…" : "验证并保存"}</Button>{deepSeekState?.source === "store" && <Button type="button" variant="outline" disabled={deepSeekBusy} onClick={() => void deleteDeepSeekKey()}>删除已保存密钥</Button>}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="text-xs font-medium text-[#347fc1] underline underline-offset-2">前往 DeepSeek 创建 API Key</a></div>
+              {deepSeekState?.error && <p role="alert" className="rounded-xl bg-[#fff8e9] p-3 text-xs leading-5 text-[#8d7146]">{deepSeekState.error}</p>}
+              {deepSeekMessage && <p role={deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "status" : "alert"} className={`rounded-xl p-3 text-xs leading-5 ${deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "bg-[#eaf8f4] text-[#168b72]" : "bg-[#fff0f1] text-[#c45761]"}`}>{deepSeekMessage}</p>}
+              <p className="text-[10px] leading-5 text-[#8b9aaa]">首次使用需在 Vercel 配置服务端 <code>SUPABASE_SECRET_KEY</code> 并应用仓库的 DeepSeek 密钥表迁移。服务器使用该密钥加密店铺 Key；不要把服务端密钥添加为 NEXT_PUBLIC 变量。</p>
+            </div>}
           </SectionCard>
           <SectionCard
             title="店铺信息"
@@ -207,8 +272,9 @@ export default function SettingsPage() {
           >
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <Label>店铺名称</Label>
+                <Label htmlFor="store-name-setting">店铺名称</Label>
                 <Input
+                  id="store-name-setting"
                   className="mt-2"
                   value={draft.store.name}
                   disabled={!canManage}

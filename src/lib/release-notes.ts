@@ -1,6 +1,16 @@
-export const APP_VERSION = "0.8.0";
+export const APP_VERSION = "0.8.1";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.8.1",
+    date: "2026-10-18",
+    title: "底栏弹性修复与 DeepSeek 设置入口",
+    changes: [
+      "移除底栏按压倾斜，点击后高亮块保持目标位置并采用更顺滑的弹性回弹；精致档活动入口加入低开销流光边框。",
+      "“更多”面板改为更慢的全屏上推，减少悬浮半屏感；性能诊断胶囊不再播放装饰动画，默认关闭且可自选指标。",
+      "系统设置新增 DeepSeek Key 验证、加密保存与删除入口；服务端密钥仅用于加密，API Key 不回传到浏览器。",
+    ],
+  },
   {
     version: "0.8.0",
     date: "2026-10-18",

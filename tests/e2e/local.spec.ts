@@ -111,7 +111,7 @@ test("本地全量备份可以预览、备份当前数据并恢复", async ({ pa
   await expect(page.getByText("从备份恢复的店铺").first()).toBeVisible();
   await page.reload();
   await page.goto("/settings");
-  await expect(page.locator('input').first()).toHaveValue("从备份恢复的店铺");
+  await expect(page.getByLabel("店铺名称")).toHaveValue("从备份恢复的店铺");
 });
 
 test("经营目标接受千位逗号并在刷新后保留", async ({ page }) => {
@@ -134,16 +134,22 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   await page.getByRole("button", { name: /精致/ }).click();
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(transition).toContainText("流光边缘");
-  await expect(transition).toContainText("v0.8.0");
+  await expect(transition).toContainText("v0.8.1");
   await expect(transition).toContainText("当前为精致动效");
   await expect(transition).toHaveCount(0, { timeout: 8000 });
+  const refreshOption = page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]");
+  await refreshOption.uncheck();
   await page.getByRole("switch", { name: "启用性能调试浮窗" }).click();
   await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
   await page.getByRole("button", { name: "网页性能调试信息" }).click();
   await expect(page.getByRole("region", { name: "性能调试面板" })).toBeVisible();
-  await expect(page.getByText("屏幕刷新率", { exact: true })).toBeVisible();
+  const debugPanel = page.getByRole("region", { name: "性能调试面板" });
+  await expect(debugPanel.getByText("页面帧率", { exact: true })).toBeVisible();
+  await expect(debugPanel.getByText("屏幕刷新率", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toHaveCSS("animation-name", "none");
   await page.reload();
   await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
+  await expect(page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]")).not.toBeChecked();
 });
 
 test("定价工具可以创建不写入商品数据的临时 SKU", async ({ page }) => {
@@ -180,7 +186,7 @@ test("全站精致与简单动效可切换、详细过场显示并在刷新后�
   const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(refinedTransition).toBeVisible();
   await expect.poll(() => refinedTransition.evaluate(element => { const rect = element.getBoundingClientRect(); return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)]; })).toEqual([0, 0, 390, 844]);
-  await expect(refinedTransition).toContainText("启用按压倾斜、柔光模糊、粒子与丰富的浮层滑动");
+  await expect(refinedTransition).toContainText("启用流光边框、弹性回弹、柔光与丰富的浮层滑动");
   await expect(refinedTransition).toContainText("切换底栏与页面反馈");
   await expect(refinedTransition).toHaveCount(0, { timeout: 6000 });
   expect(await page.locator("html").getAttribute("data-motion")).toBe("refined");
