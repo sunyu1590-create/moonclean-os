@@ -141,15 +141,28 @@ export default function DataPage() {
     const existing=data!.daily.find(item=>item.date===row.date&&item.source!=="mock_pinduoduo"&&item.source!=="official_pinduoduo");
     if(data!.daily.some(item=>item.date===row.date&&(item.source==="mock_pinduoduo"||item.source==="official_pinduoduo")))throw new Error("该日期包含平台同步数据，请在平台连接中心查看；请勿用截图覆盖同步记录。");
     if(existing&&!window.confirm(`${row.date} 已有手工数据，确认用截图识别结果替换日报指标吗？成本字段会保留。`))return false;
-    const optionalInteger=(value:string)=>value===""?undefined:Number(value);
+    const optionalInteger=(value:string,label:string)=>{
+      if(value==="")return undefined;
+      const parsed=Number(value);
+      if(!Number.isSafeInteger(parsed))throw new Error(`${label}必须填写整数，请检查识别结果。`);
+      return parsed;
+    };
     const optionalMoney=(value:string)=>value===""?undefined:value;
-    const parsed=dailySchema.parse({
-      id:existing?.id||crypto.randomUUID(),date:row.date,sales:row.sales,refunds:row.refunds,orders:Number(row.orders),
+    const orders=optionalInteger(row.orders,"成交订单数");
+    if(orders===undefined)throw new Error("成交订单数不能为空，请检查识别结果。");
+    const result=dailySchema.safeParse({
+      id:existing?.id||crypto.randomUUID(),date:row.date,sales:row.sales,refunds:row.refunds,orders,
       productCost:existing?.productCost||"",packagingCost:existing?.packagingCost||"",logisticsCost:existing?.logisticsCost||"",platformFees:existing?.platformFees||"",
       otherExpenses:existing?.otherExpenses||"0",productSales:existing?.productSales||{},source:"image_import",isDemo:false,
-      reportDetails:{buyers:optionalInteger(row.buyers)??existing?.reportDetails?.buyers,averageOrderValue:optionalMoney(row.averageOrderValue)??existing?.reportDetails?.averageOrderValue,visitors:optionalInteger(row.visitors)??existing?.reportDetails?.visitors,conversionRate:optionalMoney(row.conversionRate)??existing?.reportDetails?.conversionRate,refundOrders:optionalInteger(row.refundOrders)??existing?.reportDetails?.refundOrders,visitorValue:optionalMoney(row.visitorValue)??existing?.reportDetails?.visitorValue},
+      reportDetails:{buyers:optionalInteger(row.buyers,"成交买家数")??existing?.reportDetails?.buyers,averageOrderValue:optionalMoney(row.averageOrderValue)??existing?.reportDetails?.averageOrderValue,visitors:optionalInteger(row.visitors,"商品访客数")??existing?.reportDetails?.visitors,conversionRate:optionalMoney(row.conversionRate)??existing?.reportDetails?.conversionRate,refundOrders:optionalInteger(row.refundOrders,"退款单数")??existing?.reportDetails?.refundOrders,visitorValue:optionalMoney(row.visitorValue)??existing?.reportDetails?.visitorValue},
       costComplete:existing?.costComplete??false,
     });
+    if(!result.success){
+      const issue=result.error.issues[0];
+      const labels:Record<string,string>={orders:"成交订单数",buyers:"成交买家数",visitors:"商品访客数",refundOrders:"退款单数",sales:"成交金额",refunds:"退款金额"};
+      throw new Error(`${labels[String(issue.path.at(-1))]||"识别数据"}：${issue.message}`);
+    }
+    const parsed=result.data;
     await update(current=>({...current,daily:[...current.daily.filter(item=>item.date!==row.date||item.source==="mock_pinduoduo"||item.source==="official_pinduoduo"),parsed].sort((a,b)=>a.date.localeCompare(b.date))}));
   }
   async function importPasted(rows:QuickDailyRow[],overwrite:boolean){

@@ -36,7 +36,7 @@ function findValue(lines: string[], labels: string[], percent = false, integer =
       const value = Number(match[1]) * (match[2] && !percent ? 10000 : 1);
       return Number.isFinite(value)
         ? integer
-          ? String(value)
+          ? String(Math.round(value))
           : percent
           ? value.toFixed(4).replace(/\.?0+$/, "")
           : value.toFixed(2)
