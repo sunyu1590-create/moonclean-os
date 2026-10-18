@@ -66,7 +66,7 @@ export default function InventoryPage(){
           <div><label htmlFor="inventory-sku" className="text-sm font-medium">商品规格</label><AppSelect id="inventory-sku" className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm" value={selected} onChange={e=>choose(e.target.value)} required><option value="">请选择规格</option>{skus.map(sku=><option value={sku.id} key={sku.id}>{sku.label}</option>)}</AppSelect></div>
           <div className="grid grid-cols-2 gap-3"><div><label htmlFor="inventory-quantity" className="text-sm font-medium">当前数量</label><Input id="inventory-quantity" type="number" min="0" max="100000000" step="1" value={quantity} onChange={e=>setQuantity(e.target.value)} className="mt-2" required/></div><div><label htmlFor="inventory-threshold" className="text-sm font-medium">预警线</label><Input id="inventory-threshold" type="number" min="0" max="100000000" step="1" value={threshold} onChange={e=>setThreshold(e.target.value)} className="mt-2" required/></div></div>
           <div><label htmlFor="inventory-note" className="text-sm font-medium">调整原因</label><Input id="inventory-note" value={note} maxLength={240} onChange={e=>setNote(e.target.value)} placeholder="如：仓库盘点、采购入库" className="mt-2" required/></div>
-          <Button disabled={busy||!selected||!note.trim()}><Save size={16}/>{busy?"正在保存…":"保存库存"}</Button>
+          <Button type="submit" disabled={busy||!selected||!note.trim()}><Save size={16}/>{busy?"正在保存…":"保存库存"}</Button>
         </form>}
       </SectionCard>
     </div>

@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useApp } from "./app-provider";
+import { getMobileNavigationSlot } from "@/lib/mobile-navigation";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
@@ -206,6 +207,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMobilePrimary(next);
     localStorage.setItem(mobileNavStorageKey, JSON.stringify(next));
   }
+  const mobileNavItems = nav.filter((item) => mobilePrimary.includes(item.href));
+  const mobileIndicatorSlot = getMobileNavigationSlot(
+    pathname,
+    mobileNavItems.map((item) => item.href),
+    mobileMenuOpen,
+  );
   return (
     <div className="min-h-screen md:flex">
       <aside
@@ -379,8 +386,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden">
         <div className="relative grid grid-cols-5">
-          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${(mobileMenuOpen || !mobilePrimary.includes(pathname) ? 4 : mobilePrimary.indexOf(pathname)) * 100}%)` }} />
-          {nav.filter(item => mobilePrimary.includes(item.href)).map(({ href, label, icon: Icon }) => {
+          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${mobileIndicatorSlot * 100}%)` }} />
+          {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
