@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,7 +9,6 @@ import {
   Wallet,
   Database,
   Settings,
-  Moon,
   ChevronRight,
   PanelLeftClose,
   LogOut,
@@ -218,9 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href="/dashboard"
             className="flex items-center gap-3 overflow-hidden"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-[#202936] text-white">
-              <Moon size={21} fill="white" strokeWidth={1.7} />
-            </span>
+            <Image src="/yue-ming-jing-logo.jpg" alt="月明净" width={56} height={56} className="size-12 shrink-0 object-contain" priority />
             {!collapsed && (
               <span className="flex flex-col whitespace-nowrap">
                 <span className="text-[17px] font-bold tracking-[-.045em] text-[#202936]">MoonClean <span className="text-[#287fe2]">OS</span></span>
@@ -296,18 +294,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 flex min-h-[72px] flex-wrap items-center justify-between gap-2 border-b border-[#e9edf2] bg-white/90 px-5 py-2 backdrop-blur-xl md:px-9">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold tracking-tight text-[#202936] md:hidden"><span className="grid size-8 place-items-center rounded-[11px] bg-[#202936] text-white"><Moon size={17} fill="white"/></span>MoonClean <span className="text-[#287fe2]">OS</span></Link>
+        <header className="sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 border-b border-white/80 bg-white/82 px-3 py-1.5 shadow-[0_3px_18px_rgba(31,57,82,0.045)] backdrop-blur-2xl sm:px-5 md:h-[68px] md:px-9">
+          <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.jpg" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
           <div className="hidden items-center gap-2 text-xs text-[#92a0ae] md:flex">
             <span>工作空间</span>
             <ChevronRight size={14} />
             <span className="font-medium text-[#45617d]">{currentLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
             {mode === "cloud" && stores.length > 0 && (
               <select
                 aria-label="切换店铺"
-                className="max-w-[130px] rounded-xl border border-[#e4e9ef] bg-[#f8fafb] px-2.5 py-2 text-xs font-medium text-[#39485a] sm:max-w-[210px]"
+                className="max-w-[30vw] rounded-xl border border-[#e4e9ef] bg-white/75 px-2 py-1.5 text-[11px] font-medium text-[#39485a] sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
                 value={activeStoreId || ""}
                 onChange={(e) => void switchStore(e.target.value).catch(() => {})}
               >
@@ -319,19 +317,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </select>
             )}
             <span className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+              "whitespace-nowrap rounded-full border border-[#d9f0e8] px-2 py-1.5 text-[10px] font-semibold sm:px-2.5 sm:text-[11px]",
               error && mode === "cloud"
                 ? "bg-[#fff0f1] text-[#e85d65]"
                 : "bg-[#e9f7f3] text-[#16a085]",
             )}>
-              ● {mode === "local" ? "本地演示" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}
+              <span aria-hidden="true" className="mr-1 inline-block size-1.5 rounded-full bg-current align-middle" />{mode === "local" ? "本地演示" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}
             </span>
             {mode === "cloud" && (
               <>
                 <Link
                   href="/account"
                   title="账号设置"
-                  className="grid size-9 place-items-center rounded-full bg-[#edf3fb] text-[#287fe2]"
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-[#edf3fb] text-[#287fe2] sm:size-9"
                 >
                   <CircleUserRound size={18} />
                 </Link>
@@ -340,7 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title="退出登录"
                   disabled={logoutBusy}
                   onClick={signOut}
-                  className="text-[#8fa1b3] hover:text-[#e85d65]"
+                  className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"
                 >
                   <LogOut size={17} />
                 </button>

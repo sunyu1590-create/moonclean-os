@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.3.1";
+export const APP_VERSION = "0.3.2";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.3.2",
+    date: "2026-10-18",
+    title: "品牌顶栏与移动端布局优化",
+    changes: [
+      "顶栏加入月明净品牌标志，并保留店铺切换、云端状态、账号及退出入口。",
+      "压缩移动端顶栏高度与横向占用，让主要信息在小屏幕上更紧凑地呈现。",
+    ],
+  },
   {
     version: "0.3.1",
     date: "2026-10-18",
