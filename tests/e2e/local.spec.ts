@@ -138,3 +138,30 @@ test("经营建议可以转成待办并在刷新后保留分析基线", async ({
   await page.reload();
   await expect(page.getByText("智能建议跟进").first()).toBeVisible();
 });
+
+test("全站精致与简单动效可切换、详细过场显示并在刷新后保留", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/settings");
+  await page.getByRole("button", { name: /精致/ }).click();
+  const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
+  await expect(refinedTransition).toBeVisible();
+  await expect.poll(() => refinedTransition.evaluate(element => { const rect = element.getBoundingClientRect(); return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)]; })).toEqual([0, 0, 390, 844]);
+  await expect(refinedTransition).toContainText("启用液态玻璃、柔光粒子与丰富的层级动效");
+  await expect(refinedTransition).toContainText("切换底栏与页面反馈");
+  await expect(refinedTransition).toHaveCount(0, { timeout: 6000 });
+  expect(await page.locator("html").getAttribute("data-motion")).toBe("refined");
+  expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toContain("blur(30px)");
+
+  await page.getByRole("button", { name: /简单/ }).click();
+  const simpleTransition = page.getByRole("status", { name: "正在切换到简单动效" });
+  await expect(simpleTransition).toBeVisible();
+  await expect(simpleTransition).toContainText("关闭动画、模糊材质与装饰性动态效果");
+  await expect(simpleTransition).toContainText("简单模式已就绪");
+  await expect(simpleTransition).toHaveCount(0, { timeout: 3000 });
+  expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
+  await page.reload();
+  await expect(page.getByRole("button", { name: /简单/ })).toHaveAttribute("aria-pressed", "true");
+  expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
+  expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toBe("none");
+});

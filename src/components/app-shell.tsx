@@ -42,6 +42,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useApp } from "./app-provider";
 import { getMobileNavigationSlot } from "@/lib/mobile-navigation";
 import { DataTransitionOverlay } from "@/components/data-transition-overlay";
+import { useMotionPreferences } from "@/components/motion-preferences";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
@@ -160,6 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchStore,
     switchDataMode,
   } = useApp();
+  const { level: motionLevel } = useMotionPreferences();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [customizingNav, setCustomizingNav] = useState(false);
@@ -412,9 +414,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden">
+      <nav aria-label="主导航" className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`)}>
         <div className="relative grid grid-cols-5">
-          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${mobileIndicatorSlot * 100}%)` }} />
+          <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${mobileIndicatorSlot * 100}%)` }}>
+            {motionLevel === "refined" && <><i/><i/><i/><i/></>}
+          </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>

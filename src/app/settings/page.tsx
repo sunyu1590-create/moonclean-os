@@ -3,6 +3,7 @@ import { AppSelect } from "@/components/ui/app-select";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  Check as CheckIcon,
   Download,
   RotateCcw,
   Save,
@@ -11,6 +12,9 @@ import {
   Target,
   UserRound,
   DatabaseZap,
+  Sparkles,
+  Zap,
+  CircleOff,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -31,8 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
+import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
+  const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -154,6 +160,22 @@ export default function SettingsPage() {
       />
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-5">
+          <SectionCard title="全站动效风格" sub="选择后会立即应用到当前设备；偏好保存在浏览器，不同步店铺数据。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              {MOTION_LEVELS.map((option) => {
+                const selected = motionLevel === option.id;
+                const Icon = option.id === "refined" ? Sparkles : option.id === "standard" ? Zap : CircleOff;
+                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[150px] rounded-2xl border p-4 text-left ${selected ? "motion-choice-selected border-[#7eb9ed] bg-[#f0f8ff] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-[#e7edf3] bg-white hover:border-[#cbdced]"}`}>
+                  {selected && <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-[#378de0] text-white"><CheckIcon size={12}/></span>}
+                  <span className={`mb-3 grid size-10 place-items-center rounded-[14px] ${selected ? "bg-white text-[#3287d5]" : "bg-[#f4f7fa] text-[#8496a8]"}`}><Icon size={19}/></span>
+                  <strong className="block text-sm font-semibold text-[#263d54]">{option.label}<span className="ml-1.5 text-[10px] font-medium text-[#94a2af]">{option.short}</span></strong>
+                  <span className="mt-1 block text-[10px] font-medium text-[#5f89ae]">{option.experience}</span>
+                  <span className="mt-2 block text-[11px] leading-[1.55] text-[#8797a6]">{option.detail}</span>
+                </button>;
+              })}
+            </div>
+            <p className="mt-3 text-[11px] leading-5 text-[#93a1af]">精致模式会使用更强的模糊、光影和粒子动画；旧款设备可切换到标准或简单以获得更流畅的操作。</p>
+          </SectionCard>
           <SectionCard
             title="店铺信息"
             sub="店铺时区决定经营日期与成本生效日期"
