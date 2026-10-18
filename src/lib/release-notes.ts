@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.8.2";
+export const APP_VERSION = "0.8.3";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.8.3",
+    date: "2026-10-18",
+    title: "夜间模式",
+    changes: [
+      "顶栏新增夜间模式开关，主题偏好保存在当前设备，刷新页面后继续生效。",
+      "夜间配色覆盖工作区、卡片、导航、表格、弹窗和表单控件，并保留品牌蓝与盈亏状态色。",
+    ],
+  },
   {
     version: "0.8.2",
     date: "2026-10-18",

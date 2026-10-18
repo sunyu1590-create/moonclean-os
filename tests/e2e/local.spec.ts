@@ -135,7 +135,7 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(transition).toContainText("切换到精致模式");
   await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
-  await expect(transition).toContainText("v0.8.2");
+  await expect(transition).toContainText("v0.8.3");
   await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
   const refreshOption = page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]");
@@ -179,7 +179,7 @@ test("经营建议可以转成待办并在刷新后保留分析基线", async ({
   await expect(page.getByText("智能建议跟进").first()).toBeVisible();
 });
 
-test("全站精致与简单动效可切换、详细过场显示并在刷新后保留", async ({ page }) => {
+test("精致与简单动效快速切换并在刷新后保留", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/settings");
@@ -187,8 +187,7 @@ test("全站精致与简单动效可切换、详细过场显示并在刷新后�
   const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(refinedTransition).toBeVisible();
   await expect.poll(() => refinedTransition.evaluate(element => { const rect = element.getBoundingClientRect(); return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)]; })).toEqual([0, 0, 390, 844]);
-  await expect(refinedTransition).toContainText("启用流光边框、弹性回弹、柔光与丰富的浮层滑动");
-  await expect(refinedTransition).toContainText("切换底栏与页面反馈");
+  await expect(refinedTransition).toContainText("流光、柔和模糊与弹性反馈");
   await expect(refinedTransition).toHaveCount(0, { timeout: 6000 });
   expect(await page.locator("html").getAttribute("data-motion")).toBe("refined");
   expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toContain("blur(18px)");
@@ -196,12 +195,26 @@ test("全站精致与简单动效可切换、详细过场显示并在刷新后�
   await page.getByRole("button", { name: /简单/ }).click();
   const simpleTransition = page.getByRole("status", { name: "正在切换到简单动效" });
   await expect(simpleTransition).toBeVisible();
-  await expect(simpleTransition).toContainText("关闭动画、模糊材质与装饰性动态效果");
-  await expect(simpleTransition).toContainText("简单模式已就绪");
+  await expect(simpleTransition).toContainText("直接切换，减少视觉效果。");
   await expect(simpleTransition).toHaveCount(0, { timeout: 3000 });
   expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
   await page.reload();
   await expect(page.getByRole("button", { name: /简单/ })).toHaveAttribute("aria-pressed", "true");
   expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
   expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toBe("none");
+});
+
+test("顶栏夜间模式开关生效并在刷新后保留", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "切换夜间模式" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.getByRole("button", { name: "切换日间模式" })).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(14, 22, 34)");
+  await expect.poll(() => page.locator(".glass-card").first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(23, 35, 50)");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await page.getByRole("button", { name: "切换日间模式" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
 });

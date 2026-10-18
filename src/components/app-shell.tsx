@@ -31,6 +31,8 @@ import {
   SlidersHorizontal,
   Check,
   Sparkles,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -63,6 +65,7 @@ const nav = [
 ];
 const defaultMobilePrimary = ["/dashboard", "/products", "/data", "/finance"];
 const mobileNavStorageKey = "moonclean-mobile-navigation-v1";
+const themeStorageKey = "moonclean-theme-v1";
 const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const roleLabels = {
   owner: "所有者",
@@ -163,6 +166,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchDataMode,
   } = useApp();
   const { level: motionLevel } = useMotionPreferences();
+  const [nightMode, setNightMode] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
@@ -176,6 +180,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      let enabled = false;
+      try { enabled = localStorage.getItem(themeStorageKey) === "night"; } catch { /* Keep the light default when storage is unavailable. */ }
+      setNightMode(enabled);
+      document.documentElement.dataset.theme = enabled ? "night" : "day";
+      document.documentElement.style.colorScheme = enabled ? "dark" : "light";
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
@@ -239,6 +253,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } finally {
       setModeSwitchBusy(false);
     }
+  }
+  function toggleNightMode() {
+    const next = !nightMode;
+    setNightMode(next);
+    document.documentElement.dataset.theme = next ? "night" : "day";
+    document.documentElement.style.colorScheme = next ? "dark" : "light";
+    try { localStorage.setItem(themeStorageKey, next ? "night" : "day"); } catch { /* Apply the theme for this session even when storage is unavailable. */ }
   }
   function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -396,6 +417,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-medium text-[#45617d]">{currentLabel}</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+            <button type="button" aria-label={nightMode ? "切换日间模式" : "切换夜间模式"} aria-pressed={nightMode} title={nightMode ? "切换日间模式" : "切换夜间模式"} onClick={toggleNightMode} className="grid size-8 shrink-0 place-items-center rounded-full border border-[#e5eaf0] bg-white/80 text-[#52677b] transition-colors hover:bg-[#f2f7fb] sm:size-9">
+              {nightMode ? <Sun size={16}/> : <Moon size={16}/>}
+            </button>
             {mode === "cloud" && stores.length > 0 && (
               <AppSelect
                 aria-label="切换店铺"
