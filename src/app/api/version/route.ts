@@ -15,6 +15,15 @@ type GitHubCommit = {
     committer: { date: string } | null;
   };
 };
+type GitHubCommitRecord = {
+  sha?: string;
+  message?: string;
+  committer?: { date: string } | null;
+  commit?: GitHubCommitRecord;
+};
+type GitHubCommitResponse = GitHubCommitRecord & {
+  object?: { sha?: string };
+};
 
 function getCurrentCommit() {
   const configured =
@@ -51,29 +60,87 @@ export async function GET() {
       fetch(url, {
         headers: {
           Accept: accept,
+          "User-Agent": "MoonCleanOS-VersionCheck/1.0",
+          "X-GitHub-Api-Version": "2022-11-28",
           ...(token && useToken ? { Authorization: `Bearer ${token}` } : {}),
         },
         cache: "no-store",
         signal: AbortSignal.timeout(12_000),
         ...(dispatcher ? { dispatcher } : {}),
       } as RequestInit & { dispatcher: EnvHttpProxyAgent });
-    let [commitResponse, packageResponse] = await Promise.all([
-      githubRequest(`https://api.github.com/repos/${repository}/commits/main`),
+    async function loadLatestCommit(): Promise<GitHubCommit> {
+      let lastStatus = 0;
+      let lastError: unknown;
+      const endpoints = [
+        `https://api.github.com/repos/${repository}/commits/main`,
+        `https://api.github.com/repos/${repository}/branches/main`,
+      ];
+
+      for (const endpoint of endpoints) {
+        try {
+          let response = await githubRequest(endpoint);
+          if (token && [401, 403].includes(response.status))
+            response = await githubRequest(endpoint, "application/vnd.github+json", true);
+          lastStatus = response.status;
+          if (response.ok) {
+            const payload = (await response.json()) as GitHubCommitResponse;
+            const candidate: GitHubCommitRecord = payload.sha
+              ? payload
+              : payload.commit || {};
+            if (candidate?.sha) {
+              return {
+                sha: candidate.sha,
+                commit: {
+                  message: candidate.commit?.message || candidate.message || "",
+                  committer: candidate.commit?.committer || candidate.committer || null,
+                },
+              };
+            }
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      // GitHub's smart Git endpoint is independent of the REST API and still
+      // advertises the public main ref when REST is unavailable or returns 404.
+      try {
+        const refsResponse = await githubRequest(
+          `https://github.com/${repository}.git/info/refs?service=git-upload-pack`,
+          "application/x-git-upload-pack-advertisement",
+        );
+        lastStatus = refsResponse.status;
+        if (refsResponse.ok) {
+          const refs = await refsResponse.text();
+          const match = refs.match(/([a-f0-9]{40}) refs\/heads\/main(?:\\n|\n|\r)/i);
+          if (match) {
+            return {
+              sha: match[1],
+              commit: { message: "", committer: null },
+            };
+          }
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (lastStatus === 403 || lastStatus === 429) {
+        throw new Error(
+          "GitHub 暂时限制了版本查询。请稍后重试；Codespaces 配置 GITHUB_TOKEN 后可提高查询额度。",
+        );
+      }
+      if (lastError) throw lastError;
+      throw new Error(`GitHub 暂时无法读取最新提交（HTTP ${lastStatus || 404}）。`);
+    }
+
+    const [latestCommit, initialPackageResponse] = await Promise.all([
+      loadLatestCommit(),
       githubRequest(
         `https://raw.githubusercontent.com/${repository}/main/package.json`,
         "application/json",
       ),
     ]);
-    if (
-      token &&
-      [401, 403].includes(commitResponse.status)
-    ) {
-      commitResponse = await githubRequest(
-        `https://api.github.com/repos/${repository}/commits/main`,
-        "application/vnd.github+json",
-        true,
-      );
-    }
+    let packageResponse = initialPackageResponse;
     if (token && [401, 403].includes(packageResponse.status)) {
       packageResponse = await githubRequest(
         `https://raw.githubusercontent.com/${repository}/main/package.json`,
@@ -81,18 +148,9 @@ export async function GET() {
         true,
       );
     }
-    if (!commitResponse.ok) {
-      if (commitResponse.status === 403 || commitResponse.status === 429) {
-        throw new Error(
-          "GitHub 暂时限制了版本查询。请稍后重试；Codespaces 配置 GITHUB_TOKEN 后可提高查询额度。",
-        );
-      }
-      throw new Error(`GitHub 暂时无法读取最新提交（HTTP ${commitResponse.status}）。`);
-    }
     if (!packageResponse.ok) {
       throw new Error(`GitHub 暂时无法读取版本号（HTTP ${packageResponse.status}）。`);
     }
-    const latestCommit = (await commitResponse.json()) as GitHubCommit;
     const latestPackage = (await packageResponse.json()) as { version?: string };
     const currentCommit = getCurrentCommit();
     const currentShort = currentCommit.slice(0, 7);
