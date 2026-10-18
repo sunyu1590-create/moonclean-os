@@ -1,20 +1,19 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Sparkles, Zap } from "lucide-react";
 import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
-  { id: "refined", label: "精致", short: "最大的特效", detail: "流光边框、弹性按压、手势跟随、局部柔光与更丰富的浮层滑动。", experience: "视觉最丰富 · 聚焦局部效果" },
-  { id: "standard", label: "标准", short: "中等的特效", detail: "保留轻量淡入、卡片反馈、底栏手势跟随与克制的半透明材质。", experience: "轻盈克制 · 日常推荐" },
-  { id: "simple", label: "简单", short: "没有动效", detail: "关闭动效、毛玻璃、活动滑块和动态阴影，界面静态直切。", experience: "静态直接 · 最省资源" },
+  { id: "refined", label: "精致", short: "丰富动效", detail: "流光、柔和模糊与弹性反馈。", experience: "丰富细腻" },
+  { id: "standard", label: "标准", short: "适中动效", detail: "轻量过渡与基础交互反馈。", experience: "轻盈克制" },
+  { id: "simple", label: "简单", short: "关闭动效", detail: "直接切换，减少视觉效果。", experience: "清爽直接" },
 ];
 
-type MotionTransition = { id: number; from: MotionLevel; to: MotionLevel; step: number };
+type MotionTransition = { id: number; to: MotionLevel };
 type MotionContextValue = { level: MotionLevel; ready: boolean; setLevel: (level: MotionLevel) => void };
 const STORAGE_KEY = "moonclean-motion-level-v1";
-const STEPS = ["保存本机动效偏好", "更新全站视觉材质", "切换底栏与页面反馈", "完成体验配置"];
 const MotionContext = createContext<MotionContextValue | null>(null);
 
 export function useMotionPreferences() {
@@ -25,45 +24,14 @@ export function useMotionPreferences() {
 
 function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
   const target = MOTION_LEVELS.find(item => item.id === transition.to)!;
-  const previous = MOTION_LEVELS.find(item => item.id === transition.from)!;
-  const detailed = [
-    `从「${previous.label}」切换至「${target.label}」`,
-    target.id === "refined" ? "启用流光边框、弹性回弹、柔光与丰富的浮层滑动" : target.id === "standard" ? "启用轻量淡入、卡片反馈与底栏手势跟随" : "关闭动画、模糊材质与装饰性动态效果",
-    "同步更新手机底栏、导航菜单与全站交互",
-    "设置已保存，可随时在系统设置中切换",
-  ];
-  const preview = transition.to === "refined"
-    ? "流光边缘 · 弹性回弹 · 局部柔光"
-    : transition.to === "standard"
-      ? "平滑过场 · 轻量反馈 · 手势跟随"
-      : "静态界面 · 无模糊 · 直接切换";
+  const Icon = transition.to === "simple" ? Check : transition.to === "standard" ? Zap : Sparkles;
   return <div className={`motion-switch-screen motion-switch-${transition.to}`} role="status" aria-live="polite" aria-label={`正在切换到${target.label}动效`}>
-    {transition.to === "refined" && <div aria-hidden="true" className="motion-particle-field">{Array.from({ length: 22 }, (_, index) => <i key={index} style={{ left: `${(index * 47 + 7) % 100}%`, width: `${2 + index % 4}px`, height: `${2 + index % 4}px`, animationDuration: `${5 + index % 7}s`, animationDelay: `${index * -.53}s`, "--particle-drift": `${((index % 5) - 2) * 34}px` } as CSSProperties}/>)}</div>}
-    <div className="motion-switch-orbit motion-switch-orbit-a" aria-hidden="true"/>
-    <div className="motion-switch-orbit motion-switch-orbit-b" aria-hidden="true"/>
     <div className="motion-switch-panel">
-      <div className="motion-switch-brand"><span className="motion-switch-icon">{transition.to === "simple" ? <Check size={24}/> : transition.to === "standard" ? <Zap size={23}/> : <Sparkles size={24}/>}</span><span>MOONCLEAN OS</span></div>
-      <p className="motion-switch-kicker">全局体验正在更新</p>
-      <h2>{transition.step >= STEPS.length ? `${target.label}模式已就绪` : `正在切换至「${target.label}」`}</h2>
+      <span className="motion-switch-icon"><Icon size={22}/></span>
+      <p className="motion-switch-kicker">MOONCLEAN OS · v{APP_VERSION}</p>
+      <h2>切换到{target.label}模式</h2>
       <p className="motion-switch-description">{target.detail}</p>
-      <div className={`motion-effect-preview motion-effect-preview-${transition.to}`}>
-        <span className="motion-effect-swatch" aria-hidden="true"><i/><i/><i/></span>
-        <span className="min-w-0"><strong>效果预览 · {target.label}</strong><small>{preview}</small></span>
-        <span className="motion-effect-state">{transition.step >= STEPS.length ? "已应用" : "正在应用"}</span>
-      </div>
-      <div className="motion-switch-steps">
-        {STEPS.map((step, index) => {
-          const completed = transition.step > index;
-          const active = transition.step === index;
-          return <div key={step} className={`motion-switch-step ${completed ? "is-done" : ""} ${active ? "is-active" : ""}`}>
-            <span className="motion-switch-step-mark">{completed ? <Check size={12}/> : String(index + 1).padStart(2, "0")}</span>
-            <span className="motion-switch-step-copy"><strong>{step}</strong><small>{detailed[index]}</small></span>
-            <span className="motion-switch-step-status">{completed ? "完成" : active ? "处理中" : "等待"}</span>
-          </div>;
-        })}
-      </div>
-      <div className="motion-switch-progress"><span style={{ width: `${(transition.step / STEPS.length) * 100}%` }}/></div>
-      <p className="motion-switch-footnote">v{APP_VERSION} · {transition.step >= STEPS.length ? `当前为${target.label}动效` : `正在切换至${target.label}动效`} · 偏好保存在当前设备</p>
+      <div className="motion-switch-progress"><span/></div>
     </div>
   </div>;
 }
@@ -90,34 +58,17 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
     document.documentElement.dataset.motion = level;
   }, [level]);
 
-  useEffect(() => () => { if (timer.current !== null) window.clearInterval(timer.current); }, []);
+  useEffect(() => () => { if (timer.current !== null) window.clearTimeout(timer.current); }, []);
 
   const setLevel = useCallback((next: MotionLevel) => {
     if (next === level) return;
     const id = ++transitionId.current;
-    if (timer.current !== null) window.clearInterval(timer.current);
+    if (timer.current !== null) window.clearTimeout(timer.current);
     try { localStorage.setItem(STORAGE_KEY, next); } catch { /* This session still adopts the selected profile. */ }
     document.documentElement.dataset.motion = next;
     setLevelState(next);
-    if (next === "simple") {
-      setTransition({ id, from: level, to: next, step: STEPS.length });
-      timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), 1900);
-      return;
-    }
-    setTransition({ id, from: level, to: next, step: 0 });
-    const interval = next === "refined" ? 640 : next === "standard" ? 480 : 55;
-    let step = 0;
-    timer.current = window.setInterval(() => {
-      step += 1;
-      setTransition(current => {
-        if (!current || current.id !== id) return current;
-        return { ...current, step };
-      });
-      if (step >= STEPS.length) {
-        if (timer.current !== null) window.clearInterval(timer.current);
-        timer.current = window.setTimeout(() => setTransition(currentState => currentState?.id === id ? null : currentState), next === "refined" ? 850 : next === "standard" ? 500 : 0);
-      }
-    }, interval);
+    setTransition({ id, to: next });
+    timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "simple" ? 320 : 560);
   }, [level]);
 
   return <MotionContext.Provider value={{ level, ready, setLevel }}>

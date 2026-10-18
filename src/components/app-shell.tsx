@@ -32,7 +32,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
@@ -165,6 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { level: motionLevel } = useMotionPreferences();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
   const [customizingNav, setCustomizingNav] = useState(false);
   const [mobilePrimary, setMobilePrimary] = useState(defaultMobilePrimary);
   const [logoutBusy, setLogoutBusy] = useState(false);
@@ -172,14 +173,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
-  const mobileNavRef = useRef<HTMLElement>(null);
-  const pointerDrag = useRef<{ id: number; x: number; y: number; dragging: boolean } | null>(null);
-  const navFollowResetTimer = useRef<number | null>(null);
-  const suppressNavClick = useRef(false);
-  const [trackingSlot, setTrackingSlot] = useState<number | null>(null);
-  const [navPressed, setNavPressed] = useState(false);
-  const [navLightY, setNavLightY] = useState(50);
-  useEffect(() => () => { if (navFollowResetTimer.current !== null) window.clearTimeout(navFollowResetTimer.current); }, []);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
@@ -250,80 +243,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     mobileNavItems.map((item) => item.href),
     mobileMenuOpen,
   );
-  const mobileIndicatorSlot = trackingSlot ?? activeIndicatorSlot;
-  function getPointerPosition(clientX: number, clientY: number) {
-    const rect = mobileNavRef.current?.querySelector(".relative.grid")?.getBoundingClientRect();
-    if (!rect || rect.width === 0 || rect.height === 0) return { slot: activeIndicatorSlot, lightY: 50 };
-    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-    const slot = Math.max(0, Math.min(4, x * 5 - 0.5));
-    return { slot, lightY: y * 100 };
-  }
-  function trackPointer(clientX: number, clientY: number) {
-    const position = getPointerPosition(clientX, clientY);
-    setTrackingSlot(position.slot);
-    setNavLightY(position.lightY);
-  }
-  function onNavPointerDown(event: React.PointerEvent<HTMLElement>) {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    pointerDrag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, dragging: false };
-    setNavPressed(true);
-    if (event.pointerType === "mouse") trackPointer(event.clientX, event.clientY);
-  }
-  function onNavPointerMove(event: React.PointerEvent<HTMLElement>) {
-    if (pointerDrag.current?.id === event.pointerId) {
-      const drag = pointerDrag.current;
-      if (!drag.dragging && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 22) {
-        drag.dragging = true;
-        if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
-      }
-      if (drag.dragging) trackPointer(event.clientX, event.clientY);
-    }
-    else if (event.pointerType === "mouse") trackPointer(event.clientX, event.clientY);
-  }
-  function onNavPointerUp(event: React.PointerEvent<HTMLElement>) {
-    const start = pointerDrag.current;
-    if (!start || start.id !== event.pointerId) return;
-    const position = getPointerPosition(event.clientX, event.clientY);
-    const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-    pointerDrag.current = null;
-    setNavPressed(false);
-    if (distance < 22) {
-      // Keep the highlight on the tapped destination while Next updates the route.
-      // Clearing it on pointer-leave used to send the indicator back to the old route
-      // before it moved forward again, which looked like a click stutter.
-      setTrackingSlot(position.slot);
-      if (navFollowResetTimer.current !== null) window.clearTimeout(navFollowResetTimer.current);
-      navFollowResetTimer.current = window.setTimeout(() => {
-        setTrackingSlot(null);
-        navFollowResetTimer.current = null;
-      }, 520);
-      return;
-    }
-    setTrackingSlot(null);
-    suppressNavClick.current = true;
-    window.setTimeout(() => { suppressNavClick.current = false; }, 500);
-    const destination = Math.round(position.slot);
-    if (destination >= 4) setMobileMenuOpen(true);
-    else if (mobileNavItems[destination]) router.push(mobileNavItems[destination].href);
-  }
-  function onNavPointerCancel(event: React.PointerEvent<HTMLElement>) {
-    if (pointerDrag.current?.id !== event.pointerId) return;
-    pointerDrag.current = null;
-    setNavPressed(false);
-    setTrackingSlot(null);
-  }
-  function onNavClickCapture(event: React.MouseEvent<HTMLElement>) {
-    if (!suppressNavClick.current) return;
-    event.preventDefault();
-    event.stopPropagation();
-    suppressNavClick.current = false;
-  }
-  function onNavPointerLeave() {
-    if (pointerDrag.current || navFollowResetTimer.current !== null) return;
-    setTrackingSlot(null);
-  }
-  const indicatorTransform = `translateX(${mobileIndicatorSlot * 100}%) scale(${motionLevel === "refined" && navPressed ? 0.96 : 1})`;
+  const indicatorTransform = `translateX(${activeIndicatorSlot * 100}%)`;
   return (
     <div className="min-h-screen md:flex">
       <aside
@@ -497,9 +417,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav ref={mobileNavRef} aria-label="主导航" onPointerDown={onNavPointerDown} onPointerMove={onNavPointerMove} onPointerUp={onNavPointerUp} onPointerCancel={onNavPointerCancel} onPointerLeave={onNavPointerLeave} onDragStart={(event) => event.preventDefault()} onClickCapture={onNavClickCapture} className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`, trackingSlot !== null && "is-following", navPressed && "is-pressed")}>
+      <nav aria-label="主导航" className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`)}>
         <div className="relative grid grid-cols-5">
-          <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform, "--touch-light-y": `${navLightY}%` } as React.CSSProperties}>
+          <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform } as React.CSSProperties}>
             {motionLevel === "refined" && <span className="mobile-active-spectrum"/>}
             {motionLevel === "refined" && <><i/><i/><i/><i/></>}
           </span>
@@ -514,8 +434,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </nav>
-      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="bottom" className="mobile-more-sheet h-[100dvh] max-h-[100dvh] overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden">
+      <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
+        <SheetContent side="bottom" onScroll={(event) => { if (event.currentTarget.scrollTop > 0) setMobileMenuExpanded(true); }} className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded")}>
           <SheetHeader className="px-1 pb-4 text-left">
             <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[#eaf4ff] text-[#3189e8]"><Sparkles size={21}/></div>
             <SheetTitle className="text-xl">更多功能</SheetTitle>
