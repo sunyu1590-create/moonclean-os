@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Bot, Clock3, RefreshCw, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { Button } from "@/components/ui/button";
+import { notifyFeedback } from "@/lib/feedback";
 
 type Feature = "dashboard" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
@@ -43,8 +44,11 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
         const entry: CacheEntry = { suggestion: result.suggestion, generatedAt: result.generatedAt, contextKey };
         try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch { /* Current session still displays the result. */ }
       }
+      if (!automatic) notifyFeedback({ kind: "success", title: "AI 建议已生成", description: "建议已显示在当前页面。" });
     } catch (cause) {
-      if (!automatic || !suggestion) setError(cause instanceof Error ? cause.message : "AI 建议生成失败，请稍后重试。");
+      const message = cause instanceof Error ? cause.message : "AI 建议生成失败，请稍后重试。";
+      if (!automatic || !suggestion) setError(message);
+      if (!automatic) notifyFeedback({ kind: "error", title: "AI 建议生成失败", description: message });
     } finally { setBusy(false); }
   }, [activeStoreId, busy, cacheKey, context, contextKey, feature, mode, suggestion]);
 

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { hasLocalData, parseAppData, readLocalRaw } from "@/lib/repository";
 import { previewMigration, type MigrationPreview } from "@/lib/migration";
 import type { AppData } from "@/lib/model";
+import { notifyFeedback } from "@/lib/feedback";
 type Result = {
   kind: string;
   sourceId: string;
@@ -92,8 +93,11 @@ export default function MigratePage() {
       if (!response.ok) throw new Error(body.error || "导入失败");
       setResults(body.results);
       await retry();
+      notifyFeedback({ kind: "success", title: "本地数据迁移完成", description: "导入结果已更新，原始本机备份仍保留。" });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "导入失败");
+      const message = cause instanceof Error ? cause.message : "导入失败";
+      setError(message);
+      notifyFeedback({ kind: "error", title: "本地数据迁移失败", description: message });
     } finally {
       setBusy(false);
     }
