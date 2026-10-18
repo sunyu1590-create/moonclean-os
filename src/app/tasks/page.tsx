@@ -22,46 +22,56 @@ const quickTasks=[
 ];
 type Feedback={success:boolean;title:string;message:string};
 export default function TasksPage(){
-  const {mode,activeStoreId,role,data}=useApp();
+  const {mode,activeStoreId,role,data,update}=useApp();
   const [tasks,setTasks]=useState<OperationTask[]>([]);const [loading,setLoading]=useState(false);
   const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [feedback,setFeedback]=useState<Feedback|null>(null);
   const [filter,setFilter]=useState<Status|"all">("all");const [editing,setEditing]=useState<string|null>(null);
   const [form,setForm]=useState(blank);
   const today=data?new Intl.DateTimeFormat("en-CA",{timeZone:data.settings.store.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):"";
   const load=useCallback(async():Promise<boolean>=>{
+    if(mode==="local") { setLoading(false); setError(""); setTasks(data?.tasks||[]); return true; }
     if(!activeStoreId)return false;
     setLoading(true);setError("");
     try{const result=await operationsRequest<{tasks:OperationTask[]}>(activeStoreId,"tasks");setTasks(result.tasks);return true;}
     catch(cause){setError(cause instanceof Error?cause.message:"待办读取失败");return false;}
     finally{setLoading(false);}
-  },[activeStoreId]);
+  },[activeStoreId,mode,data?.tasks]);
   useEffect(()=>{queueMicrotask(()=>{setTasks([]);void load();});},[load]);
-  const canEdit=mode==="cloud"&&role!=="viewer";
+  const canEdit=mode==="local"||role!=="viewer";
   function startEdit(task:OperationTask){setEditing(task.id);setForm({title:task.title,detail:task.detail,priority:task.priority,status:task.status,dueDate:task.due_date||""});}
   async function save(event:React.FormEvent){
     event.preventDefault();if(!activeStoreId)return;
     setBusy(true);setError("");setFeedback(null);
     try{
       const payload={...form,title:form.title.trim(),detail:form.detail.trim(),dueDate:form.dueDate||null,...(editing?{id:editing}:{})};
-      if(editing){await operationsRequest(activeStoreId,"tasks",payload,"PATCH");}
-      else{const created=await operationsRequest<OperationTask>(activeStoreId,"tasks",payload,"POST");setTasks(current=>[created,...current.filter(task=>task.id!==created.id)]);}
+      if(mode==="local"){
+        const now=new Date().toISOString();
+        await update(current=>{
+          const next:OperationTask={id:editing||crypto.randomUUID(),title:payload.title,detail:payload.detail,priority:payload.priority,status:payload.status,due_date:payload.dueDate,created_at:editing?(current.tasks||[]).find(task=>task.id===editing)?.created_at||now:now,updated_at:now};
+          return {...current,tasks:editing?(current.tasks||[]).map(task=>task.id===editing?next:task):[next,...(current.tasks||[])]};
+        });
+      } else {
+        if(!activeStoreId)throw new Error("未找到当前店铺");
+        if(editing){await operationsRequest(activeStoreId,"tasks",payload,"PATCH");}
+        else{const created=await operationsRequest<OperationTask>(activeStoreId,"tasks",payload,"POST");setTasks(current=>[created,...current.filter(task=>task.id!==created.id)]);}
+      }
       const title=form.title.trim();setEditing(null);setForm(blank);
       const refreshed=await load();
-      setFeedback({success:true,title:editing?"任务已更新":"任务已创建",message:refreshed?`“${title}”已保存到云端，并显示在任务列表中。`:`“${title}”已保存到云端；列表暂时无法刷新，稍后点击刷新即可重新读取。`});
+      const location=mode==="local"?"当前设备":"云端";
+      setFeedback({success:true,title:editing?"任务已更新":"任务已创建",message:refreshed?`“${title}”已保存到${location}，并显示在任务列表中。`:`“${title}”已保存到${location}；列表暂时无法刷新，稍后点击刷新即可重新读取。`});
     }catch(cause){const message=cause instanceof Error?cause.message:"保存失败，请检查网络后重试。";setError(message);setFeedback({success:false,title:editing?"任务更新失败":"任务创建失败",message});}
     finally{setBusy(false);}
   }
   async function changeStatus(task:OperationTask,status:Status){
-    if(!activeStoreId)return;
     setBusy(true);setError("");
-    try{await operationsRequest(activeStoreId,"tasks",{id:task.id,title:task.title,detail:task.detail,priority:task.priority,status,dueDate:task.due_date},"PATCH");await load();setFeedback({success:true,title:"任务状态已更新",message:`“${task.title}”已设为${statusName[status]}。`});}
+    try{if(mode==="local")await update(current=>({...current,tasks:(current.tasks||[]).map(item=>item.id===task.id?{...item,status,updated_at:new Date().toISOString()}:item)}));else{if(!activeStoreId)throw new Error("未找到当前店铺");await operationsRequest(activeStoreId,"tasks",{id:task.id,title:task.title,detail:task.detail,priority:task.priority,status,dueDate:task.due_date},"PATCH");}await load();setFeedback({success:true,title:"任务状态已更新",message:`“${task.title}”已设为${statusName[status]}。`});}
     catch(cause){const message=cause instanceof Error?cause.message:"更新失败，请重试。";setError(message);setFeedback({success:false,title:"更新失败",message});}
     finally{setBusy(false);}
   }
   async function remove(task:OperationTask){
-    if(!activeStoreId||!window.confirm(`确定删除“${task.title}”吗？`))return;
+    if((mode==="cloud"&&!activeStoreId)||!window.confirm(`确定删除“${task.title}”吗？`))return;
     setBusy(true);setError("");
-    try{await operationsRequest(activeStoreId,"tasks",{id:task.id},"DELETE");await load();setFeedback({success:true,title:"任务已删除",message:`“${task.title}”已从云端任务列表删除。`});}
+    try{if(mode==="local")await update(current=>({...current,tasks:(current.tasks||[]).filter(item=>item.id!==task.id)}));else await operationsRequest(activeStoreId!,"tasks",{id:task.id},"DELETE");await load();setFeedback({success:true,title:"任务已删除",message:`“${task.title}”已从${mode==="local"?"本机":"云端"}任务列表删除。`});}
     catch(cause){const message=cause instanceof Error?cause.message:"删除失败，请重试。";setError(message);setFeedback({success:false,title:"删除失败",message});}
     finally{setBusy(false);}
   }
@@ -69,8 +79,7 @@ export default function TasksPage(){
   const overdue=open.filter(task=>task.due_date&&task.due_date<today);
   const visible=tasks.filter(task=>filter==="all"||task.status===filter);
   return <>
-    <PageHead eyebrow="TASKS / 运营待办" title="让每天的运营更有条理" description="记录补货、推广、售后等任务，按店铺同步给团队成员。" action={<Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button>}/>
-    {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-[#e8f5ff] p-4 text-sm text-[#476d91]">待办功能使用云端店铺。配置 Supabase 并登录后即可跨设备使用。</p>}
+    <PageHead eyebrow="TASKS / 运营待办" title="让每天的运营更有条理" description={mode==="local"?"任务仅保存在当前设备，可随本地数据备份或迁移到云端。":"记录补货、推广、售后等任务，按店铺同步给团队成员。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}
     <div className="mb-5 grid gap-4 sm:grid-cols-3">
       <MetricCard label="未完成" value={String(open.length)} icon={<ListTodo size={19}/>}/>

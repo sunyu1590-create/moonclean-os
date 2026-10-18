@@ -10,12 +10,14 @@ import {
   Wallet,
   Database,
   Settings,
+  ChevronDown,
   ChevronRight,
   PanelLeftClose,
   LogOut,
   CircleUserRound,
   RefreshCw,
   Cloud,
+  HardDrive,
   Plug,
   ListChecks,
   Menu,
@@ -36,8 +38,10 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "./app-provider";
 import { getMobileNavigationSlot } from "@/lib/mobile-navigation";
+import { DataTransitionOverlay } from "@/components/data-transition-overlay";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
@@ -150,8 +154,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     stores,
     activeStoreId,
     role,
+    user,
+    dataTransition,
     retry,
     switchStore,
+    switchDataMode,
   } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -159,6 +166,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobilePrimary, setMobilePrimary] = useState(defaultMobilePrimary);
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
+  const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
+  const [modeSwitchError, setModeSwitchError] = useState("");
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
@@ -206,6 +216,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : mobilePrimary.length < 4 ? [...mobilePrimary, href] : mobilePrimary;
     setMobilePrimary(next);
     localStorage.setItem(mobileNavStorageKey, JSON.stringify(next));
+  }
+  async function chooseDataMode(next: "local" | "cloud") {
+    if (next === mode || modeSwitchBusy) {
+      if (next === mode) setDataModeDialogOpen(false);
+      return;
+    }
+    setModeSwitchBusy(true);
+    setModeSwitchError("");
+    try {
+      await switchDataMode(next);
+      setDataModeDialogOpen(false);
+    } catch (cause) {
+      setModeSwitchError(cause instanceof Error ? cause.message : "切换失败，请重试。");
+    } finally {
+      setModeSwitchBusy(false);
+    }
   }
   const mobileNavItems = nav.filter((item) => mobilePrimary.includes(item.href));
   const mobileIndicatorSlot = getMobileNavigationSlot(
@@ -292,7 +318,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="text-xs text-[#8fa1b3]">
                 {mode === "cloud"
                   ? `云端数据 · ${role ? roleLabels[role] : ""}`
-                  : "本地演示模式"}
+                  : "本地数据 · 当前设备"}
               </div>
             </div>
           )}
@@ -313,6 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mode === "cloud" && stores.length > 0 && (
               <AppSelect
                 aria-label="切换店铺"
+                disabled={loading||modeSwitchBusy}
                 className="max-w-[30vw] rounded-xl border border-[#e4e9ef] bg-white/75 px-2 py-1.5 text-[11px] font-medium text-[#39485a] sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
                 value={activeStoreId || ""}
                 onChange={(e) => void switchStore(e.target.value).catch(() => {})}
@@ -324,14 +351,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))}
               </AppSelect>
             )}
-            <span className={cn(
-              "whitespace-nowrap rounded-full border border-[#d9f0e8] px-2 py-1.5 text-[10px] font-semibold sm:px-2.5 sm:text-[11px]",
-              error && mode === "cloud"
+            <button type="button" onClick={() => { setModeSwitchError(""); setDataModeDialogOpen(true); }} disabled={loading||modeSwitchBusy} aria-label="切换本地数据或云端数据" title="切换数据存储位置" className={cn(
+              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#d9f0e8] px-2 py-1.5 text-[10px] font-semibold transition-colors hover:bg-[#dff4ee] disabled:opacity-60 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
+              error
                 ? "bg-[#fff0f1] text-[#e85d65]"
                 : "bg-[#e9f7f3] text-[#16a085]",
             )}>
-              <span aria-hidden="true" className="mr-1 inline-block size-1.5 rounded-full bg-current align-middle" />{mode === "local" ? "本地演示" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}
-            </span>
+              <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-current" />{mode === "local" ? error ? "本地异常" : saving ? "本机保存中…" : "本地数据" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}<ChevronDown size={12}/>
+            </button>
             {mode === "cloud" && (
               <>
                 <Link
@@ -352,9 +379,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </>
             )}
+            {mode === "local" && user && <button type="button" aria-label="退出登录" title="退出登录" disabled={logoutBusy} onClick={signOut} className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"><LogOut size={17}/></button>}
           </div>
         </header>
-        <main className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
+        <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
           {error && (
             <div
@@ -370,7 +398,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           {saving && (
             <p role="status" className="mb-4 text-xs text-[#3b91eb]">
-              正在保存到云端…
+              {mode === "local" ? "正在保存到此设备…" : "正在保存到云端…"}
             </p>
           )}
           {loading ? (
@@ -421,6 +449,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </SheetContent>
       </Sheet>
+      <Dialog open={dataModeDialogOpen} onOpenChange={open=>{if(!modeSwitchBusy)setDataModeDialogOpen(open);}}>
+        <DialogContent className="rounded-[28px] border border-[#e3edf6] p-6 sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-[#172b45]">选择数据存储位置</DialogTitle>
+            <DialogDescription className="leading-6">切换只会更改当前读取的数据源，不会自动复制或合并两边的数据。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(["cloud","local"] as const).map(target=>{
+              const active=mode===target;
+              return <button key={target} type="button" disabled={modeSwitchBusy||loading} onClick={()=>void chooseDataMode(target)} className={cn("rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-wait disabled:opacity-60",active?"border-[#9cccf8] bg-[#f0f8ff] shadow-[inset_0_0_0_1px_#d5eaff]":"border-[#e6edf3] bg-white hover:border-[#c8def1]")}>
+                <span className={cn("mb-3 grid size-10 place-items-center rounded-xl",target==="cloud"?"bg-[#e8f5ff] text-[#3189e8]":"bg-[#eaf7f2] text-[#15987c]")}>{target==="cloud"?<Cloud size={20}/>:<HardDrive size={20}/>}</span>
+                <span className="block text-sm font-semibold text-[#253b53]">{target==="cloud"?"云端数据":"本地数据"}{active&&<span className="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-[#4581b2]">当前使用</span>}</span>
+                <span className="mt-1.5 block text-xs leading-5 text-[#8092a4]">{target==="cloud"?"安全保存在云端，手机和电脑可同步，支持店铺与团队协作。":"保存在此设备的浏览器中；不会自动上传或跨设备同步。"}</span>
+              </button>;
+            })}
+          </div>
+          {modeSwitchError&&<p role="alert" className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#d35760]">{modeSwitchError}</p>}
+          {modeSwitchError.includes("登录")&&<Link href="/login" onClick={()=>setDataModeDialogOpen(false)} className="text-sm font-semibold text-[#287fe2]">前往登录云端账号 →</Link>}
+          <p className="text-xs leading-5 text-[#91a0af]">本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。</p>
+        </DialogContent>
+      </Dialog>
+      <DataTransitionOverlay transition={dataTransition}/>
     </div>
   );
 }

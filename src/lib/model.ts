@@ -96,7 +96,36 @@ export interface AppData {
   daily: DailyMetric[];
   advertising: AdvertisingMetric[];
   skuDaily?: SKUDailyMetric[];
+  /** Device-local operational data is never uploaded unless the user migrates it. */
+  tasks?: LocalOperationTask[];
+  inventory?: LocalInventoryBalance[];
+  inventoryMovements?: LocalInventoryMovement[];
   externalCatalog?: { id: string; name: string; isDemo: boolean; skus: { id: string; name: string; code: string | null; price: Money; mappedSkuId: string | null }[] }[];
   settings: AppSettings;
+}
+export interface LocalOperationTask {
+  id: string;
+  title: string;
+  detail: string;
+  priority: "low" | "normal" | "high";
+  status: "todo" | "doing" | "done";
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface LocalInventoryBalance {
+  sku_id: string;
+  quantity: number;
+  low_stock_threshold: number;
+  updated_at: string;
+}
+export interface LocalInventoryMovement {
+  id: string;
+  sku_id: string;
+  quantity_before: number;
+  quantity_after: number;
+  delta: number;
+  note: string;
+  created_at: string;
 }
 export const DATA_VERSION = 1;

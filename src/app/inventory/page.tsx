@@ -10,7 +10,7 @@ import { type InventoryBalance, type InventoryMovement, operationsRequest } from
 
 type Snapshot = {balances:InventoryBalance[];movements:InventoryMovement[]};
 export default function InventoryPage(){
-  const {data,mode,activeStoreId,role}=useApp();
+  const {data,mode,activeStoreId,role,update}=useApp();
   const [snapshot,setSnapshot]=useState<Snapshot|null>(null);
   const [error,setError]=useState("");const [notice,setNotice]=useState("");
   const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(false);
@@ -19,12 +19,18 @@ export default function InventoryPage(){
   const skus=useMemo(()=>data?.products.flatMap(product=>product.skus.map(sku=>({id:sku.id,label:`${product.name} · ${sku.name}`})))||[],[data]);
   const names=new Map(skus.map(sku=>[sku.id,sku.label]));
   const load=useCallback(async()=>{
+    if(mode==="local"){
+      setError("");
+      setSnapshot({balances:data?.inventory||[],movements:data?.inventoryMovements||[]});
+      setLoading(false);
+      return;
+    }
     if(!activeStoreId)return;
     setLoading(true);setError("");
     try{setSnapshot(await operationsRequest<Snapshot>(activeStoreId,"inventory"));}
     catch(cause){setError(cause instanceof Error?cause.message:"库存读取失败");}
     finally{setLoading(false);}
-  },[activeStoreId]);
+  },[activeStoreId,mode,data?.inventory,data?.inventoryMovements]);
   useEffect(()=>{queueMicrotask(()=>{setSnapshot(null);void load();});},[load]);
   function choose(id:string){
     setSelected(id);const balance=snapshot?.balances.find(row=>row.sku_id===id);
@@ -34,17 +40,30 @@ export default function InventoryPage(){
     event.preventDefault();if(!activeStoreId||!selected)return;
     setBusy(true);setError("");setNotice("");
     try{
-      await operationsRequest(activeStoreId,"inventory",{skuId:selected,quantity:Number(quantity),threshold:Number(threshold),note},"POST");
-      await load();setNote("");setNotice("库存已保存到云端，调整流水已记录。");
+      if(mode==="local"){
+        const now=new Date().toISOString();
+        await update(current=>{
+          const previous=(current.inventory||[]).find(row=>row.sku_id===selected);
+          const nextQuantity=Number(quantity);
+          const movement:InventoryMovement={id:crypto.randomUUID(),sku_id:selected,quantity_before:previous?.quantity||0,quantity_after:nextQuantity,delta:nextQuantity-(previous?.quantity||0),note:note.trim(),created_at:now};
+          const balance:InventoryBalance={sku_id:selected,quantity:nextQuantity,low_stock_threshold:Number(threshold),updated_at:now};
+          return {...current,inventory:[balance,...(current.inventory||[]).filter(row=>row.sku_id!==selected)],inventoryMovements:[movement,...(current.inventoryMovements||[])].slice(0,500)};
+        });
+        setNotice("库存已保存在当前设备，调整流水也已记录。");
+      }else{
+        if(!activeStoreId)throw new Error("未找到当前店铺");
+        await operationsRequest(activeStoreId,"inventory",{skuId:selected,quantity:Number(quantity),threshold:Number(threshold),note},"POST");
+        setNotice("库存已保存到云端，调整流水已记录。");
+      }
+      await load();setNote("");
     }catch(cause){setError(cause instanceof Error?cause.message:"库存保存失败");}
     finally{setBusy(false);}
   }
   const balances=snapshot?.balances||[];
   const low=balances.filter(row=>row.quantity<=row.low_stock_threshold);
-  const canEdit=mode==="cloud"&&role!=="viewer";
+  const canEdit=mode==="local"||role!=="viewer";
   return <>
-    <PageHead eyebrow="INVENTORY / 库存管理" title="每个规格的库存，心中有数" description="手工维护库存数量与预警线，所有调整保留历史。模拟订单不会自动扣减库存。" action={<Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button>}/>
-    {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-[#e8f5ff] p-4 text-sm text-[#476d91]">库存功能使用云端店铺。配置 Supabase 并登录后即可跨设备使用。</p>}
+    <PageHead eyebrow="INVENTORY / 库存管理" title="每个规格的库存，心中有数" description={mode==="local"?"库存和调整流水保存在当前设备，并包含在本地数据备份中。":"手工维护库存数量与预警线，所有调整保留历史。模拟订单不会自动扣减库存。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}
     {notice&&<p role="status" className="mb-5 rounded-xl bg-[#e7f8f4] p-4 text-sm text-[#167c68]">{notice}</p>}
     <div className="mb-5 grid gap-4 sm:grid-cols-3">
@@ -54,7 +73,7 @@ export default function InventoryPage(){
     </div>
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
       <SectionCard title="SKU 库存" sub="未设置库存的规格显示为“未录入”，不视为零库存">
-        {loading?<p className="text-sm text-[#8194a8]">正在读取云端库存…</p>:skus.length===0?<p className="text-sm text-[#8194a8]">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">
+        {loading?<p className="text-sm text-[#8194a8]">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-[#8194a8]">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">
           {skus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <button key={sku.id} type="button" onClick={()=>choose(sku.id)} className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${selected===sku.id?"border-[#8dc2fa] bg-[#f0f7ff]":"border-[#e9eef3] hover:bg-[#f8fafc]"}`}>
             <span className="min-w-0 truncate text-sm font-medium text-[#26374c]">{sku.label}</span>
             <span className={`shrink-0 text-sm font-semibold ${isLow?"text-[#e85d65]":"text-[#4e6b85]"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span>

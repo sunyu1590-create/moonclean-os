@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/integrations/pinduoduo/client";
 
 export default function IntegrationsPage(){
-  const {activeStoreId,role,retry,data}=useApp();
+  const {activeStoreId,role,retry,data,mode}=useApp();
   const [snapshot,setSnapshot]=useState<IntegrationSnapshot|null>(null);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
@@ -21,12 +21,13 @@ export default function IntegrationsPage(){
   const [refundStatus,setRefundStatus]=useState("succeeded");
   const [orderToUpdate,setOrderToUpdate]=useState("");
   const [orderStatus,setOrderStatus]=useState("completed");
-  const refresh=useCallback(async()=>{if(activeStoreId)setSnapshot(await getIntegration(activeStoreId));},[activeStoreId]);
+  const refresh=useCallback(async()=>{if(mode==="local"){setSnapshot(null);return;}if(activeStoreId)setSnapshot(await getIntegration(activeStoreId));},[activeStoreId,mode]);
   useEffect(()=>{queueMicrotask(()=>{void refresh().catch(e=>setError(e.message));});},[refresh]);
   const connection=snapshot?.connections.find(c=>c.mode==="mock");
   const canEdit=role!=="viewer";
   const canAdmin=role==="owner"||role==="admin";
   async function act(body:unknown){
+    if(mode==="local")return;
     if(!activeStoreId)return;
     setBusy(true);setError("");setNotice("");
     try{
@@ -39,6 +40,7 @@ export default function IntegrationsPage(){
     finally{setBusy(false);}
   }
   async function createDemo(){
+    if(mode==="local")return;
     setBusy(true);setError("");
     try{
       const response=await fetch("/api/integrations/demo",{method:"POST",credentials:"same-origin"});
@@ -50,6 +52,7 @@ export default function IntegrationsPage(){
     finally{setBusy(false);}
   }
   const internalNames=new Map(data?.products.flatMap(p=>p.skus.map(s=>[s.id,`${p.name} · ${s.name}`] as const))||[]);
+  if(mode==="local")return <><PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心" description="平台授权与定时同步属于云端功能。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">当前正在使用本地数据。切换到云端数据后，才能管理平台连接、查看同步任务或运行模拟同步。切换不会上传本地数据。</div></>;
   return <>
     <PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心"
       description="当前为模拟同步模式，尚未连接拼多多官方开放平台。" />

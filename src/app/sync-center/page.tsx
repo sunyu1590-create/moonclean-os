@@ -10,16 +10,17 @@ import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/i
 const kindLabel = {orders:"订单",products:"商品",refunds:"退款"};
 const statusLabel:Record<string,string>={pending:"等待中",running:"运行中",success:"成功",partial_success:"部分成功",failed:"失败",cancelled:"已取消"};
 export default function SyncCenter(){
-  const {activeStoreId,role,retry}=useApp();
+  const {activeStoreId,role,retry,mode}=useApp();
   const [data,setData]=useState<IntegrationSnapshot|null>(null);
   const [error,setError]=useState("");
   const [filter,setFilter]=useState("all");
   const [busy,setBusy]=useState(false);
-  const refresh=useCallback(async()=>{if(activeStoreId)setData(await getIntegration(activeStoreId));},[activeStoreId]);
+  const refresh=useCallback(async()=>{if(mode==="local"){setData(null);return;}if(activeStoreId)setData(await getIntegration(activeStoreId));},[activeStoreId,mode]);
   useEffect(()=>{queueMicrotask(()=>{void refresh().catch(e=>setError(e.message));});},[refresh]);
   const connection=data?.connections.find(c=>c.mode==="mock");
   const canEdit=role!=="viewer";
   async function act(body:unknown){
+    if(mode==="local")return;
     if(!activeStoreId)return;
     setBusy(true);setError("");
     try{const result=await integrationAction<{status?:string;error?:string}>(activeStoreId,body);
@@ -29,6 +30,7 @@ export default function SyncCenter(){
     finally{setBusy(false);}
   }
   const jobs=(data?.jobs||[]).filter(job=>filter==="all"||job.kind===filter);
+  if(mode==="local")return <><PageHead eyebrow="SYNC CENTER / 同步任务" title="同步任务中心" description="云端平台连接的同步进度与历史记录。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">同步任务保存在云端店铺。当前本地工作区不会访问云端接口，也不会发起任何同步。请从顶部数据源菜单切换到云端数据。</div></>;
   return <>
     <PageHead eyebrow="SYNC CENTER / 同步任务" title="同步任务中心"
       description="模拟平台任务在服务端执行，进度、游标和错误持久保存在云端。" />

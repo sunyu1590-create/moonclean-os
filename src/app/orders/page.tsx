@@ -18,12 +18,13 @@ export default function OrdersPage(){
   const [status,setStatus]=useState("all");const [search,setSearch]=useState("");
   const [loading,setLoading]=useState(false);const [error,setError]=useState("");
   const load=useCallback(async()=>{
+    if(mode==="local"){setSnapshot(null);setError("");setLoading(false);return;}
     if(!activeStoreId)return;
     setLoading(true);setError("");
     try{setSnapshot(await operationsRequest<Snapshot>(activeStoreId,`orders?page=${page}&status=${status}`));}
     catch(cause){setError(cause instanceof Error?cause.message:"订单读取失败");}
     finally{setLoading(false);}
-  },[activeStoreId,page,status]);
+  },[activeStoreId,page,status,mode]);
   useEffect(()=>{queueMicrotask(()=>{setSnapshot(null);void load();});},[load]);
   const visible=useMemo(()=>snapshot?.orders.filter(order=>order.external_id.toLowerCase().includes(search.trim().toLowerCase()))||[],[snapshot,search]);
   function exportPage(){
@@ -35,6 +36,7 @@ export default function OrdersPage(){
     })];
     downloadText(`moonclean-orders-page-${page}.csv`,`\uFEFF${rows.join("\n")}`,"text/csv;charset=utf-8");
   }
+  if(mode==="local")return <><PageHead eyebrow="ORDERS / 订单中心" title="订单进展，一处查看" description="当前本地工作区不保存平台同步订单。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">订单和退款来自平台连接中心，当前设备没有本地订单记录。切换到云端数据后可读取已同步的模拟订单；本地经营日报仍可在数据中心管理。</div></>;
   return <>
     <PageHead eyebrow="ORDERS / 订单中心" title="订单进展，一处查看" description="查看平台同步的订单、商品明细和退款。当前拼多多连接为模拟模式，所有订单均为模拟数据。" action={<div className="flex gap-2"><Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button><Button variant="outline" onClick={exportPage} disabled={!visible.length}><Download size={16}/>导出本页</Button></div>}/>
     <div className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">此页面的模拟订单不会自动计入经营总览或扣减库存。真实经营数据请在数据中心录入。<Link href="/integrations" className="ml-2 font-semibold text-[#287fe2] underline">前往平台连接</Link></div>

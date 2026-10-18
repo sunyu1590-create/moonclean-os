@@ -240,6 +240,23 @@ select:focus-visible {
   height: 300px;
   width: 100%;
 }
+@keyframes data-space-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes data-space-orbit {
+  to { transform: rotate(360deg); }
+}
+@keyframes data-space-progress {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(260%); }
+}
+.data-space-enter { animation: data-space-enter 460ms cubic-bezier(.2,.75,.25,1) both; }
+.data-space-orbit { animation: data-space-orbit 7s linear infinite; }
+.data-space-progress { animation: data-space-progress 1.15s cubic-bezier(.45,0,.55,1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .data-space-enter, .data-space-orbit, .data-space-progress { animation: none !important; }
+}
 @media (max-width: 640px) {
   .page-title {
     font-size: 27px;

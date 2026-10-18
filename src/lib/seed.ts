@@ -136,3 +136,29 @@ export function demoData(): AppData {
     },
   };
 }
+
+export function createEmptyLocalData(): AppData {
+  const now = new Date().toISOString();
+  return {
+    version: DATA_VERSION,
+    products: [],
+    daily: [],
+    advertising: [],
+    tasks: [],
+    inventory: [],
+    inventoryMovements: [],
+    settings: {
+      store: {
+        id: `local-${crypto.randomUUID()}`,
+        name: "我的本地工作区",
+        platform: "pinduoduo",
+        currency: "CNY",
+        createdAt: now,
+        timezone: "Asia/Shanghai",
+      },
+      salesTarget: "10000",
+      marginAlert: 12,
+      role: "owner",
+    },
+  };
+}

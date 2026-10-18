@@ -10,7 +10,7 @@ import { getIntegration, type IntegrationSnapshot } from "@/integrations/pinduod
 import { formatMoney } from "@/lib/finance";
 export default function AfterSalesPage(){
   const {activeStoreId,mode}=useApp();const [snapshot,setSnapshot]=useState<IntegrationSnapshot|null>(null);const [error,setError]=useState("");const [loading,setLoading]=useState(false);
-  const load=useCallback(async()=>{if(!activeStoreId)return;setLoading(true);setError("");try{setSnapshot(await getIntegration(activeStoreId));}catch(e){setError(e instanceof Error?e.message:"售后读取失败");}finally{setLoading(false);}},[activeStoreId]);
+  const load=useCallback(async()=>{if(mode==="local"){setSnapshot(null);setError("");setLoading(false);return;}if(!activeStoreId)return;setLoading(true);setError("");try{setSnapshot(await getIntegration(activeStoreId));}catch(e){setError(e instanceof Error?e.message:"售后读取失败");}finally{setLoading(false);}},[activeStoreId,mode]);
   useEffect(()=>{queueMicrotask(()=>{setSnapshot(null);void load();});},[load]);
   const refunds=snapshot?.refunds||[];const orders=snapshot?.orders||[];
   const orderById=new Map(orders.map(order=>[order.id,order]));
@@ -19,6 +19,7 @@ export default function AfterSalesPage(){
   const totalSales=orders.reduce((sum,row)=>sum.plus(row.gross_sales),new Decimal(0));
   const ratio=totalSales.gt(0)?completedAmount.div(totalSales).mul(100).toNumber():null;
   const sorted=[...refunds].sort((a,b)=>Number(orderById.get(b.order_id)?.placed_at||0)-Number(orderById.get(a.order_id)?.placed_at||0));
+  if(mode==="local")return <><PageHead eyebrow="AFTER-SALES / 售后分析" title="退款状态和售后金额，一眼看清" description="退款数据来自云端同步订单，不会自动复制到本地工作区。"/><div className="rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-5 text-sm leading-6 text-[#476d91]">当前本地工作区没有云端同步的订单与退款记录。切换到云端数据后可继续查看售后分析。</div></>;
   return <>
     <PageHead eyebrow="AFTER-SALES / 售后分析" title="退款状态和售后金额，一眼看清" description="按同步到云端的退款记录汇总。退款原因当前未从平台接口提供，接入真实售后接口后可继续扩展。" action={<Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button>}/>
     {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-[#e8f5ff] p-4 text-sm text-[#476d91]">售后分析使用店铺订单和退款同步数据，请登录云端店铺查看。</p>}

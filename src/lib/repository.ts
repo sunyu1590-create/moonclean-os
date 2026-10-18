@@ -28,7 +28,7 @@ export const dailySchema = z
     isDemo: z.boolean().optional(),
     costComplete: z.boolean().optional(),
     costSource: z.enum(["manual", "sku"]).optional(),
-    source: z.enum(["manual", "csv_import", "image_import"]).optional(),
+    source: z.enum(["manual", "csv_import", "image_import", "mock_pinduoduo", "official_pinduoduo"]).optional(),
   })
   .refine((v) => new Decimal(v.refunds).lte(v.sales), {
     message: "退款不能超过销售额",
@@ -41,7 +41,7 @@ export const advertisingSchema = z.object({
   attributedSales: money,
   attributedOrders: z.number().int().nonnegative().optional(),
   isDemo: z.boolean().optional(),
-  source: z.enum(["manual", "csv_import", "image_import"]).optional(),
+  source: z.enum(["manual", "csv_import", "image_import", "mock_pinduoduo", "official_pinduoduo"]).optional(),
 });
 export const productSchema = z.object({
   id: z.string(),
@@ -73,6 +73,32 @@ export const dataSchema = z.object({
   products: z.array(productSchema),
   daily: z.array(dailySchema),
   advertising: z.array(advertisingSchema),
+  tasks: z.array(z.object({
+    id: z.string(), title: z.string(), detail: z.string(),
+    priority: z.enum(["low", "normal", "high"]),
+    status: z.enum(["todo", "doing", "done"]), due_date: z.iso.date().nullable(),
+    created_at: z.iso.datetime(), updated_at: z.iso.datetime(),
+  })).optional(),
+  skuDaily: z.array(z.object({
+    id: z.string(), skuId: z.string(), date: z.iso.date(),
+    quantitySold: z.number().int().nonnegative(), grossSales: money, refundAmount: money,
+  })).optional(),
+  externalCatalog: z.array(z.object({
+    id: z.string(), name: z.string(), isDemo: z.boolean(),
+    skus: z.array(z.object({
+      id: z.string(), name: z.string(), code: z.string().nullable(), price: money,
+      mappedSkuId: z.string().nullable(),
+    })),
+  })).optional(),
+  inventory: z.array(z.object({
+    sku_id: z.string(), quantity: z.number().int().nonnegative(),
+    low_stock_threshold: z.number().int().nonnegative(), updated_at: z.iso.datetime(),
+  })).optional(),
+  inventoryMovements: z.array(z.object({
+    id: z.string(), sku_id: z.string(), quantity_before: z.number().int().nonnegative(),
+    quantity_after: z.number().int().nonnegative(), delta: z.number().int(),
+    note: z.string(), created_at: z.iso.datetime(),
+  })).optional(),
   settings: z.object({
     store: z.object({
       id: z.string(),

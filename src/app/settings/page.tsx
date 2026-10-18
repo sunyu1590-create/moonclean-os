@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [backupError, setBackupError] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -311,7 +312,7 @@ export default function SettingsPage() {
                   onClick={() => setConfirm(true)}
                 >
                   <RotateCcw size={16} />
-                  重置演示数据
+                  重置本地数据
                 </Button>
               )}
             </div>
@@ -342,20 +343,28 @@ export default function SettingsPage() {
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>重置为模拟数据？</AlertDialogTitle>
+            <AlertDialogTitle>清空并重置本地数据？</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作会覆盖当前浏览器保存的所有修改，无法撤销。
+              此操作会清除当前设备保存的商品、经营记录、推广、待办和库存数据，并创建一个空白本地工作区，无法撤销。请先导出备份。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                void reset();
-                setConfirm(false);
+              disabled={resetBusy}
+              onClick={(event) => {
+                event.preventDefault();
+                setResetBusy(true);
+                void reset().then(() => {
+                  setError("");
+                  setSaved(false);
+                  setConfirm(false);
+                }).catch((cause: unknown) => {
+                  setError(cause instanceof Error ? cause.message : "重置失败，请先检查本地存储空间。");
+                }).finally(() => setResetBusy(false));
               }}
             >
-              确认重置
+              {resetBusy ? "正在清除…" : "确认重置"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

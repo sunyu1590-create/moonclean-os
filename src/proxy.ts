@@ -1,9 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
+import { shouldBypassAuthForLocalWorkspace } from "@/lib/local-workspace";
 
 export async function proxy(request: NextRequest) {
-  if (localDemoEnabled() && !request.nextUrl.pathname.startsWith("/api/"))
+  if (shouldBypassAuthForLocalWorkspace(
+    request.nextUrl.pathname,
+    request.cookies.get("moonclean-data-mode")?.value,
+    localDemoEnabled(),
+  ))
     return NextResponse.next();
   const config = supabaseConfig();
   const isApi = request.nextUrl.pathname.startsWith("/api/");
