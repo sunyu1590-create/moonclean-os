@@ -295,7 +295,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 border-b border-white/80 bg-white/82 px-3 py-1.5 shadow-[0_3px_18px_rgba(31,57,82,0.045)] backdrop-blur-2xl sm:px-5 md:h-[68px] md:px-9">
+        <header className="sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 border-b border-white/80 bg-white/82 px-3 py-1.5 shadow-[0_3px_18px_rgba(31,57,82,0.045)] backdrop-blur-md sm:px-5 md:h-[68px] md:px-9">
           <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.png" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
           <div className="hidden items-center gap-2 text-xs text-[#92a0ae] md:flex">
             <span>工作空间</span>
@@ -377,16 +377,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-[#78b5f1]/70 bg-[#358de2] p-1.5 shadow-[0_8px_26px_rgba(30,111,194,0.24),inset_0_1px_0_rgba(255,255,255,0.28)] md:hidden">
+      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden">
         <div className="relative grid grid-cols-5">
-          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] bg-white shadow-[0_2px_8px_rgba(18,77,135,0.16)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${(mobileMenuOpen || !mobilePrimary.includes(pathname) ? 4 : mobilePrimary.indexOf(pathname)) * 100}%)` }} />
+          <span aria-hidden="true" className="pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: `translateX(${(mobileMenuOpen || !mobilePrimary.includes(pathname) ? 4 : mobilePrimary.indexOf(pathname)) * 100}%)` }} />
           {nav.filter(item => mobilePrimary.includes(item.href)).map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-white/95")}>
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}
-          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-[#287fe2]" : "text-white/95")}>
+          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-[#287fe2]" : "text-[#798898]")}>
             <Menu size={20}/><span>更多</span>
           </button>
         </div>

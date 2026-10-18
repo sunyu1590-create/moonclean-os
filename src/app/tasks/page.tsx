@@ -1,30 +1,38 @@
 "use client";
 import { AppSelect } from "@/components/ui/app-select";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Clock3, ListTodo, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { type OperationTask, operationsRequest } from "@/lib/operations";
 type Status=OperationTask["status"];
 type Priority=OperationTask["priority"];
 const statusName:Record<Status,string>={todo:"待处理",doing:"进行中",done:"已完成"};
 const priorityName:Record<Priority,string>={low:"低",normal:"普通",high:"高"};
 const blank={title:"",detail:"",priority:"normal" as Priority,status:"todo" as Status,dueDate:""};
+const quickTasks=[
+  {label:"核对库存",title:"核对热销商品库存",detail:"检查各 SKU 可售库存与预警线，确认是否需要补货。",priority:"high" as Priority},
+  {label:"检查推广",title:"复盘近 7 天推广效果",detail:"核对广告消耗、归因成交与 ROAS，暂停明显低效计划并记录调整。",priority:"normal" as Priority},
+  {label:"跟进售后",title:"处理待跟进售后",detail:"查看退款与售后原因，优先处理临近超时的订单。",priority:"high" as Priority},
+  {label:"准备活动",title:"检查活动商品与价格",detail:"确认活动库存、商品价格、优惠设置和活动页面信息。",priority:"normal" as Priority},
+];
+type Feedback={success:boolean;title:string;message:string};
 export default function TasksPage(){
   const {mode,activeStoreId,role,data}=useApp();
   const [tasks,setTasks]=useState<OperationTask[]>([]);const [loading,setLoading]=useState(false);
-  const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [notice,setNotice]=useState("");
+  const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [feedback,setFeedback]=useState<Feedback|null>(null);
   const [filter,setFilter]=useState<Status|"all">("all");const [editing,setEditing]=useState<string|null>(null);
   const [form,setForm]=useState(blank);
   const today=data?new Intl.DateTimeFormat("en-CA",{timeZone:data.settings.store.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):"";
-  const load=useCallback(async()=>{
-    if(!activeStoreId)return;
+  const load=useCallback(async():Promise<boolean>=>{
+    if(!activeStoreId)return false;
     setLoading(true);setError("");
-    try{const result=await operationsRequest<{tasks:OperationTask[]}>(activeStoreId,"tasks");setTasks(result.tasks);}
-    catch(cause){setError(cause instanceof Error?cause.message:"待办读取失败");}
+    try{const result=await operationsRequest<{tasks:OperationTask[]}>(activeStoreId,"tasks");setTasks(result.tasks);return true;}
+    catch(cause){setError(cause instanceof Error?cause.message:"待办读取失败");return false;}
     finally{setLoading(false);}
   },[activeStoreId]);
   useEffect(()=>{queueMicrotask(()=>{setTasks([]);void load();});},[load]);
@@ -32,25 +40,29 @@ export default function TasksPage(){
   function startEdit(task:OperationTask){setEditing(task.id);setForm({title:task.title,detail:task.detail,priority:task.priority,status:task.status,dueDate:task.due_date||""});}
   async function save(event:React.FormEvent){
     event.preventDefault();if(!activeStoreId)return;
-    setBusy(true);setError("");setNotice("");
+    setBusy(true);setError("");setFeedback(null);
     try{
-      await operationsRequest(activeStoreId,"tasks",{...form,dueDate:form.dueDate||null,...(editing?{id:editing}:{})},editing?"PATCH":"POST");
-      setEditing(null);setForm(blank);await load();setNotice("待办已保存到云端。");
-    }catch(cause){setError(cause instanceof Error?cause.message:"保存失败");}
+      const payload={...form,title:form.title.trim(),detail:form.detail.trim(),dueDate:form.dueDate||null,...(editing?{id:editing}:{})};
+      if(editing){await operationsRequest(activeStoreId,"tasks",payload,"PATCH");}
+      else{const created=await operationsRequest<OperationTask>(activeStoreId,"tasks",payload,"POST");setTasks(current=>[created,...current.filter(task=>task.id!==created.id)]);}
+      const title=form.title.trim();setEditing(null);setForm(blank);
+      const refreshed=await load();
+      setFeedback({success:true,title:editing?"任务已更新":"任务已创建",message:refreshed?`“${title}”已保存到云端，并显示在任务列表中。`:`“${title}”已保存到云端；列表暂时无法刷新，稍后点击刷新即可重新读取。`});
+    }catch(cause){const message=cause instanceof Error?cause.message:"保存失败，请检查网络后重试。";setError(message);setFeedback({success:false,title:editing?"任务更新失败":"任务创建失败",message});}
     finally{setBusy(false);}
   }
   async function changeStatus(task:OperationTask,status:Status){
     if(!activeStoreId)return;
-    setBusy(true);setError("");setNotice("");
-    try{await operationsRequest(activeStoreId,"tasks",{id:task.id,title:task.title,detail:task.detail,priority:task.priority,status,dueDate:task.due_date},"PATCH");await load();setNotice("状态已更新。");}
-    catch(cause){setError(cause instanceof Error?cause.message:"更新失败");}
+    setBusy(true);setError("");
+    try{await operationsRequest(activeStoreId,"tasks",{id:task.id,title:task.title,detail:task.detail,priority:task.priority,status,dueDate:task.due_date},"PATCH");await load();setFeedback({success:true,title:"任务状态已更新",message:`“${task.title}”已设为${statusName[status]}。`});}
+    catch(cause){const message=cause instanceof Error?cause.message:"更新失败，请重试。";setError(message);setFeedback({success:false,title:"更新失败",message});}
     finally{setBusy(false);}
   }
   async function remove(task:OperationTask){
     if(!activeStoreId||!window.confirm(`确定删除“${task.title}”吗？`))return;
-    setBusy(true);setError("");setNotice("");
-    try{await operationsRequest(activeStoreId,"tasks",{id:task.id},"DELETE");await load();setNotice("待办已删除。");}
-    catch(cause){setError(cause instanceof Error?cause.message:"删除失败");}
+    setBusy(true);setError("");
+    try{await operationsRequest(activeStoreId,"tasks",{id:task.id},"DELETE");await load();setFeedback({success:true,title:"任务已删除",message:`“${task.title}”已从云端任务列表删除。`});}
+    catch(cause){const message=cause instanceof Error?cause.message:"删除失败，请重试。";setError(message);setFeedback({success:false,title:"删除失败",message});}
     finally{setBusy(false);}
   }
   const open=tasks.filter(task=>task.status!=="done");
@@ -60,7 +72,6 @@ export default function TasksPage(){
     <PageHead eyebrow="TASKS / 运营待办" title="让每天的运营更有条理" description="记录补货、推广、售后等任务，按店铺同步给团队成员。" action={<Button variant="outline" onClick={()=>void load()} disabled={loading||mode!=="cloud"}><RefreshCw size={16}/>刷新</Button>}/>
     {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-[#e8f5ff] p-4 text-sm text-[#476d91]">待办功能使用云端店铺。配置 Supabase 并登录后即可跨设备使用。</p>}
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}
-    {notice&&<p role="status" className="mb-5 rounded-xl bg-[#e7f8f4] p-4 text-sm text-[#167c68]">{notice}</p>}
     <div className="mb-5 grid gap-4 sm:grid-cols-3">
       <MetricCard label="未完成" value={String(open.length)} icon={<ListTodo size={19}/>}/>
       <MetricCard label="已逾期" value={String(overdue.length)} tone={overdue.length?"red":"green"} icon={<Clock3 size={19}/>}/>
@@ -76,6 +87,7 @@ export default function TasksPage(){
       </SectionCard>
       <SectionCard title={editing?"编辑任务":"新建任务"} sub="补货、活动准备、售后跟进都可以记录">
         {!canEdit?<p className="text-sm text-[#8194a8]">当前账号仅能查看任务，或当前为本地演示模式。</p>:<form onSubmit={save} className="space-y-4">
+          {!editing&&<div><p className="mb-2 text-xs font-medium text-[#8293a4]">快速套用模板</p><div className="flex flex-wrap gap-2">{quickTasks.map(template=><Button key={template.label} type="button" size="sm" variant="outline" disabled={busy} onClick={()=>setForm(current=>({...current,...template}))}>{template.label}</Button>)}</div></div>}
           <div><label htmlFor="task-title" className="text-sm font-medium">标题</label><Input id="task-title" maxLength={160} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} className="mt-2" placeholder="例如：检查洗衣液库存" required/></div>
           <div><label htmlFor="task-detail" className="text-sm font-medium">说明</label><Textarea id="task-detail" maxLength={1000} value={form.detail} onChange={e=>setForm({...form,detail:e.target.value})} className="mt-2" placeholder="补充背景或处理步骤"/></div>
           <div className="grid grid-cols-2 gap-3"><div><label htmlFor="task-priority" className="text-sm font-medium">优先级</label><AppSelect id="task-priority" value={form.priority} onChange={e=>setForm({...form,priority:e.target.value as Priority})} className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm">{Object.entries(priorityName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect></div><div><label htmlFor="task-status" className="text-sm font-medium">状态</label><AppSelect id="task-status" value={form.status} onChange={e=>setForm({...form,status:e.target.value as Status})} className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm">{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect></div></div>
@@ -84,5 +96,17 @@ export default function TasksPage(){
         </form>}
       </SectionCard>
     </div>
+    <Dialog open={feedback!==null} onOpenChange={open=>{if(!open)setFeedback(null);}}>
+      <DialogContent className="rounded-3xl border border-[#e5edf5] p-6 sm:max-w-md">
+        <DialogHeader className="items-center text-center sm:items-start sm:text-left">
+          <span className={`mb-2 grid size-12 place-items-center rounded-2xl ${feedback?.success?"bg-[#e8f7f2] text-[#16a085]":"bg-[#fff0f1] text-[#e85d65]"}`}>{feedback?.success?<CheckCircle2 size={25}/>:<CircleAlert size={25}/>}</span>
+          <DialogTitle className="text-lg font-semibold text-[#172b45]">{feedback?.title}</DialogTitle>
+          <DialogDescription className="leading-6 text-[#718397]">{feedback?.message}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-2 border-0 bg-transparent p-0 sm:justify-end">
+          <Button type="button" onClick={()=>setFeedback(null)}>知道了</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </>;
 }

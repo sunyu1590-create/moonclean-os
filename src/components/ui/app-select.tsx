@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 
 type OptionProps = { value?: string; disabled?: boolean; children?: ReactNode };
@@ -38,7 +37,9 @@ export function AppSelect({
   const selectedValue = value === undefined ? internalValue : value;
   const options = Children.toArray(children).filter(isValidElement<OptionProps>);
   const placeholder = options.find((option) => option.props.value === "")?.props.children;
-  const rootValue = selectedValue === "" ? null : selectedValue;
+  const selectedOption = options.find((option) => (option.props.value ?? "") === selectedValue);
+  const displayedLabel = selectedValue === "" ? placeholder : selectedOption?.props.children;
+  const rootValue = selectedValue === "" ? (placeholder ? EMPTY_VALUE : null) : selectedValue;
 
   return (
     <Select
@@ -50,7 +51,7 @@ export function AppSelect({
       }}
     >
       <SelectTrigger className={className} aria-required={required || undefined} {...triggerProps}>
-        <SelectValue placeholder={placeholder} />
+        <span data-slot="select-value" className="min-w-0 flex-1 truncate text-left">{displayedLabel ?? "请选择"}</span>
       </SelectTrigger>
       <SelectContent align="start" className="rounded-xl border border-[#dce8f4] bg-white p-1.5 shadow-[0_12px_32px_rgba(31,57,82,0.16)]">
         {options.map((option, index) => {

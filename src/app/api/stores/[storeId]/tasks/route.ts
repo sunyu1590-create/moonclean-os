@@ -25,9 +25,9 @@ export async function POST(request: Request, context: Context) {
     const { data, error } = await result.auth!.supabase.from("operation_tasks").insert({
       store_id:result.storeId!,created_by:result.auth!.user.id,title:row.title,
       detail:row.detail,priority:row.priority,status:row.status,due_date:row.dueDate,
-    }).select("id").single();
+    }).select("id,title,detail,priority,status,due_date,created_at,updated_at").single();
     if (error) throw error;
-    return NextResponse.json({ id:data.id });
+    return NextResponse.json(data,{status:201});
   } catch (error) { return apiError(error,"创建待办失败"); }
 }
 export async function PATCH(request: Request, context: Context) {
