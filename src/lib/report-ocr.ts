@@ -66,9 +66,9 @@ export function parsePinduoduoReportText(
     sales: findValue(lines, ["成交金额", "店铺成交额", "成交总额", "销售额", "成交额", "支付金额"]),
     refunds: findValue(lines, ["昨日退款金额", "退款金额", "售后退款", "退款总额"]),
     orders: findValue(lines, ["成交订单数", "支付订单数", "订单数", "订单量"], false, true),
-    spend: findValue(lines, ["推广消耗", "广告消耗", "消耗金额", "推广花费", "广告花费"]),
-    attributedSales: findValue(lines, ["广告归因成交额", "推广归因成交额", "广告成交金额", "推广成交金额", "广告成交额", "推广成交额", "直接成交金额", "直接成交额"]),
-    attributedOrders: findValue(lines, ["推广订单数", "广告订单数", "推广成交订单数", "广告成交订单数", "直接成交订单数"], false, true),
+    spend: findValue(lines, ["总花费", "成交花费", "推广消耗", "广告消耗", "消耗金额", "推广花费", "广告花费"]),
+    attributedSales: findValue(lines, ["广告归因成交额", "推广归因成交额", "广告成交金额", "推广成交金额", "广告成交额", "推广成交额", "直接成交金额", "直接成交额", "净交易额", "交易额"]),
+    attributedOrders: findValue(lines, ["净成交笔数", "净成交订单数", "推广订单数", "广告订单数", "推广成交订单数", "广告成交订单数", "直接成交订单数", "成交笔数"], false, true),
     buyers: findValue(lines, ["成交买家数"], false, true),
     averageOrderValue: findValue(lines, ["客单价"]),
     visitors: findValue(lines, ["商品访客数", "访客数"], false, true),
@@ -76,4 +76,12 @@ export function parsePinduoduoReportText(
     refundOrders: findValue(lines, ["昨日退款单数", "退款单数", "退款订单数"], false, true),
     visitorValue: findValue(lines, ["昨日访客价值", "访客价值"]),
   };
+}
+
+export function detectPinduoduoReportKind(raw: string): "daily" | "advertising" {
+  return /实际投产比|净成交花费|成交花费|推广消耗|广告消耗/.test(
+    raw.replace(/\s/g, ""),
+  )
+    ? "advertising"
+    : "daily";
 }

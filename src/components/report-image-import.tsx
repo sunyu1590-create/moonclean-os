@@ -5,13 +5,17 @@ import { FileImage, LoaderCircle, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionCard } from "@/components/common";
+import { adRoas } from "@/lib/finance";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { parsePinduoduoReportText } from "@/lib/report-ocr";
+import {
+  detectPinduoduoReportKind,
+  parsePinduoduoReportText,
+} from "@/lib/report-ocr";
 
 export type ImageReportDraft = {
   kind: "daily" | "advertising";
@@ -64,8 +68,9 @@ export function ReportImageImport({
       try {
         const result = await worker.recognize(file);
         const rawText = result.data.text;
+        const detectedKind = detectPinduoduoReportKind(rawText);
         setDraft({
-          kind: selectedKind,
+          kind: detectedKind === "advertising" ? detectedKind : selectedKind,
           ...parsePinduoduoReportText(rawText, defaultDate),
           rawText,
         });
@@ -146,6 +151,17 @@ export function ReportImageImport({
   const requiredKeys = draft?.kind === "daily"
     ? ["sales", "refunds", "orders"]
     : ["spend", "attributedSales", "attributedOrders"];
+  const validPreviewMoney = (value: string) => /^\d+(\.\d{1,2})?$/.test(value);
+  const previewRoas = draft?.kind === "advertising" &&
+      validPreviewMoney(draft.spend) && validPreviewMoney(draft.attributedSales)
+    ? adRoas([{
+        id: "image-preview",
+        date: draft.date,
+        spend: draft.spend,
+        attributedSales: draft.attributedSales,
+        attributedOrders: Number(draft.attributedOrders) || 0,
+      }])
+    : null;
 
   return (
     <>
@@ -187,7 +203,7 @@ export function ReportImageImport({
         </div>
         {disabled && <p className="mt-3 text-xs text-[#8999a9]">当前账号只有查看权限，无法导入数据。</p>}
         <p className="mt-3 text-xs leading-5 text-[#8999a9]">
-          图片和识别内容仅在当前浏览器处理，不会上传至 MoonClean 服务器。首次使用会从 jsDelivr 下载 OCR 引擎和中文识别模型；识别后请逐项核对。推广归因金额只自动识别带“广告 / 推广 / 直接成交”字样的字段，普通“成交额”不会自动填入 ROAS。
+          图片和识别内容仅在当前浏览器处理，不会上传至 MoonClean 服务器。首次使用会从 jsDelivr 下载 OCR 引擎和中文识别模型。识别到推广报表时，会读取报表内的花费、交易额和净成交笔数，并按归因交易额 ÷ 推广花费预览 ROAS；不会使用全店经营日报的成交额。
         </p>
       </SectionCard>
 
@@ -237,6 +253,12 @@ export function ReportImageImport({
                   </div>
                 ))}
               </div>
+              {draft.kind === "advertising" && (
+                <div className="rounded-xl bg-[#eef7ff] p-3 text-sm text-[#486d8e]">
+                  推广 ROAS 预览：<strong className="text-[#172b45]">{previewRoas === null ? "—" : `${previewRoas.toFixed(2)}x`}</strong>
+                  <span className="ml-1 text-xs">（归因交易额 ÷ 推广花费）</span>
+                </div>
+              )}
               {error && <p role="alert" className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#d35760]">{error}</p>}
               <details>
                 <summary className="cursor-pointer text-xs text-[#7a8a9b]">查看 OCR 原文</summary>
