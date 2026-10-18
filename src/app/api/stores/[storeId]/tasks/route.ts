@@ -12,7 +12,7 @@ async function authorize(context: Context, write = false) {
 export async function GET(_request: Request, context: Context) {
   const result = await authorize(context); if (result.error) return result.error;
   const { data, error } = await result.auth!.supabase.from("operation_tasks")
-    .select("id,title,detail,priority,status,due_date,created_at,updated_at")
+    .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
     .eq("store_id",result.storeId!).order("created_at",{ascending:false}).limit(500);
   if (error) return apiError(error,"待办读取失败");
   return NextResponse.json({ tasks: data });
@@ -22,11 +22,27 @@ export async function POST(request: Request, context: Context) {
   const result = await authorize(context,true); if (result.error) return result.error;
   try {
     const row = taskSchema.parse(await request.json());
+    if (row.recommendationKey) {
+      const { data: existing, error: lookupError } = await result.auth!.supabase.from("operation_tasks")
+        .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
+        .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle();
+      if (lookupError) throw lookupError;
+      if (existing) return NextResponse.json(existing, { status: 200 });
+    }
     const { data, error } = await result.auth!.supabase.from("operation_tasks").insert({
       store_id:result.storeId!,created_by:result.auth!.user.id,title:row.title,
       detail:row.detail,priority:row.priority,status:row.status,due_date:row.dueDate,
-    }).select("id,title,detail,priority,status,due_date,created_at,updated_at").single();
-    if (error) throw error;
+      recommendation_key:row.recommendationKey||null,recommendation_baseline:row.recommendationBaseline||null,
+    }).select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline").single();
+    if (error) {
+      if (error.code === "23505" && row.recommendationKey) {
+        const { data: existing } = await result.auth!.supabase.from("operation_tasks")
+          .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
+          .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle();
+        if (existing) return NextResponse.json(existing, { status: 200 });
+      }
+      throw error;
+    }
     return NextResponse.json(data,{status:201});
   } catch (error) { return apiError(error,"创建待办失败"); }
 }

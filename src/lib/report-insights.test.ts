@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AdvertisingMetric, DailyMetric } from "@/lib/model";
-import { weeklyReportInsights } from "./report-insights";
+import { recommendationBaseline, weeklyReportInsights } from "./report-insights";
 
 function daily(overrides: Partial<DailyMetric> = {}): DailyMetric {
   return {
@@ -36,6 +36,19 @@ describe("weeklyReportInsights", () => {
       expect.objectContaining({ category: "利润表现" }),
       expect.objectContaining({ category: "推广效率", title: expect.stringContaining("高于估算保本线") }),
     ]));
+  });
+
+  it("assigns stable follow-up keys and captures the recommendation baseline", () => {
+    const insights = weeklyReportInsights([daily()], [ad()]);
+    expect(insights.every((insight) => /^[a-z0-9_-]+$/.test(insight.key))).toBe(true);
+    expect(recommendationBaseline([daily()], [ad()], "2026-10-18")).toEqual({
+      captured_at: "2026-10-18",
+      coverage_days: 1,
+      net_sales: "98.00",
+      profit: "62.00",
+      roas: 5,
+      refund_rate: 2,
+    });
   });
 
   it("identifies rising refunds and a falling sales trend", () => {

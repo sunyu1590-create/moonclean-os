@@ -112,6 +112,17 @@ export interface LocalOperationTask {
   due_date: string | null;
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
+  recommendation_key?: string | null;
+  recommendation_baseline?: RecommendationBaseline | null;
+}
+export interface RecommendationBaseline {
+  captured_at: string;
+  coverage_days: number;
+  net_sales: Money;
+  profit: Money;
+  roas: number | null;
+  refund_rate: number | null;
 }
 export interface LocalInventoryBalance {
   sku_id: string;

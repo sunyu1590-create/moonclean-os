@@ -254,14 +254,22 @@ select:focus-visible {
 .data-space-enter { animation: data-space-enter 460ms cubic-bezier(.2,.75,.25,1) both; }
 .data-space-orbit { animation: data-space-orbit 7s linear infinite; }
 .data-space-progress { animation: data-space-progress 1.15s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes insight-row-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.insight-row-enter { animation: insight-row-enter 240ms ease-out both; }
+.insight-details { animation: insight-row-enter 180ms ease-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .data-space-enter, .data-space-orbit, .data-space-progress { animation: none !important; }
+  .data-space-enter, .data-space-orbit, .data-space-progress, .insight-row-enter, .insight-details { animation: none !important; }
 }
 @media (max-width: 640px) {
   .page-title {
-    font-size: 27px;
+    font-size: 23px;
+    line-height: 1.25;
   }
+  .section-title { font-size: 15px; }
   .chart-wrap {
-    height: 240px;
+    height: 210px;
   }
 }

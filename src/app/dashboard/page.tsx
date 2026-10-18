@@ -41,8 +41,6 @@ export default function Dashboard() {
   const rows = periodRows(data.daily, days, currentDate),
     ads = periodRows(data.advertising, days, currentDate);
   const summary = financialSummary(rows, ads);
-  const weekRows = periodRows(data.daily, 7, currentDate);
-  const weekAds = periodRows(data.advertising, 7, currentDate);
   const todayRows = data.daily.filter((r) => r.date === currentDate),
     todayAds = data.advertising.filter((r) => r.date === currentDate);
   const current = financialSummary(todayRows, todayAds);
@@ -116,7 +114,7 @@ export default function Dashboard() {
       <div className="mb-5 px-1">
         <DemoNote hasDemo={data.daily.some((r) => r.isDemo)} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
         <MetricCard
           label="今日销售额"
           value={formatMoney(current.netSales)}
@@ -155,7 +153,7 @@ export default function Dashboard() {
           icon={<ChartNoAxesCombined size={18} />}
         />
       </div>
-      <DashboardIntelligence daily={weekRows} advertising={weekAds} />
+      <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
           <div className="chart-wrap">

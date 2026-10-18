@@ -78,6 +78,13 @@ export const dataSchema = z.object({
     priority: z.enum(["low", "normal", "high"]),
     status: z.enum(["todo", "doing", "done"]), due_date: z.iso.date().nullable(),
     created_at: z.iso.datetime(), updated_at: z.iso.datetime(),
+    completed_at: z.iso.datetime().nullable().optional(),
+    recommendation_key: z.string().regex(/^[a-z0-9_-]{1,80}$/).nullable().optional(),
+    recommendation_baseline: z.object({
+      captured_at: z.iso.date(), coverage_days: z.number().int().min(0).max(7),
+      net_sales: money, profit: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
+      roas: z.number().nullable(), refund_rate: z.number().nullable(),
+    }).nullable().optional(),
   })).optional(),
   skuDaily: z.array(z.object({
     id: z.string(), skuId: z.string(), date: z.iso.date(),

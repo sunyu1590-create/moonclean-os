@@ -1,7 +1,8 @@
-import type { AdvertisingMetric, DailyMetric } from "@/lib/model";
+import type { AdvertisingMetric, DailyMetric, RecommendationBaseline } from "@/lib/model";
 import { financialSummary } from "@/lib/finance";
 
 export type ReportInsight = {
+  key: string;
   category: string;
   title: string;
   detail: string;
@@ -30,6 +31,7 @@ export function weeklyReportInsights(
 
   if (daily.length === 0) {
     return [{
+      key: "data_coverage",
       category: "数据准备",
       title: "补齐最近一周经营数据",
       detail: "最近 7 天没有可用于分析的经营日报，系统暂时不能可靠判断销售、退款和利润变化。",
@@ -40,6 +42,7 @@ export function weeklyReportInsights(
 
   if (daily.length < 7) {
     insights.push({
+      key: "data_coverage",
       category: "数据覆盖",
       title: `近 7 天已录入 ${daily.length} 天日报`,
       detail: "缺少日期会让周趋势和日均数据偏离实际情况。",
@@ -50,6 +53,7 @@ export function weeklyReportInsights(
 
   if (!costsComplete) {
     insights.push({
+      key: "cost_quality",
       category: "利润质量",
       title: "成本数据不完整，利润只能参考",
       detail: "所选日报中存在缺少或未确认成本的日期，当前利润和保本 ROAS 不适合用于定预算。",
@@ -58,6 +62,7 @@ export function weeklyReportInsights(
     });
   } else if (amount(summary.profit) < 0) {
     insights.push({
+      key: "profit_negative",
       category: "利润预警",
       title: "近 7 天估算经营利润为负",
       detail: `净销售额 ${summary.netSales} 元，估算经营利润 ${summary.profit} 元。先找出亏损集中在哪些日期和费用项。`,
@@ -66,6 +71,7 @@ export function weeklyReportInsights(
     });
   } else {
     insights.push({
+      key: "profit_positive",
       category: "利润表现",
       title: "经营利润保持为正",
       detail: `近 7 天估算经营利润 ${summary.profit} 元，利润率 ${summary.margin === null ? "暂不可算" : `${summary.margin.toFixed(2)}%`}。`,
@@ -77,6 +83,7 @@ export function weeklyReportInsights(
   const spend = amount(summary.adSpend);
   if (spend <= 0) {
     insights.push({
+      key: "ads_missing",
       category: "推广数据",
       title: advertising.length ? "本周未记录广告消耗" : "尚无本周推广日报",
       detail: "广告 ROAS 只使用广告归因成交额除以广告消耗；不能用全店成交额代替。",
@@ -85,6 +92,7 @@ export function weeklyReportInsights(
     });
   } else if (summary.roas === null || summary.breakEvenRoas === null) {
     insights.push({
+      key: "ads_incomplete",
       category: "推广效率",
       title: `已记录推广消耗 ${summary.adSpend} 元，保本线暂不可算`,
       detail: summary.roas === null ? "当前没有有效的广告归因成交额，无法计算 ROAS。" : `广告归因 ROAS 为 ${summary.roas.toFixed(2)}x，但成本数据不完整，暂不能计算可靠保本 ROAS。`,
@@ -93,6 +101,7 @@ export function weeklyReportInsights(
     });
   } else if (summary.roas < summary.breakEvenRoas) {
     insights.push({
+      key: "roas_below_break_even",
       category: "推广效率",
       title: `广告 ROAS ${summary.roas.toFixed(2)}x 低于估算保本线 ${summary.breakEvenRoas.toFixed(2)}x`,
       detail: `近 7 天广告消耗 ${summary.adSpend} 元，归因成交额 ${advertising.reduce((total, row) => total + amount(row.attributedSales), 0).toFixed(2)} 元。`,
@@ -101,6 +110,7 @@ export function weeklyReportInsights(
     });
   } else {
     insights.push({
+      key: "roas_above_break_even",
       category: "推广效率",
       title: `广告 ROAS ${summary.roas.toFixed(2)}x 高于估算保本线`,
       detail: `估算保本 ROAS 为 ${summary.breakEvenRoas.toFixed(2)}x，当前投放可能覆盖直接经营成本。`,
@@ -111,6 +121,7 @@ export function weeklyReportInsights(
 
   if (refundRate >= 5) {
     insights.push({
+      key: "refund_rate",
       category: "退款关注",
       title: `退款金额占成交额 ${refundRate.toFixed(1)}%`,
       detail: `本周退款 ${summary.refunds} 元。5% 是系统提示线，不代表行业通用标准。`,
@@ -130,6 +141,7 @@ export function weeklyReportInsights(
       const change = ((recentAverage - oldAverage) / oldAverage) * 100;
       if (change <= -10) {
         insights.push({
+          key: "sales_trend_down",
           category: "销售趋势",
           title: `后半周日均净销售额下降 ${Math.abs(change).toFixed(1)}%`,
           detail: `前半周日均 ${oldAverage.toFixed(2)} 元，后半周日均 ${recentAverage.toFixed(2)} 元。`,
@@ -138,6 +150,7 @@ export function weeklyReportInsights(
         });
       } else if (change >= 10) {
         insights.push({
+          key: "sales_trend_up",
           category: "销售趋势",
           title: `后半周日均净销售额增长 ${change.toFixed(1)}%`,
           detail: `前半周日均 ${oldAverage.toFixed(2)} 元，后半周日均 ${recentAverage.toFixed(2)} 元。`,
@@ -150,6 +163,7 @@ export function weeklyReportInsights(
 
   if (conversion !== null && visitors > 0 && conversion < 2) {
     insights.push({
+      key: "low_conversion",
       category: "流量转化",
       title: `日报访客到订单转化约 ${conversion.toFixed(2)}%`,
       detail: `近 7 天记录 ${visitors} 名访客、${orders} 笔订单。该值按订单数 ÷ 访客数估算，与平台口径可能不同。`,
@@ -159,4 +173,17 @@ export function weeklyReportInsights(
   }
 
   return insights.slice(0, 6);
+}
+
+export function recommendationBaseline(daily: DailyMetric[], advertising: AdvertisingMetric[], capturedAt: string): RecommendationBaseline {
+  const summary = financialSummary(daily, advertising);
+  const gross = Number(summary.grossSales);
+  return {
+    captured_at: capturedAt,
+    coverage_days: new Set(daily.map(row => row.date)).size,
+    net_sales: summary.netSales,
+    profit: summary.profit,
+    roas: summary.roas,
+    refund_rate: gross > 0 ? Number((Number(summary.refunds) / gross * 100).toFixed(2)) : null,
+  };
 }

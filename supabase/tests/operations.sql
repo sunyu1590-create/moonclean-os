@@ -27,8 +27,15 @@ do $$ begin
   if sqlerrm='negative stock accepted' then raise; end if;
  end;
 end $$;
-insert into public.operation_tasks(store_id,title,priority,due_date)
- values('60000000-0000-4000-8000-000000000001','Replenish','high',current_date);
+insert into public.operation_tasks(store_id,title,priority,due_date,recommendation_key,recommendation_baseline)
+ values('60000000-0000-4000-8000-000000000001','Replenish','high',current_date,'profit_negative','{"profit":"-12.00","coverage_days":7}');
+do $$ begin
+ begin
+  insert into public.operation_tasks(store_id,title,recommendation_key)
+   values('60000000-0000-4000-8000-000000000001','Duplicate recommendation','profit_negative');
+  raise exception 'duplicate active recommendation accepted';
+ exception when unique_violation then null; end;
+end $$;
 select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000002',true);
 select public.set_inventory_balance('60000000-0000-4000-8000-000000000001','80000000-0000-4000-8000-000000000001',12,5,'restocked');
 update public.operation_tasks set status='done' where store_id='60000000-0000-4000-8000-000000000001';

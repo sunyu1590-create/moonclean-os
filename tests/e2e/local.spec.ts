@@ -84,7 +84,7 @@ test("本机与云端工作区切换会呈现过场并保持数据各自独立",
   await expect(page.getByRole("button", { name: "切换本地数据或云端数据" })).toContainText("本地数据");
   await expect(page.getByText("只保存在本地的任务")).toBeVisible();
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "AI 智能经营建议" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "智能经营建议" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "运营待办" })).toBeVisible();
   await expect(page.getByText("只保存在本地的任务")).toBeVisible();
 });
@@ -125,4 +125,16 @@ test("经营目标接受千位逗号并在刷新后保留", async ({ page }) => 
   await page.reload();
   await page.goto("/settings");
   await expect(page.getByLabel("月销售目标")).toHaveValue("250000");
+});
+
+test("经营建议可以转成待办并在刷新后保留分析基线", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "智能经营建议" })).toBeVisible();
+  await page.getByRole("button", { name: /转为待办|建任务/ }).first().click();
+  await expect(page.getByRole("status")).toContainText("已创建跟进任务");
+  await page.goto("/tasks");
+  await expect(page.getByText("智能建议跟进").first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("智能建议跟进").first()).toBeVisible();
 });
