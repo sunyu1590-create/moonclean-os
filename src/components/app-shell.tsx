@@ -25,8 +25,11 @@ import {
   Calculator,
   ReceiptText,
   FileText,
+  SlidersHorizontal,
+  Check,
+  Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
@@ -50,7 +53,8 @@ const nav = [
   { href: "/integrations", label: "平台连接", icon: Plug },
   { href: "/sync-center", label: "同步任务", icon: ListChecks },
 ];
-const mobilePrimary = ["/dashboard", "/products", "/data", "/finance"];
+const defaultMobilePrimary = ["/dashboard", "/products", "/data", "/finance"];
+const mobileNavStorageKey = "moonclean-mobile-navigation-v1";
 const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const roleLabels = {
   owner: "所有者",
@@ -149,8 +153,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [customizingNav, setCustomizingNav] = useState(false);
+  const [mobilePrimary, setMobilePrimary] = useState(defaultMobilePrimary);
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+    try {
+      const saved = localStorage.getItem(mobileNavStorageKey);
+      if (!saved) return;
+      const parsed: unknown = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const valid = parsed.filter(
+          (href): href is string =>
+            typeof href === "string" && nav.some((item) => item.href === href),
+        );
+        if (valid.length === 4 && new Set(valid).size === 4) setMobilePrimary(valid);
+      }
+    } catch {
+      localStorage.removeItem(mobileNavStorageKey);
+    }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -173,6 +198,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
     )[pathname] ||
     "经营总览";
+  function toggleMobileNav(href: string) {
+    const next = mobilePrimary.includes(href)
+      ? mobilePrimary.length > 2 ? mobilePrimary.filter((item) => item !== href) : mobilePrimary
+      : mobilePrimary.length < 4 ? [...mobilePrimary, href] : mobilePrimary;
+    setMobilePrimary(next);
+    localStorage.setItem(mobileNavStorageKey, JSON.stringify(next));
+  }
   return (
     <div className="min-h-screen md:flex">
       <aside
@@ -346,7 +378,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e8ecf1] bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_28px_#20293612] backdrop-blur-xl md:hidden">
+      <nav aria-label="主导航" className="fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 rounded-[22px] border border-white/80 bg-white/75 px-2 pb-2 pt-2 shadow-[0_8px_32px_rgba(31,57,82,0.14),0_1px_3px_rgba(31,57,82,0.06)] backdrop-blur-2xl supports-[backdrop-filter]:bg-white/65 md:hidden">
         {nav.filter(item => mobilePrimary.includes(item.href)).map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
@@ -365,11 +397,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-        <SheetContent side="bottom" className="rounded-t-[26px] p-4 pb-[max(22px,env(safe-area-inset-bottom))] md:hidden">
-          <SheetHeader className="px-2 pb-2"><SheetTitle>更多功能</SheetTitle></SheetHeader>
+        <SheetContent side="bottom" className="max-h-[86dvh] overflow-y-auto rounded-t-[30px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden">
+          <SheetHeader className="px-1 pb-4 text-left">
+            <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[#eaf4ff] text-[#3189e8]"><Sparkles size={21}/></div>
+            <SheetTitle className="text-xl">更多功能</SheetTitle>
+            <p className="text-sm text-[#8192a3]">常用经营工具与系统管理</p>
+          </SheetHeader>
+          <button type="button" onClick={() => setCustomizingNav((value) => !value)} className="mb-5 flex w-full items-center justify-between rounded-2xl border border-[#dcecff] bg-gradient-to-r from-[#f1f8ff] to-white p-4 text-left transition-colors hover:bg-[#eaf4ff]">
+            <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-white text-[#3189e8] shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-[#203751]">自定义底栏</span><span className="mt-0.5 block text-xs text-[#8294a8]">选择常用入口，最多显示 4 个</span></span></span>
+            <ChevronRight size={18} className={cn("text-[#8ba0b4] transition-transform", customizingNav && "rotate-90")}/>
+          </button>
+          {customizingNav && <div className="mb-5 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#243c56]">底栏快捷入口</p><span className="text-xs text-[#8799ab]">已选 {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-[#b8d9fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#536579]")}><Icon size={17}/><span className="flex-1 truncate">{label}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-[#3b91eb] bg-[#3b91eb] text-white" : "border-[#d7e0e9]")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-[#66809a] hover:text-[#287fe2]">恢复默认底栏</button></div>}
+          <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-[#94a4b4]">经营工具</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-xl border border-[#edf1f5] p-4 text-sm font-medium", pathname===href ? "bg-[#eaf2fd] text-[#287fe2]" : "bg-[#fafbfc] text-[#425166]")}><Icon size={19}/>{label}</Link>)}
-            {mode==="cloud"&&<Link href="/account" onClick={()=>setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-xl border border-[#edf1f5] bg-[#fafbfc] p-4 text-sm font-medium text-[#425166]"><CircleUserRound size={19}/>账号设置</Link>}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-[#c8e1fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#42566b] hover:border-[#d7e9fb] hover:bg-[#f7fbff]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><Icon size={18}/></span>{label}</Link>)}
+          </div>
+          <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-[#94a4b4]">系统与账号</p>
+          <div className="grid grid-cols-2 gap-2">
+            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-[#c8e1fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#42566b] hover:border-[#d7e9fb] hover:bg-[#f7fbff]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><Icon size={18}/></span>{label}</Link>)}
+            {mode==="cloud"&&<Link href="/account" onClick={()=>setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-[#edf1f5] bg-white p-3.5 text-sm font-medium text-[#42566b]"><span className="grid size-9 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><CircleUserRound size={18}/></span>账号设置</Link>}
           </div>
         </SheetContent>
       </Sheet>
