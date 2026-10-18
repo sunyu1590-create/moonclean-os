@@ -214,13 +214,15 @@ export default function DataPage() {
           </div>
         }
       />
+      <div className="mb-5">
+        <ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/>
+      </div>
       <div className="mb-5 rounded-2xl border border-[#dcebf8] bg-[#eef7ff] p-4 text-sm text-[#557692]">
         CSV 字段：date, sales, refunds, orders, productCost, packagingCost,
         logisticsCost, platformFees, otherExpenses,
         productSales。建议先导出样例，再按相同格式填写；productSales 是商品 ID
         与销售额的 JSON 对象。
       </div>
-      <div className="mb-5"><ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/></div>
       <div className="mb-5"><QuickMetricEntry rows={data.daily} disabled={!canEdit} onImport={importPasted}/></div>
       <SectionCard
         title="历史经营数据"
