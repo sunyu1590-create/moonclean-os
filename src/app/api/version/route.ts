@@ -38,23 +38,44 @@ export async function GET() {
   const dispatcher = new EnvHttpProxyAgent();
   try {
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
-    const githubRequest = (url: string, accept = "application/vnd.github+json") =>
+    const githubRequest = (
+      url: string,
+      accept = "application/vnd.github+json",
+      useToken = false,
+    ) =>
       fetch(url, {
         headers: {
           Accept: accept,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token && useToken ? { Authorization: `Bearer ${token}` } : {}),
         },
         cache: "no-store",
         signal: AbortSignal.timeout(12_000),
         dispatcher,
       } as RequestInit & { dispatcher: EnvHttpProxyAgent });
-    const [commitResponse, packageResponse] = await Promise.all([
+    let [commitResponse, packageResponse] = await Promise.all([
       githubRequest(`https://api.github.com/repos/${repository}/commits/main`),
       githubRequest(
         `https://raw.githubusercontent.com/${repository}/main/package.json`,
         "application/json",
       ),
     ]);
+    if (
+      token &&
+      [401, 403, 404].includes(commitResponse.status)
+    ) {
+      commitResponse = await githubRequest(
+        `https://api.github.com/repos/${repository}/commits/main`,
+        "application/vnd.github+json",
+        true,
+      );
+    }
+    if (token && [401, 403, 404].includes(packageResponse.status)) {
+      packageResponse = await githubRequest(
+        `https://raw.githubusercontent.com/${repository}/main/package.json`,
+        "application/json",
+        true,
+      );
+    }
     if (!commitResponse.ok) {
       if (commitResponse.status === 403 || commitResponse.status === 429) {
         throw new Error(
