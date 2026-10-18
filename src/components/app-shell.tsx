@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <div className="text-xs text-[#8fa1b3]">
                 {mode === "cloud"
-                  ? `云端同步 · ${role ? roleLabels[role] : ""}`
+                  ? `云端数据 · ${role ? roleLabels[role] : ""}`
                   : "本地演示模式"}
               </div>
             </div>
@@ -250,8 +250,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))}
               </select>
             )}
-            <span className="rounded-full bg-[#e9f7f3] px-2.5 py-1 text-[11px] font-semibold text-[#16a085]">
-              ● {mode === "cloud" ? "云端同步" : "本地演示"}
+            <span className={cn(
+              "rounded-full px-2.5 py-1 text-[11px] font-semibold",
+              error && mode === "cloud"
+                ? "bg-[#fff0f1] text-[#e85d65]"
+                : "bg-[#e9f7f3] text-[#16a085]",
+            )}>
+              ● {mode === "local" ? "本地演示" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}
             </span>
             {mode === "cloud" && (
               <>

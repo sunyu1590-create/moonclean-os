@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 source .devcontainer/cloud-config.sh
+export NEXT_PUBLIC_DATA_MODE=cloud
 
 if curl --silent --fail --max-time 2 http://127.0.0.1:3000 >/dev/null; then
   exit 0

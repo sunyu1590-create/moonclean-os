@@ -53,7 +53,7 @@ const fields = [
   ["otherExpenses", "其他经营费用"],
 ] as const;
 export default function DataPage() {
-  const { data, update, role, saving } = useApp();
+  const { data, update, role, saving, mode } = useApp();
   const canEdit = role !== "viewer";
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -141,7 +141,9 @@ export default function DataPage() {
       <PageHead
         eyebrow="DATA HUB / 数据中心"
         title="让经营数据有据可查"
-        description="每日录入、编辑与 CSV 批量导入，数据会保存在当前浏览器。"
+        description={mode === "cloud"
+          ? "每日录入、编辑与 CSV 批量导入，保存成功后数据会同步到云端店铺。"
+          : "每日录入、编辑与 CSV 批量导入，演示数据保存在当前浏览器。"}
         action={
           <div className="flex flex-wrap gap-2">
             <ExportButton
