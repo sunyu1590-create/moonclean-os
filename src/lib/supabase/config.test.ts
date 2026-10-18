@@ -20,4 +20,15 @@ describe("Supabase public configuration", () => {
       key: "sb_publishable_example",
     });
   });
+
+  it("keeps production on the canonical MoonClean OS project", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://wrong-project.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_wrong");
+
+    expect(supabaseConfig()).toEqual({
+      url: "https://duolfhyodjhuatucjhtz.supabase.co",
+      key: expect.stringMatching(/^sb_publishable_/),
+    });
+  });
 });
