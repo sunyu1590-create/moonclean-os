@@ -2,6 +2,14 @@
 
 在第一阶段 Next.js 项目上增加 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。原有经营总览、推广、商品、财务、数据中心和统一十进制财务计算继续使用。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。
 
+## 已创建的 Supabase 项目
+
+- 项目：`MoonClean OS`，组织：`m`，区域：Singapore (`ap-southeast-1`)
+- Project ID：`duolfhyodjhuatucjhtz`，URL：`https://duolfhyodjhuatucjhtz.supabase.co`
+- `supabase/migrations/` 中的五个迁移已按顺序应用到该项目。12 张业务表均已启用 RLS。项目的 Publishable Key 存于本地 `.env.local`，不提交到仓库。
+- **GitHub Codespaces 仍需设置两个 Secrets**：打开仓库 **Settings → Secrets and variables → Codespaces → New repository secret**，分别填写 `NEXT_PUBLIC_SUPABASE_URL`（上面的项目 URL）及 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`（在 [Supabase 项目 API Keys](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/settings/api-keys) 复制 Publishable Key）。当前 GitHub 集成对仓库 Secrets API 返回 403，因此这一步需在 GitHub 网页完成。设置后重建或重启 Codespace。
+- **邮箱回调还需设置**：在 [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/auth/url-configuration) 添加 Codespaces 端口 3000 的实际 HTTPS 转发域名，并将该域名下的 `/auth/callback` 与 `/auth/confirm` 加入 Redirect URLs。本地运行时使用 `http://localhost:3000` 对应路径。未完成前不要依赖邮件验证或密码重置流程。
+
 ## 配置与启动
 
 想直接从 GitHub 仓库试用，可在仓库点击 **Code → Codespaces → Create codespace on main**。首次启动会自动安装依赖并运行本地演示版；在 Codespaces 的 **Ports** 面板打开 3000 端口即可操作。演示数据保存在打开页面的浏览器中。Codespace 关闭后预览网址会停止，使用时受 GitHub Codespaces 配额限制。

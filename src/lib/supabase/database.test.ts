@@ -7,6 +7,7 @@ const migrations = [
   "202610170002_security_and_api.sql",
   "202610170003_mutations.sql",
   "202610170004_hardening.sql",
+  "202610170005_trigger_permissions.sql",
 ];
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
