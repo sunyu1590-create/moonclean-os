@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/integrations/pinduoduo/client";
 import { formatMoney } from "@/lib/finance";
 import { REFUND_REASONS, summarizeRefundIssues, refundReasonSchema, type RefundReason } from "@/lib/after-sales";
+import { notifyFeedback } from "@/lib/feedback";
 
 type Period = 7 | 30 | 90;
 type Draft = { reason: RefundReason | ""; note: string };
@@ -95,7 +96,8 @@ export default function AfterSalesPage() {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "AI 分析失败");
       setSummary(body.summary || "未能读取分析结果");
-    } catch (cause) { setAiError(cause instanceof Error ? cause.message : "AI 分析失败"); }
+      notifyFeedback({ kind: "success", title: "售后分析已生成", description: "分析结果已显示在当前窗口。" });
+    } catch (cause) { const message = cause instanceof Error ? cause.message : "AI 分析失败"; setAiError(message); notifyFeedback({ kind: "error", title: "售后分析失败", description: message }); }
     finally { setAiBusy(false); }
   }
 

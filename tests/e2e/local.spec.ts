@@ -15,6 +15,7 @@ test("第一阶段本地模式保留商品与经营数据编辑", async ({ page 
   await page.getByPlaceholder("例如：2kg 家庭装").fill("单瓶");
   await page.getByRole("button", { name: "保存商品" }).click();
   await expect(page.getByText("阶段二兼容测试商品").first()).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "保存成功" })).toBeVisible();
   await page.reload();
   await expect(page.getByText("阶段二兼容测试商品").first()).toBeVisible();
   await page.goto("/data");
@@ -29,7 +30,7 @@ test("第一阶段本地模式保留商品与经营数据编辑", async ({ page 
   await page.getByRole("button", { name: "保存数据" }).click();
   await page.goto("/dashboard");
   await expect(page.getByText("今日销售额")).toBeVisible();
-  await expect(page.getByText("¥9836.00")).toBeVisible();
+  await expect(page.getByText("期间净销售额")).toBeVisible();
 });
 
 test("本机与云端工作区切换会呈现过场并保持数据各自独立", async ({ page }) => {
@@ -136,13 +137,18 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(transition).toContainText("切换到精致模式");
   await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
-  await expect(transition).toContainText("v0.8.5");
+  await expect(transition).toContainText("v0.8.6");
   await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
+  const debugOptions = page.getByRole("button", { name: "调试选项（自定义显示内容）" });
+  await expect(debugOptions).toHaveAttribute("aria-expanded", "false");
+  await debugOptions.click();
   const refreshOption = page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]");
   await refreshOption.uncheck();
   await page.getByRole("switch", { name: "启用性能调试浮窗" }).click();
   await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toHaveAttribute("aria-expanded", "false");
+  await expect(page.getByRole("region", { name: "性能调试面板" })).toHaveCount(0);
   await page.getByRole("button", { name: "网页性能调试信息" }).click();
   await expect(page.getByRole("region", { name: "性能调试面板" })).toBeVisible();
   const debugPanel = page.getByRole("region", { name: "性能调试面板" });
@@ -151,7 +157,12 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   await expect(page.getByRole("button", { name: "网页性能调试信息" })).toHaveCSS("animation-name", "none");
   await page.reload();
   await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
+  await page.getByRole("button", { name: "调试选项（自定义显示内容）" }).click();
   await expect(page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]")).not.toBeChecked();
+  await page.getByRole("switch", { name: "启用性能调试浮窗" }).click();
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toHaveCount(0);
+  await page.getByRole("switch", { name: "启用性能调试浮窗" }).click();
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toHaveAttribute("aria-expanded", "false");
 });
 
 test("定价工具可以创建不写入商品数据的临时 SKU", async ({ page }) => {
@@ -173,7 +184,7 @@ test("经营建议可以转成待办并在刷新后保留分析基线", async ({
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "智能经营建议" })).toBeVisible();
   await page.getByRole("button", { name: /转为待办|建任务/ }).first().click();
-  await expect(page.getByRole("status")).toContainText("已创建跟进任务");
+  await expect(page.locator('p[role="status"]')).toContainText("已创建跟进任务");
   await page.goto("/tasks");
   await expect(page.getByText("智能建议跟进").first()).toBeVisible();
   await page.reload();

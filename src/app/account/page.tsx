@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApp } from "@/components/app-provider";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { notifyFeedback } from "@/lib/feedback";
 export default function AccountPage() {
   const { mode } = useApp();
   const [email, setEmail] = useState("");
@@ -47,8 +48,10 @@ export default function AccountPage() {
       const body = await r.json();
       if (!r.ok) throw new Error(body.error);
       setMessage("账号资料已保存");
+      notifyFeedback({ kind: "success", title: "账号资料已保存" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存失败");
+      notifyFeedback({ kind: "error", title: "账号资料保存失败", description: e instanceof Error ? e.message : "请重试。" });
     } finally {
       setBusy(false);
     }
@@ -63,8 +66,10 @@ export default function AccountPage() {
         });
       if (error) throw error;
       setMessage("密码重置邮件已发送，请检查邮箱。");
+      notifyFeedback({ kind: "success", title: "重置邮件已发送", description: "请前往邮箱打开密码重置链接。" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "发送失败");
+      notifyFeedback({ kind: "error", title: "发送失败", description: e instanceof Error ? e.message : "请检查邮箱后重试。" });
     } finally {
       setBusy(false);
     }

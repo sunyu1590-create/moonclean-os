@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { notifyFeedback } from "@/lib/feedback";
 
 export const inventorySchema = z.object({
   skuId: z.uuid(),
@@ -39,6 +40,14 @@ export async function operationsRequest<T>(storeId: string, resource: string, bo
     ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `请求失败（${response.status}）`);
+  if (!response.ok) {
+    const message = payload.error || `请求失败（${response.status}）`;
+    if (method !== "GET") notifyFeedback({ kind: "error", title: "操作失败", description: message });
+    throw new Error(message);
+  }
+  if (method !== "GET") {
+    const resourceName = resource === "inventory" ? "库存" : resource === "tasks" ? "运营待办" : "经营数据";
+    notifyFeedback({ kind: "success", title: "操作成功", description: `${resourceName}已保存并同步到云端。` });
+  }
   return payload as T;
 }

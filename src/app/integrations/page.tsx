@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getIntegration, integrationAction, type IntegrationSnapshot } from "@/integrations/pinduoduo/client";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
+import { notifyFeedback } from "@/lib/feedback";
 
 export default function IntegrationsPage(){
   const {activeStoreId,role,retry,data,mode}=useApp();
@@ -49,7 +50,8 @@ export default function IntegrationsPage(){
       if(!response.ok)throw new Error(body.error||"创建模拟店铺失败");
       localStorage.setItem("moonclean-active-store",body.storeId);
       await retry();
-    }catch(e){setError(e instanceof Error?e.message:"创建失败");}
+      notifyFeedback({ kind: "success", title: "演示店铺已创建", description: "已切换到新店铺的云端工作区。" });
+    }catch(e){const message=e instanceof Error?e.message:"创建失败";setError(message);notifyFeedback({ kind: "error", title: "创建演示店铺失败", description: message });}
     finally{setBusy(false);}
   }
   const internalNames=new Map(data?.products.flatMap(p=>p.skus.map(s=>[s.id,`${p.name} · ${s.name}`] as const))||[]);

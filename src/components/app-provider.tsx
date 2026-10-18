@@ -12,6 +12,7 @@ import type { AppData, StoreRole } from "@/lib/model";
 import { hasLocalData, repository } from "@/lib/repository";
 import { createEmptyLocalData } from "@/lib/seed";
 import { setDisplayCurrency } from "@/lib/finance";
+import { notifyFeedback } from "@/lib/feedback";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import {
   SupabaseRepository,
@@ -306,6 +307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (mode !== "cloud") throw new Error("本地演示模式无法创建云端店铺");
     const result = await createCloudStore(input);
     await refresh(result.id);
+    notifyFeedback({ kind: "success", title: "店铺创建成功", description: `“${input.name}”已连接到云端。` });
   };
   const update = async (fn: (current: AppData) => AppData) => {
     if (busyRef.current) throw new Error("上一次操作尚未完成");
@@ -326,9 +328,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyData(fresh);
         setStores(current => current.map(store => store.id === fresh.settings.store.id ? {...store, name:fresh.settings.store.name, platform:fresh.settings.store.platform, currency:fresh.settings.store.currency, timezone:fresh.settings.store.timezone||"Asia/Shanghai"} : store));
       }
+      notifyFeedback({ kind: "success", title: "保存成功", description: mode === "cloud" ? "数据已保存并同步到云端。" : "数据已保存到当前设备。" });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "保存失败";
       setError(message);
+      notifyFeedback({ kind: "error", title: "保存失败", description: message });
       if (mode === "cloud" && activeStoreId) {
         try {
           applyData(await cloud.load(activeStoreId));
@@ -346,6 +350,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await repository.save(empty);
     setActiveStoreId(empty.settings.store.id);
     applyData(empty);
+    notifyFeedback({ kind: "success", title: "本地数据已重置", description: "新的空白工作区已准备好。" });
   };
   const exportBackup = () => {
     if (!dataRef.current) throw new Error("数据尚未加载");

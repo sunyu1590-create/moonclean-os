@@ -28,7 +28,15 @@ export async function getIntegration(storeId:string):Promise<IntegrationSnapshot
   return json(await fetch(`/api/stores/${storeId}/integration`,{cache:"no-store"}));
 }
 export async function integrationAction<T=unknown>(storeId:string,body:unknown):Promise<T>{
-  return json(await fetch(`/api/stores/${storeId}/integration`,{
-    method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),
-  }));
+  try {
+    const result = await json(await fetch(`/api/stores/${storeId}/integration`,{
+      method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),
+    }));
+    notifyFeedback({ kind: "success", title: "平台操作成功", description: "处理结果已保存到云端店铺。" });
+    return result;
+  } catch (cause) {
+    notifyFeedback({ kind: "error", title: "平台操作失败", description: cause instanceof Error ? cause.message : "请检查网络后重试。" });
+    throw cause;
+  }
 }
+import { notifyFeedback } from "@/lib/feedback";

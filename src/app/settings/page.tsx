@@ -16,6 +16,7 @@ import {
   Zap,
   CircleOff,
   Activity,
+  ChevronDown,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -38,6 +39,7 @@ import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
 import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
+import { notifyFeedback } from "@/lib/feedback";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
   const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
@@ -54,6 +56,7 @@ export default function SettingsPage() {
   const [localImportError, setLocalImportError] = useState("");
   const [localImportBusy, setLocalImportBusy] = useState(false);
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [debugOptionsOpen, setDebugOptionsOpen] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<DebugMetricId[]>([]);
   const [deepSeekKey, setDeepSeekKey] = useState("");
   const [deepSeekState, setDeepSeekState] = useState<{ configured: boolean; source: string; canSave: boolean; updatedAt?: string | null; error?: string } | null>(null);
@@ -110,7 +113,8 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error(body.error || "DeepSeek Key 验证失败");
       setDeepSeekKey(""); setDeepSeekMessage("验证通过，密钥已加密保存到当前店铺。");
       setDeepSeekState({ configured: true, source: "store", canSave: true });
-    } catch (cause) { setDeepSeekMessage(cause instanceof Error ? cause.message : "DeepSeek 配置失败"); }
+      notifyFeedback({ kind: "success", title: "DeepSeek 配置已保存", description: "密钥已在服务端验证并加密保存。" });
+    } catch (cause) { const message = cause instanceof Error ? cause.message : "DeepSeek 配置失败"; setDeepSeekMessage(message); notifyFeedback({ kind: "error", title: "DeepSeek 配置失败", description: message }); }
     finally { setDeepSeekBusy(false); }
   }
   async function deleteDeepSeekKey() {
@@ -122,7 +126,8 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error(body.error || "删除配置失败");
       setDeepSeekState({ configured: body.configured, source: body.source, canSave: true });
       setDeepSeekMessage(body.configured ? "店铺保存的 Key 已删除；服务器环境变量仍然生效。" : "已删除当前店铺的 DeepSeek Key。");
-    } catch (cause) { setDeepSeekMessage(cause instanceof Error ? cause.message : "删除配置失败"); }
+      notifyFeedback({ kind: "success", title: "DeepSeek 配置已更新", description: body.configured ? "店铺密钥已删除，服务器环境变量仍然生效。" : "当前店铺的密钥已删除。" });
+    } catch (cause) { const message = cause instanceof Error ? cause.message : "删除配置失败"; setDeepSeekMessage(message); notifyFeedback({ kind: "error", title: "删除配置失败", description: message }); }
     finally { setDeepSeekBusy(false); }
   }
   async function save() {
@@ -245,15 +250,21 @@ export default function SettingsPage() {
             </div>
             <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效只保存在当前设备。精致包含流光边框与弹性回弹；旧款手机可选择标准或简单。</p>
           </SectionCard>
-          <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。" action={<Activity size={19} className="text-[#3b91eb]" />}>
+          <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-[#3b91eb]" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-3 sm:p-4">
               <div className="min-w-0"><strong className="block text-sm text-[#263d54]">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-[#899aaa] sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
-              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !debugEnabled; setDebugEnabled(next); setPerformanceDebugEnabled(next); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-[#3b91eb]" : "bg-[#cbd5df]"}`}><span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
+              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !readPerformanceDebugEnabled(); setPerformanceDebugEnabled(next); notifyFeedback({ kind: "success", title: next ? "性能调试已开启" : "性能调试已关闭", description: next ? "悬浮胶囊已显示，面板默认收起。" : "当前设备的调试浮窗已隐藏。" }); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-[#3b91eb]" : "bg-[#cbd5df]"}`}><span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {DEBUG_METRICS.map(({ id, label }) => <label key={id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#e8eef4] bg-white px-2.5 text-[10px] text-[#667b8f] sm:text-xs"><input type="checkbox" checked={debugMetrics.includes(id)} onChange={(event) => { const next = event.target.checked ? [...debugMetrics, id] : debugMetrics.filter((item) => item !== id); setDebugMetrics(next); setPerformanceDebugMetrics(next); }} className="size-3.5 accent-[#3b91eb]"/>{label}</label>)}
-            </div>
-            <p className="mt-2 text-[10px] leading-4 text-[#96a4b2]">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
+            <button type="button" aria-expanded={debugOptionsOpen} onClick={() => setDebugOptionsOpen((open) => !open)} className="mt-3 flex min-h-10 w-full items-center justify-between rounded-xl border border-[#e8eef4] bg-white px-3 text-left text-xs font-medium text-[#5d748b] hover:bg-[#f8fbfe]">
+              <span>{debugOptionsOpen ? "收起调试选项" : "调试选项（自定义显示内容）"}</span>
+              <ChevronDown size={16} className={`transition-transform ${debugOptionsOpen ? "rotate-180" : ""}`} />
+            </button>
+            {debugOptionsOpen && <div className="mt-2 rounded-xl bg-[#f8fbfe] p-2.5">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {DEBUG_METRICS.map(({ id, label }) => <label key={id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#e8eef4] bg-white px-2.5 text-[10px] text-[#667b8f] sm:text-xs"><input type="checkbox" checked={debugMetrics.includes(id)} onChange={(event) => { const next = event.target.checked ? [...debugMetrics, id] : debugMetrics.filter((item) => item !== id); setDebugMetrics(next); setPerformanceDebugMetrics(next); }} className="size-3.5 accent-[#3b91eb]"/>{label}</label>)}
+              </div>
+              <p className="mt-2 text-[10px] leading-4 text-[#96a4b2]">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
+            </div>}
           </SectionCard>
           <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端，验证后加密保存，不会回传给浏览器。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
             {mode !== "cloud" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">

@@ -5,6 +5,7 @@ import { Users, UserPlus, Trash2, Crown, RefreshCw } from "lucide-react";
 import { useApp } from "./app-provider";
 import { SectionCard } from "./common";
 import { Button } from "@/components/ui/button";
+import { notifyFeedback } from "@/lib/feedback";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -80,11 +81,13 @@ export function TeamPanel() {
       await load();
       await retry();
       setMessage("成员设置已保存");
+      notifyFeedback({ kind: "success", title: "成员设置已更新", description: "权限变更已同步到当前店铺。" });
       setEmail("");
       setRemove(null);
       setTransfer(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "操作失败");
+      notifyFeedback({ kind: "error", title: "成员操作失败", description: cause instanceof Error ? cause.message : "请重试。" });
     } finally {
       setBusy(false);
     }

@@ -593,3 +593,21 @@ html[data-theme="night"] .mobile-primary-nav a[aria-current="page"],
 html[data-theme="night"] .mobile-primary-nav button[aria-current="page"] { color: #78b7ff; }
 html[data-theme="night"] .positive { color: #43c9a7 !important; }
 html[data-theme="night"] .negative { color: #ff8088 !important; }
+
+.feedback-viewport { position: fixed; z-index: 100; top: calc(env(safe-area-inset-top) + 14px); right: 16px; display: flex; width: min(390px,calc(100vw - 24px)); flex-direction: column; gap: 9px; pointer-events: none; }
+.feedback-toast { display: flex; min-width: 0; align-items: center; gap: 11px; padding: 12px 12px 12px 14px; border: 1px solid rgba(221,232,242,.92); border-radius: 16px; background: rgba(255,255,255,.96); box-shadow: 0 12px 34px rgba(31,57,82,.16),inset 0 1px 0 rgba(255,255,255,.9); color: #263d54; backdrop-filter: blur(14px); pointer-events: auto; animation: feedback-toast-in .2s ease-out both; }
+.feedback-toast-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: #e9f7f3; color: #168f78; }
+.feedback-toast-error .feedback-toast-icon { background: #fff0f1; color: #d9535d; }
+.feedback-toast-info .feedback-toast-icon { background: #eaf4ff; color: #3189e8; }
+.feedback-toast-copy { min-width: 0; flex: 1; }
+.feedback-toast-copy strong,.feedback-toast-copy small { display: block; }
+.feedback-toast-copy strong { font-size: 13px; font-weight: 650; line-height: 1.35; }
+.feedback-toast-copy small { margin-top: 2px; color: #77899b; font-size: 11px; line-height: 1.45; }
+.feedback-toast > button { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: #8b9aaa; }
+.feedback-toast > button:hover { background: #f0f4f7; color: #50667b; }
+@keyframes feedback-toast-in { from { opacity: 0; transform: translateY(-7px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 640px) { .feedback-viewport { top: calc(env(safe-area-inset-top) + 8px); right: 12px; left: 12px; width: auto; gap: 7px; } .feedback-toast { border-radius: 14px; padding: 10px 10px 10px 12px; } .feedback-toast-copy strong { font-size: 12px; } .feedback-toast-copy small { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .feedback-toast { animation: none; } }
+html[data-theme="night"] .feedback-toast { border-color: #3a4c60; background: rgba(29,41,56,.97); color: #e4eaf1; }
+html[data-theme="night"] .feedback-toast-copy small { color: #9babbc; }
+html[data-theme="night"] .feedback-toast > button { color: #9babbc; }

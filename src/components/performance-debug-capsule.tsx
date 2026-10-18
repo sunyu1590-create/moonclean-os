@@ -43,7 +43,9 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
   useEffect(() => {
     const update = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
-      setEnabled(typeof detail === "boolean" ? detail : readPerformanceDebugEnabled());
+      const next = typeof detail === "boolean" ? detail : readPerformanceDebugEnabled();
+      setEnabled(next);
+      if (!next) setExpanded(false);
     };
     const updateMetrics = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
