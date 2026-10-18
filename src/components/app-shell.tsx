@@ -15,6 +15,8 @@ import {
   CircleUserRound,
   RefreshCw,
   Cloud,
+  Plug,
+  ListChecks,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,8 @@ const nav = [
   { href: "/finance", label: "财务利润", icon: Wallet },
   { href: "/data", label: "数据中心", icon: Database },
   { href: "/settings", label: "系统设置", icon: Settings },
+  { href: "/integrations", label: "平台连接", icon: Plug },
+  { href: "/sync-center", label: "同步任务", icon: ListChecks },
 ];
 const authPaths = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const roleLabels = {
@@ -310,7 +314,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </main>
       </div>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-[#e5eef6] bg-white/95 px-1 pb-[max(6px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_22px_#dae9f355] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-8 border-t border-[#e5eef6] bg-white/95 px-1 pb-[max(6px,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_22px_#dae9f355] backdrop-blur-xl md:hidden">
         {nav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}

@@ -88,7 +88,7 @@ export default function DataPage() {
       return;
     }
     if (
-      data!.daily.some((row) => row.date === draft.date && row.id !== editing)
+      data!.daily.some((row) => row.date === draft.date && row.id !== editing && row.source !== "mock_pinduoduo" && row.source !== "official_pinduoduo")
     ) {
       setError("该日期已有经营数据，请编辑已有记录");
       return;
@@ -98,7 +98,7 @@ export default function DataPage() {
         ...current,
         daily: [
           ...current.daily.filter((row) => row.id !== editing),
-          { ...parsed.data, isDemo: false },
+          { ...parsed.data, source: parsed.data.source || "manual", isDemo: false },
         ].sort((a, b) => a.date.localeCompare(b.date)),
       }));
       setOpen(false);
@@ -108,7 +108,7 @@ export default function DataPage() {
   }
   async function importFile(file: File) {
     const content = await file.text();
-    setPreview(parseDailyCsv(content, data!.daily));
+    setPreview(parseDailyCsv(content, data!.daily.filter(row => row.source !== "mock_pinduoduo" && row.source !== "official_pinduoduo")));
     setOverwrite(false);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -124,6 +124,7 @@ export default function DataPage() {
           ...preview.rows.map((r) => ({
             ...r,
             id: crypto.randomUUID(),
+            source: "csv_import" as const,
             isDemo: false,
           })),
         ].sort((a, b) => a.date.localeCompare(b.date)),
@@ -151,7 +152,7 @@ export default function DataPage() {
               onClick={() =>
                 downloadText(
                   "moonclean-daily.csv",
-                  exportDailyCsv(data.daily),
+                  exportDailyCsv(data.daily.filter(row => row.source !== "mock_pinduoduo" && row.source !== "official_pinduoduo")),
                   "text/csv;charset=utf-8",
                 )
               }
@@ -233,14 +234,14 @@ export default function DataPage() {
                   <td>{formatMoney(row.logisticsCost)}</td>
                   <td>{formatMoney(row.otherExpenses)}</td>
                   <td className="text-xs text-[#92a4b5]">
-                    {row.isDemo ? "模拟数据" : "用户数据"}
+                    {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
                   </td>
                   <td className="text-right">
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => edit(row)}
-                      disabled={!canEdit}
+                      disabled={!canEdit || row.source === "mock_pinduoduo" || row.source === "official_pinduoduo"}
                     >
                       <Pencil size={14} />
                       编辑

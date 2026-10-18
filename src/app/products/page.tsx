@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Plus, Pencil, Trash2, Package, Boxes } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { PageHead, SectionCard } from "@/components/common";
@@ -194,6 +195,16 @@ export default function Products() {
           </SectionCard>
         ))}
       </div>
+      {mode === "cloud" && (data.externalCatalog?.length || 0) > 0 && (
+        <SectionCard title="拼多多同步商品（模拟）" sub="平台目录仅供核对；关联店内 SKU 后才可匹配成本版本。" action={<Link className="text-sm text-[#3b91eb]" href="/integrations">管理 SKU 关联 →</Link>}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data.externalCatalog?.map(product => <div key={product.id} className="rounded-xl border border-[#eaf0f6] bg-[#fbfdff] p-4">
+              <p className="font-semibold">{product.name} <span className="text-xs font-normal text-[#3b91eb]">模拟数据</span></p>
+              {product.skus.map(sku => <p key={sku.id} className="mt-2 text-xs text-[#70879b]">{sku.name} · {formatMoney(sku.price)} · {sku.mappedSkuId ? "已关联店内 SKU" : "未关联，成本数据不完整"}</p>)}
+            </div>)}
+          </div>
+        </SectionCard>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
           <DialogHeader>

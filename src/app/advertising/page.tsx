@@ -327,7 +327,7 @@ export default function Advertising() {
                   <td>{formatMoney(ad.attributedSales)}</td>
                   <td>{adRoas([ad]) !== null ? adRoas([ad]) + "x" : "—"}</td>
                   <td className="text-xs text-[#8ca0b2]">
-                    {ad.isDemo ? "模拟数据" : "手动录入"}
+                    {ad.isDemo ? "模拟数据" : ad.source === "csv_import" ? "CSV 导入" : "手动录入"}
                   </td>
                   <td className="text-right">
                     <Button

@@ -1,0 +1,5 @@
+{
+  "crons": [
+    { "path": "/api/cron/mock-sync", "schedule": "0 0 * * *" }
+  ]
+}

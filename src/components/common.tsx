@@ -97,7 +97,7 @@ export function DemoNote({ hasDemo = true }: { hasDemo?: boolean }) {
   return (
     <div className="flex items-center gap-2 text-xs text-[#8fa3b6]">
       <Info size={14} />
-      {hasDemo ? "当前包含模拟数据，可在数据中心替换" : "当前使用本地录入数据"}
+      {hasDemo ? "当前包含模拟数据；平台模拟订单需在连接中心管理" : "当前无模拟经营数据"}
     </div>
   );
 }

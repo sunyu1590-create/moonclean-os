@@ -53,6 +53,7 @@ export interface CloudSnapshot {
     shipping_cost: string | null;
     platform_fee: string | null;
     cost_source: "manual" | "sku";
+    data_source?: "manual" | "csv_import";
     is_demo?: boolean;
   }[];
   ads: {
@@ -62,6 +63,7 @@ export interface CloudSnapshot {
     attributed_revenue: string;
     attributed_orders: number;
     is_demo?: boolean;
+    data_source?: "manual" | "csv_import";
   }[];
   skuDaily: {
     id: string;
@@ -225,6 +227,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
         productSales: productSalesByDate.get(row.metric_date) || {},
         costComplete: complete,
         costSource: row.cost_source,
+        source: row.data_source || "manual",
         isDemo: row.is_demo || false,
       };
     }),
@@ -236,6 +239,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
       attributedSales: amount(row.attributed_revenue),
       attributedOrders: row.attributed_orders,
       isDemo: row.is_demo || false,
+      source: row.data_source || "manual",
     })),
   };
 }

@@ -1,12 +1,14 @@
-# MoonClean OS · 第二阶段
+# MoonClean OS · 第三阶段预接入
 
 在第一阶段 Next.js 项目上增加 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。原有经营总览、推广、商品、财务、数据中心和统一十进制财务计算继续使用。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。
+
+第三阶段新增拼多多模拟同步预接入：`/integrations` 平台连接、`/sync-center` 同步任务、Mock Adapter、云端订单与退款、SKU 映射、增量游标及演示数据经营汇总。**尚未连接拼多多官方开放平台。** 使用说明见 [模拟同步](docs/mock-sync.md)，待申请接口见 [官方能力清单](docs/pinduoduo-api-capabilities.md)。
 
 ## 已创建的 Supabase 项目
 
 - 项目：`MoonClean OS`，组织：`m`，区域：Singapore (`ap-southeast-1`)
 - Project ID：`duolfhyodjhuatucjhtz`，URL：`https://duolfhyodjhuatucjhtz.supabase.co`
-- `supabase/migrations/` 中的五个迁移已按顺序应用到该项目。12 张业务表均已启用 RLS。`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
+- `supabase/migrations/` 中的七个迁移已按顺序应用到该项目。新增模拟同步业务表均已启用 RLS。`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
 - **邮箱回调还需设置**：在 [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/auth/url-configuration) 添加 Codespaces 端口 3000 的实际 HTTPS 转发域名，并将该域名下的 `/auth/callback` 与 `/auth/confirm` 加入 Redirect URLs。本地运行时使用 `http://localhost:3000` 对应路径。未完成前不要依赖邮件验证或密码重置流程。
 
 ## 配置与启动
@@ -61,4 +63,4 @@ npm run build
 
 ## 当前限制
 
-尚未接入拼多多或抖音自动同步，也没有对未注册邮箱自动发送团队邀请。成员需先自行注册并验证邮箱。第一阶段本地数据只存当前浏览器；迁移需在保存该数据的浏览器中执行。云端并发更改以数据库唯一约束、事务函数与最近写入为准，尚无字段级冲突合并界面。
+拼多多官方自动同步与抖音自动同步尚未接入；现有模块仅同步演示数据。定时模拟同步需完成 Vercel 部署和服务端密钥配置。系统没有对未注册邮箱自动发送团队邀请；成员需先自行注册并验证邮箱。第一阶段本地数据只存当前浏览器；迁移需在保存该数据的浏览器中执行。云端并发更改以数据库唯一约束、事务函数与最近写入为准，尚无字段级冲突合并界面。

@@ -8,14 +8,17 @@ const migrations = [
   "202610170003_mutations.sql",
   "202610170004_hardening.sql",
   "202610170005_trigger_permissions.sql",
+  "202610180001_mock_sync.sql",
+  "202610180002_refund_guard.sql",
 ];
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
 beforeAll(async () => {
   db = new PGlite();
-  await db.exec(`create schema auth; create role authenticated; create role anon;
+  await db.exec(`create schema auth; create role authenticated; create role anon; create role service_role;
     create table auth.users(id uuid primary key,instance_id uuid,aud text,role text,email text,encrypted_password text,email_confirmed_at timestamptz,raw_app_meta_data jsonb default '{}'::jsonb,raw_user_meta_data jsonb default '{}'::jsonb);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+    create function auth.role() returns text language sql stable as $$ select nullif(current_setting('request.jwt.claim.role',true),'') $$;
     grant usage on schema auth to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;`);
   for (const name of migrations)
     await db.exec(
@@ -47,5 +50,8 @@ describe("PostgreSQL 迁移与权限", () => {
   }, 15_000);
   it("跨店铺、Viewer、Editor、Admin 越权均被拒绝", async () => {
     await db.exec(file("supabase/tests/rls.sql"));
+  }, 15_000);
+  it("模拟同步幂等、并发保护、租户隔离和 Viewer 限权", async () => {
+    await db.exec(file("supabase/tests/mock_sync.sql"));
   }, 15_000);
 });

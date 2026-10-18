@@ -47,6 +47,7 @@ export interface DailyMetric {
   isDemo?: boolean;
   costComplete?: boolean;
   costSource?: "manual" | "sku";
+  source?: "manual" | "csv_import" | "mock_pinduoduo" | "official_pinduoduo";
 }
 export interface AdvertisingMetric {
   id: string;
@@ -55,6 +56,7 @@ export interface AdvertisingMetric {
   attributedSales: Money;
   attributedOrders?: number;
   isDemo?: boolean;
+  source?: "manual" | "csv_import" | "mock_pinduoduo" | "official_pinduoduo";
 }
 export interface SKUDailyMetric { id: string; skuId: string; date: string; quantitySold: number; grossSales: Money; refundAmount: Money }
 export interface FinancialSummary {
@@ -85,6 +87,7 @@ export interface AppData {
   daily: DailyMetric[];
   advertising: AdvertisingMetric[];
   skuDaily?: SKUDailyMetric[];
+  externalCatalog?: { id: string; name: string; isDemo: boolean; skus: { id: string; name: string; code: string | null; price: Money; mappedSkuId: string | null }[] }[];
   settings: AppSettings;
 }
 export const DATA_VERSION = 1;

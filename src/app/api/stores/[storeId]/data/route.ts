@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStore, apiError } from "@/lib/supabase/auth";
 import { mapCloudSnapshot, type CloudSnapshot } from "@/lib/supabase/mapper";
+import { mergeExternalDaily } from "@/services/external-finance";
 export const dynamic = "force-dynamic";
 export async function GET(
   _request: Request,
@@ -57,7 +58,28 @@ export async function GET(
       skuDaily: results[5],
       productSales: results[6],
     } as CloudSnapshot;
-    return NextResponse.json(mapCloudSnapshot(snapshot), {
+    const [orders, refunds, externalProducts, externalSkus, mappings, externalItems] = await Promise.all([
+      auth.supabase.from("external_orders").select("id,connection_id,placed_at,gross_sales,status,is_demo").eq("store_id",storeId),
+      auth.supabase.from("external_refunds").select("order_id,amount,status").eq("store_id",storeId),
+      auth.supabase.from("external_products").select("id,name,is_demo").eq("store_id",storeId),
+      auth.supabase.from("external_skus").select("id,connection_id,external_id,product_id,name,sku_code,selling_price").eq("store_id",storeId),
+      auth.supabase.from("platform_sku_mappings").select("external_sku_id,sku_id").eq("store_id",storeId),
+      auth.supabase.from("external_order_items").select("order_id,external_sku_id,quantity,gross_sales").eq("store_id",storeId),
+    ]);
+    for (const response of [orders,refunds,externalProducts,externalSkus,mappings,externalItems]) if(response.error) throw response.error;
+    const result = mapCloudSnapshot(snapshot);
+    result.daily = mergeExternalDaily(result.daily, orders.data || [], refunds.data || [], store.timezone,{
+      items:externalItems.data||[],externalSkus:externalSkus.data||[],mappings:mappings.data||[],
+      internalSkus:snapshot.skus,costs:snapshot.costs,
+    });
+    result.externalCatalog = (externalProducts.data || []).map(product => ({
+      id:product.id,name:product.name,isDemo:product.is_demo,
+      skus:(externalSkus.data || []).filter(sku=>sku.product_id===product.id).map(sku=>({
+        id:sku.id,name:sku.name,code:sku.sku_code,price:sku.selling_price,
+        mappedSkuId:(mappings.data || []).find(map=>map.external_sku_id===sku.id)?.sku_id || null,
+      })),
+    }));
+    return NextResponse.json(result, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
