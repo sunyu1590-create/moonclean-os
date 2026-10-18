@@ -13,12 +13,14 @@ const row: DailyMetric = {
   platformFees: "4.10",
   otherExpenses: "2.10",
   productSales: { p1: "55.20" },
+  reportDetails: { buyers: 2, averageOrderValue: "33.37", visitors: 48, conversionRate: "4.17", refundOrders: 1, visitorValue: "0.28" },
 };
 describe("每日数据 CSV", () => {
   it("导出后可以导入并保留商品销售额", () => {
     const result = parseDailyCsv(exportDailyCsv([row]), []);
     expect(result.errors).toEqual([]);
     expect(result.rows[0].productSales.p1).toBe("55.20");
+    expect(result.rows[0].reportDetails).toEqual(row.reportDetails);
   });
   it("标记已有日期和文件内重复日期", () => {
     const result = parseDailyCsv(exportDailyCsv([row, row]), [row]);

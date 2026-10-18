@@ -12,7 +12,21 @@ export const csvColumns = [
   "platformFees",
   "otherExpenses",
   "productSales",
+  "buyers",
+  "averageOrderValue",
+  "visitors",
+  "conversionRate",
+  "refundOrders",
+  "visitorValue",
 ] as const;
+const reportDetailColumns = new Set<string>([
+  "buyers",
+  "averageOrderValue",
+  "visitors",
+  "conversionRate",
+  "refundOrders",
+  "visitorValue",
+]);
 export function exportDailyCsv(rows: DailyMetric[]) {
   return (
     "\uFEFF" +
@@ -23,7 +37,9 @@ export function exportDailyCsv(rows: DailyMetric[]) {
             key,
             key === "productSales"
               ? JSON.stringify(row.productSales)
-              : row[key],
+              : reportDetailColumns.has(key)
+                ? row.reportDetails?.[key as keyof NonNullable<DailyMetric["reportDetails"]>] ?? ""
+                : row[key as keyof DailyMetric],
           ]),
         ),
       })),
@@ -44,6 +60,14 @@ export function parseDailyCsv(text: string, existing: DailyMetric[]) {
       const productSales = item.productSales
         ? JSON.parse(item.productSales)
         : {};
+      const reportDetails = {
+        buyers: item.buyers ? Number(item.buyers) : undefined,
+        averageOrderValue: item.averageOrderValue || undefined,
+        visitors: item.visitors ? Number(item.visitors) : undefined,
+        conversionRate: item.conversionRate || undefined,
+        refundOrders: item.refundOrders ? Number(item.refundOrders) : undefined,
+        visitorValue: item.visitorValue || undefined,
+      };
       const candidate = {
         id: `d-${item.date}`,
         date: item.date,
@@ -56,6 +80,7 @@ export function parseDailyCsv(text: string, existing: DailyMetric[]) {
         platformFees: item.platformFees,
         otherExpenses: item.otherExpenses,
         productSales,
+        reportDetails,
       };
       const result = dailySchema.safeParse(candidate);
       if (!result.success) {

@@ -55,6 +55,14 @@ export interface CloudSnapshot {
     cost_source: "manual" | "sku";
     data_source?: "manual" | "csv_import" | "image_import";
     is_demo?: boolean;
+    report_details?: {
+      buyers?: number;
+      averageOrderValue?: string;
+      visitors?: number;
+      conversionRate?: string;
+      refundOrders?: number;
+      visitorValue?: string;
+    } | null;
   }[];
   ads: {
     id: string;
@@ -225,6 +233,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
         logisticsCost: amount(logisticsCost),
         platformFees: amount(platformFees),
         productSales: productSalesByDate.get(row.metric_date) || {},
+        reportDetails: row.report_details || undefined,
         costComplete: complete,
         costSource: row.cost_source,
         source: row.data_source || "manual",

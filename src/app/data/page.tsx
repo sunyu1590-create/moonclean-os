@@ -140,11 +140,14 @@ export default function DataPage() {
     if(row.kind!=="daily")return false;
     const existing=data!.daily.find(item=>item.date===row.date&&item.source!=="mock_pinduoduo"&&item.source!=="official_pinduoduo");
     if(data!.daily.some(item=>item.date===row.date&&(item.source==="mock_pinduoduo"||item.source==="official_pinduoduo")))throw new Error("该日期包含平台同步数据，请在平台连接中心查看；请勿用截图覆盖同步记录。");
-    if(existing&&!window.confirm(`${row.date} 已有手工数据，确认用截图识别值替换销售额、退款和订单数吗？成本字段会保留。`))return false;
+    if(existing&&!window.confirm(`${row.date} 已有手工数据，确认用截图识别结果替换日报指标吗？成本字段会保留。`))return false;
+    const optionalInteger=(value:string)=>value===""?undefined:Number(value);
+    const optionalMoney=(value:string)=>value===""?undefined:value;
     const parsed=dailySchema.parse({
       id:existing?.id||crypto.randomUUID(),date:row.date,sales:row.sales,refunds:row.refunds,orders:Number(row.orders),
       productCost:existing?.productCost||"",packagingCost:existing?.packagingCost||"",logisticsCost:existing?.logisticsCost||"",platformFees:existing?.platformFees||"",
       otherExpenses:existing?.otherExpenses||"0",productSales:existing?.productSales||{},source:"image_import",isDemo:false,
+      reportDetails:{buyers:optionalInteger(row.buyers)??existing?.reportDetails?.buyers,averageOrderValue:optionalMoney(row.averageOrderValue)??existing?.reportDetails?.averageOrderValue,visitors:optionalInteger(row.visitors)??existing?.reportDetails?.visitors,conversionRate:optionalMoney(row.conversionRate)??existing?.reportDetails?.conversionRate,refundOrders:optionalInteger(row.refundOrders)??existing?.reportDetails?.refundOrders,visitorValue:optionalMoney(row.visitorValue)??existing?.reportDetails?.visitorValue},
       costComplete:existing?.costComplete??false,
     });
     await update(current=>({...current,daily:[...current.daily.filter(item=>item.date!==row.date||item.source==="mock_pinduoduo"||item.source==="official_pinduoduo"),parsed].sort((a,b)=>a.date.localeCompare(b.date))}));
@@ -252,6 +255,7 @@ export default function DataPage() {
                 <th>订单量</th>
                 <th>商品成本</th>
                 <th>物流费用</th>
+                <th>日报补充指标</th>
                 <th>其他费用</th>
                 <th>来源</th>
                 <th className="text-right">操作</th>
@@ -269,6 +273,9 @@ export default function DataPage() {
                   <td>{row.orders}</td>
                   <td>{formatMoney(row.productCost)}</td>
                   <td>{formatMoney(row.logisticsCost)}</td>
+                  <td className="text-xs text-[#718096]">
+                    {row.reportDetails ? <details className="cursor-pointer"><summary>查看指标</summary><div className="mt-2 min-w-40 space-y-1 rounded-lg bg-[#f6faff] p-2"><p>买家 {row.reportDetails.buyers ?? "—"} · 访客 {row.reportDetails.visitors ?? "—"}</p><p>客单价 {row.reportDetails.averageOrderValue ? formatMoney(row.reportDetails.averageOrderValue) : "—"}</p><p>转化率 {row.reportDetails.conversionRate ? `${row.reportDetails.conversionRate}%` : "—"}</p><p>退款单 {row.reportDetails.refundOrders ?? "—"} · 访客价值 {row.reportDetails.visitorValue ? formatMoney(row.reportDetails.visitorValue) : "—"}</p></div></details> : "—"}
+                  </td>
                   <td>{formatMoney(row.otherExpenses)}</td>
                   <td className="text-xs text-[#92a4b5]">
                     {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "image_import" ? "截图识别" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}

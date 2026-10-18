@@ -44,6 +44,15 @@ export interface DailyMetric {
   platformFees: Money;
   otherExpenses: Money;
   productSales: Record<string, Money>;
+  /** Optional extra fields transcribed from a Pinduoduo operating report screenshot. */
+  reportDetails?: {
+    buyers?: number;
+    averageOrderValue?: Money;
+    visitors?: number;
+    conversionRate?: Money;
+    refundOrders?: number;
+    visitorValue?: Money;
+  };
   isDemo?: boolean;
   costComplete?: boolean;
   costSource?: "manual" | "sku";

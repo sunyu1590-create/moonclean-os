@@ -67,6 +67,7 @@ const base: CloudSnapshot = {
       shipping_cost: null,
       platform_fee: null,
       cost_source: "sku",
+      report_details: { buyers: 2, averageOrderValue: "34.97", visitors: 47, conversionRate: "4.17", refundOrders: 2, visitorValue: "0.27" },
     },
     {
       id: "d2",
@@ -107,6 +108,7 @@ describe("云端财务映射", () => {
     expect(data.daily[0].productCost).toBe("5.00");
     expect(data.daily[1].productCost).toBe("8.00");
     expect(data.daily[0].productSales["product-a"]).toBe("30.00");
+    expect(data.daily[0].reportDetails).toEqual({ buyers: 2, averageOrderValue: "34.97", visitors: 47, conversionRate: "4.17", refundOrders: 2, visitorValue: "0.27" });
     expect(financialSummary(data.daily, []).productCost).toBe("13.00");
   });
   it("缺少生效成本时标记数据不完整", () => {
