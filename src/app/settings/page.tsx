@@ -56,8 +56,9 @@ export default function SettingsPage() {
       setError("请输入店铺名称");
       return;
     }
-    if (!/^\d+(\.\d{1,2})?$/.test(draft.salesTarget)) {
-      setError("请输入有效目标金额");
+    const normalizedTarget = draft.salesTarget.replace(/[，,\s]/g, "");
+    if (!/^\d+(\.\d{1,2})?$/.test(normalizedTarget)) {
+      setError("月销售目标请填写数字，可使用千位逗号，最多保留两位小数。");
       return;
     }
     if (
@@ -69,7 +70,9 @@ export default function SettingsPage() {
       return;
     }
     try {
-      await update((current) => ({ ...current, settings: draft }));
+      const nextSettings = { ...draft, salesTarget: normalizedTarget };
+      await update((current) => ({ ...current, settings: nextSettings }));
+      setDraft(nextSettings);
       setError("");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -244,18 +247,19 @@ export default function SettingsPage() {
           >
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <Label>月销售目标</Label>
+                <Label htmlFor="monthly-sales-target">月销售目标</Label>
                 <Input
+                  id="monthly-sales-target"
                   className="mt-2"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
                   disabled={!canManage}
                   value={draft.salesTarget}
-                  onChange={(e) =>
-                    setDraft({ ...draft, salesTarget: e.target.value })
-                  }
+                  onChange={(e) => { setDraft({ ...draft, salesTarget: e.target.value }); setError(""); setSaved(false); }}
                 />
+                <p className="mt-1.5 text-xs text-[#91a0af]">按每月填写，支持千位逗号，例如 100,000；保存后自动规范为纯数字。</p>
+                {!canManage && <p className="mt-1 text-xs text-[#bc7657]">当前角色没有修改经营目标的权限，请联系店主或管理员。</p>}
               </div>
               <div>
                 <Label>利润率预警阈值（%）</Label>

@@ -113,3 +113,16 @@ test("本地全量备份可以预览、备份当前数据并恢复", async ({ pa
   await page.goto("/settings");
   await expect(page.locator('input').first()).toHaveValue("从备份恢复的店铺");
 });
+
+test("经营目标接受千位逗号并在刷新后保留", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.goto("/settings");
+  const target = page.getByLabel("月销售目标");
+  await target.fill("250,000");
+  await page.getByRole("button", { name: "保存设置" }).click();
+  await expect(page.getByRole("button", { name: "已保存" })).toBeVisible();
+  await expect(target).toHaveValue("250000");
+  await page.reload();
+  await page.goto("/settings");
+  await expect(page.getByLabel("月销售目标")).toHaveValue("250000");
+});

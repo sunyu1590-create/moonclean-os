@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.4.0";
+export const APP_VERSION = "0.4.1";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.4.1",
+    date: "2026-10-18",
+    title: "经营目标设置修复",
+    changes: [
+      "月销售目标支持千位逗号输入，并在保存时自动转换为标准金额格式。",
+      "补充目标输入说明和只读角色权限提示，保存结果继续同步到云端或本地工作区。",
+    ],
+  },
   {
     version: "0.4.0",
     date: "2026-10-18",
