@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import type { AppData, StoreRole } from "@/lib/model";
 import { DATA_VERSION } from "@/lib/model";
 import { storeToday } from "@/lib/analytics";
+import { costForDate, indexCosts } from "@/lib/cost-history";
 
 export interface CloudSnapshot {
   store: {
@@ -89,20 +90,6 @@ export interface CloudSnapshot {
 }
 const amount = (value: string | null | undefined) =>
   new Decimal(value || 0).toFixed(2);
-export function costForDate(
-  costs: CloudSnapshot["costs"],
-  skuId: string,
-  date: string,
-) {
-  return costs
-    .filter((c) => c.sku_id === skuId && c.effective_from <= date)
-    .sort(
-      (a, b) =>
-        b.effective_from.localeCompare(a.effective_from) ||
-        b.created_at.localeCompare(a.created_at) ||
-        b.id.localeCompare(a.id),
-    )[0];
-}
 export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
   const {
     store,
@@ -116,7 +103,21 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
     productSales,
   } = snapshot;
   const today = storeToday(store.timezone || "Asia/Shanghai");
+  const costsBySku = indexCosts(costs);
   const skuProduct = new Map(skus.map((s) => [s.id, s.product_id]));
+  const skusByProduct = new Map<string, CloudSnapshot["skus"]>();
+  for (const sku of skus) {
+    if (sku.status !== "active") continue;
+    const group = skusByProduct.get(sku.product_id) || [];
+    group.push(sku);
+    skusByProduct.set(sku.product_id, group);
+  }
+  const linesByDate = new Map<string, CloudSnapshot["skuDaily"]>();
+  for (const line of skuDaily) {
+    const group = linesByDate.get(line.metric_date) || [];
+    group.push(line);
+    linesByDate.set(line.metric_date, group);
+  }
   const productSalesByDate = new Map<string, Record<string, string>>();
   const allocated = new Set(
     productSales.map((row) => `${row.metric_date}:${row.product_id}`),
@@ -159,25 +160,31 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
         category: p.category,
         createdAt: p.created_at,
         isDemo: p.is_demo || false,
-        skus: skus
-          .filter((s) => s.product_id === p.id && s.status === "active")
-          .map((s) => {
-            const cost = costForDate(costs, s.id, today);
-            return {
-              id: s.id,
-              name: s.sku_name,
-              code: s.sku_code || "",
-              price: amount(s.selling_price),
-              costComplete: !!cost,
-              costHistory: costs.filter(c => c.sku_id === s.id).sort((a,b) => b.effective_from.localeCompare(a.effective_from) || b.created_at.localeCompare(a.created_at)).map(c => ({effectiveFrom:c.effective_from,cost:{production:amount(c.product_cost),packaging:amount(c.packaging_cost),logistics:amount(c.shipping_cost),platform:amount(c.platform_fee)}})),
+        skus: (skusByProduct.get(p.id) || []).map((s) => {
+          const cost = costForDate(costsBySku, s.id, today);
+          return {
+            id: s.id,
+            name: s.sku_name,
+            code: s.sku_code || "",
+            price: amount(s.selling_price),
+            costComplete: !!cost,
+            costHistory: (costsBySku.get(s.id) || []).map((c) => ({
+              effectiveFrom: c.effective_from,
               cost: {
-                production: amount(cost?.product_cost),
-                packaging: amount(cost?.packaging_cost),
-                logistics: amount(cost?.shipping_cost),
-                platform: amount(cost?.platform_fee),
+                production: amount(c.product_cost),
+                packaging: amount(c.packaging_cost),
+                logistics: amount(c.shipping_cost),
+                platform: amount(c.platform_fee),
               },
-            };
-          }),
+            })),
+            cost: {
+              production: amount(cost?.product_cost),
+              packaging: amount(cost?.packaging_cost),
+              logistics: amount(cost?.shipping_cost),
+              platform: amount(cost?.platform_fee),
+            },
+          };
+        }),
       })),
     daily: daily.map((row) => {
       let productCost = row.product_cost,
@@ -191,9 +198,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
         platformFees,
       ].every((v) => v !== null);
       if (row.cost_source === "sku") {
-        const lines = skuDaily.filter(
-          (line) => line.metric_date === row.metric_date,
-        );
+        const lines = linesByDate.get(row.metric_date) || [];
         complete = (lines.length > 0 || Number(row.gross_sales) === 0) && lines.reduce((sum,line)=>sum.plus(line.gross_sales),new Decimal(0)).eq(row.gross_sales);
         const totals = [
           new Decimal(0),
@@ -202,7 +207,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
           new Decimal(0),
         ];
         for (const line of lines) {
-          const cost = costForDate(costs, line.sku_id, row.metric_date);
+          const cost = costForDate(costsBySku, line.sku_id, row.metric_date);
           if (!cost) {
             complete = false;
             continue;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStore, apiError } from "@/lib/supabase/auth";
 import { mapCloudSnapshot, type CloudSnapshot } from "@/lib/supabase/mapper";
-import { mergeExternalDaily } from "@/services/external-finance";
+import { mergeExternalDaily, type ExternalCostContext } from "@/services/external-finance";
 export const dynamic = "force-dynamic";
 export async function GET(
   _request: Request,
@@ -10,7 +10,24 @@ export async function GET(
   const { storeId } = await params;
   const auth = await requireStore(storeId);
   if (!auth.ok) return auth.error;
+  const supabase = auth.supabase;
   try {
+    async function loadRows<T>(table: string, columns: string): Promise<T[]> {
+      const rows: T[] = [];
+      const size = 500;
+      for (let start = 0; ; start += size) {
+        const { data, error } = await supabase
+          .from(table)
+          .select(columns)
+          .eq("store_id", storeId)
+          .order("id", { ascending: true })
+          .range(start, start + size - 1);
+        if (error) throw error;
+        rows.push(...((data || []) as T[]));
+        if (!data || data.length < size) break;
+      }
+      return rows;
+    }
     const { data: store, error: storeError } = await auth.supabase
       .from("stores")
       .select(
@@ -28,25 +45,7 @@ export async function GET(
       "sku_daily_metrics",
       "product_daily_sales",
     ] as const;
-    const results = await Promise.all(
-      names.map(async (name) => {
-        const rows: unknown[] = [];
-        let start = 0;
-        const size = 500;
-        for (;;) {
-          const { data, error } = await auth.supabase
-            .from(name)
-            .select("*")
-            .eq("store_id", storeId)
-            .range(start, start + size - 1);
-          if (error) throw error;
-          rows.push(...(data || []));
-          if (!data || data.length < size) break;
-          start += size;
-        }
-        return rows;
-      }),
-    );
+    const results = await Promise.all(names.map((name) => loadRows(name, "*")));
     const snapshot = {
       store,
       role: auth.role,
@@ -59,24 +58,30 @@ export async function GET(
       productSales: results[6],
     } as CloudSnapshot;
     const [orders, refunds, externalProducts, externalSkus, mappings, externalItems] = await Promise.all([
-      auth.supabase.from("external_orders").select("id,connection_id,placed_at,gross_sales,status,is_demo").eq("store_id",storeId),
-      auth.supabase.from("external_refunds").select("order_id,amount,status").eq("store_id",storeId),
-      auth.supabase.from("external_products").select("id,name,is_demo").eq("store_id",storeId),
-      auth.supabase.from("external_skus").select("id,connection_id,external_id,product_id,name,sku_code,selling_price").eq("store_id",storeId),
-      auth.supabase.from("platform_sku_mappings").select("external_sku_id,sku_id").eq("store_id",storeId),
-      auth.supabase.from("external_order_items").select("order_id,external_sku_id,quantity,gross_sales").eq("store_id",storeId),
+      loadRows<Parameters<typeof mergeExternalDaily>[1][number]>("external_orders", "id,connection_id,placed_at,gross_sales,status,is_demo"),
+      loadRows<Parameters<typeof mergeExternalDaily>[2][number]>("external_refunds", "id,order_id,amount,status"),
+      loadRows<{ id:string; name:string; is_demo:boolean }>("external_products", "id,name,is_demo"),
+      loadRows<ExternalCostContext["externalSkus"][number] & {product_id:string;name:string;sku_code:string|null;selling_price:string}>("external_skus", "id,connection_id,external_id,product_id,name,sku_code,selling_price"),
+      loadRows<ExternalCostContext["mappings"][number]>("platform_sku_mappings", "id,external_sku_id,sku_id"),
+      loadRows<ExternalCostContext["items"][number]>("external_order_items", "id,order_id,external_sku_id,quantity,gross_sales"),
     ]);
-    for (const response of [orders,refunds,externalProducts,externalSkus,mappings,externalItems]) if(response.error) throw response.error;
     const result = mapCloudSnapshot(snapshot);
-    result.daily = mergeExternalDaily(result.daily, orders.data || [], refunds.data || [], store.timezone,{
-      items:externalItems.data||[],externalSkus:externalSkus.data||[],mappings:mappings.data||[],
+    result.daily = mergeExternalDaily(result.daily, orders, refunds, store.timezone,{
+      items:externalItems,externalSkus,mappings,
       internalSkus:snapshot.skus,costs:snapshot.costs,
     });
-    result.externalCatalog = (externalProducts.data || []).map(product => ({
+    const skusByProduct = new Map<string, typeof externalSkus>();
+    for (const sku of externalSkus) {
+      const group = skusByProduct.get(sku.product_id) || [];
+      group.push(sku);
+      skusByProduct.set(sku.product_id, group);
+    }
+    const mappedSkuIds = new Map(mappings.map(mapping => [mapping.external_sku_id, mapping.sku_id]));
+    result.externalCatalog = externalProducts.map(product => ({
       id:product.id,name:product.name,isDemo:product.is_demo,
-      skus:(externalSkus.data || []).filter(sku=>sku.product_id===product.id).map(sku=>({
+      skus:(skusByProduct.get(product.id) || []).map(sku=>({
         id:sku.id,name:sku.name,code:sku.sku_code,price:sku.selling_price,
-        mappedSkuId:(mappings.data || []).find(map=>map.external_sku_id===sku.id)?.sku_id || null,
+        mappedSkuId:mappedSkuIds.get(sku.id) || null,
       })),
     }));
     return NextResponse.json(result, {

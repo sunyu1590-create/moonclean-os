@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import type { DailyMetric } from "@/lib/model";
+import { costForDate, indexCosts } from "@/lib/cost-history";
 
 type Order = { id: string; connection_id?: string; placed_at: string; gross_sales: string; status: string; is_demo: boolean };
 type Refund = { order_id: string; amount: string; status: string };
@@ -21,15 +22,21 @@ export function mergeExternalDaily(
     refundByOrder.set(refund.order_id, (refundByOrder.get(refund.order_id) || new Decimal(0)).plus(refund.amount));
   const grouped = new Map<string, { gross: Decimal; refund: Decimal; orders: number; demo: boolean; costs: Decimal[]; complete: boolean; productSales: Record<string,string> }>();
   const itemsByOrder = new Map<string,ExternalCostContext["items"]>();
-  for(const item of context?.items || []) itemsByOrder.set(item.order_id,[...(itemsByOrder.get(item.order_id)||[]),item]);
+  for(const item of context?.items || []) {
+    const group = itemsByOrder.get(item.order_id) || [];
+    group.push(item);
+    itemsByOrder.set(item.order_id, group);
+  }
   const externalSkuId = new Map(context?.externalSkus.map(sku=>[`${sku.connection_id||""}:${sku.external_id}`,sku.id])||[]);
   const skuId = new Map(context?.mappings.map(mapping=>[mapping.external_sku_id,mapping.sku_id])||[]);
   const productId = new Map(context?.internalSkus.map(sku=>[sku.id,sku.product_id])||[]);
+  const costsBySku = indexCosts(context?.costs || []);
+  const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
+  });
   for (const order of orders) {
     if (!["paid","shipped","completed","refunded"].includes(order.status)) continue;
-    const date = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit",
-    }).format(new Date(order.placed_at));
+    const date = dateFormatter.format(new Date(order.placed_at));
     if (occupied.has(date)) continue; // Manual or CSV daily total is authoritative for this date.
     const row = grouped.get(date) || { gross: new Decimal(0), refund: new Decimal(0), orders: 0, demo: false, costs:[new Decimal(0),new Decimal(0),new Decimal(0),new Decimal(0)], complete:true, productSales:{} };
     row.gross = row.gross.plus(order.gross_sales);
@@ -40,8 +47,7 @@ export function mergeExternalDaily(
     if(!lines.length || !lines.reduce((sum,line)=>sum.plus(line.gross_sales),new Decimal(0)).eq(order.gross_sales)) row.complete=false;
     for(const line of lines){
       const internalSku=skuId.get(externalSkuId.get(`${order.connection_id||""}:${line.external_sku_id}`)||"");
-      const cost=internalSku && context?.costs.filter(c=>c.sku_id===internalSku && c.effective_from<=date)
-        .sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id))[0];
+      const cost=internalSku ? costForDate(costsBySku,internalSku,date) : undefined;
       if(!internalSku || !cost){row.complete=false;continue;}
       [cost.product_cost,cost.packaging_cost,cost.shipping_cost,cost.platform_fee].forEach((value,i)=>{
         row.costs[i]=row.costs[i].plus(new Decimal(value).mul(line.quantity));

@@ -42,13 +42,13 @@ export function previewMigration(
     ...local.advertising.map((r) => `advertising:${r.id}`),
   ].filter((key) => known.has(key)).length;
   const errors: string[] = [];
-  const repeated = (values: string[]) =>
-    values.filter((value, index) => values.indexOf(value) !== index);
-  if (repeated(local.products.map((p) => p.id)).length)
+  const hasDuplicates = (values: string[]) =>
+    new Set(values).size !== values.length;
+  if (hasDuplicates(local.products.map((p) => p.id)))
     errors.push("本地商品 ID 重复");
-  if (repeated(local.daily.map((r) => r.date)).length)
+  if (hasDuplicates(local.daily.map((r) => r.date)))
     errors.push("本地经营日期重复");
-  if (repeated(local.advertising.map((r) => r.date)).length)
+  if (hasDuplicates(local.advertising.map((r) => r.date)))
     errors.push("本地推广日期重复");
   return {
     products: local.products.length,

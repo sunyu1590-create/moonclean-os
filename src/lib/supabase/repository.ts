@@ -1,9 +1,4 @@
-import type {
-  AppData,
-  Product,
-  DailyMetric,
-  AdvertisingMetric,
-} from "@/lib/model";
+import type { AppData, Product } from "@/lib/model";
 import type { DataRepository } from "@/lib/repository";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -53,9 +48,8 @@ export async function createCloudStore(input: {
 export class SupabaseRepository implements DataRepository {
   private lastData: AppData | null = null;
   async load(storeId?: string): Promise<AppData> {
-    const id = storeId;
-    if (!id) throw new Error("请先选择店铺");
-    const data = await request<AppData>(`/api/stores/${id}/data`);
+    if (!storeId) throw new Error("请先选择店铺");
+    const data = await request<AppData>(`/api/stores/${storeId}/data`);
     this.lastData = data;
     return data;
   }
@@ -128,15 +122,5 @@ function settingsChanged(a: AppData, b: AppData) {
       target: b.settings.salesTarget,
       alert: b.settings.marginAlert,
     })
-  );
-}
-export function changedRows<T extends DailyMetric | AdvertisingMetric>(
-  before: T[],
-  after: T[],
-) {
-  const old = new Map(before.map((r) => [r.id, r]));
-  return after.filter(
-    (r) =>
-      !old.has(r.id) || JSON.stringify(old.get(r.id)) !== JSON.stringify(r),
   );
 }
