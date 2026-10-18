@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 test("未登录访问受保护页面会转到登录页", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE === "local", "本地演示模式不要求登录，认证保护仅在云端模式验证");
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();

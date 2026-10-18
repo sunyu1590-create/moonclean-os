@@ -127,6 +127,39 @@ test("经营目标接受千位逗号并在刷新后保留", async ({ page }) => 
   await expect(page.getByLabel("月销售目标")).toHaveValue("250000");
 });
 
+test("动效切换展示版本与效果，调试浮窗可启停", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/settings");
+  await page.getByRole("button", { name: /精致/ }).click();
+  const transition = page.getByRole("status", { name: "正在切换到精致动效" });
+  await expect(transition).toContainText("流光边缘");
+  await expect(transition).toContainText("v0.8.0");
+  await expect(transition).toContainText("当前为精致动效");
+  await expect(transition).toHaveCount(0, { timeout: 8000 });
+  await page.getByRole("switch", { name: "启用性能调试浮窗" }).click();
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
+  await page.getByRole("button", { name: "网页性能调试信息" }).click();
+  await expect(page.getByRole("region", { name: "性能调试面板" })).toBeVisible();
+  await expect(page.getByText("屏幕刷新率", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "网页性能调试信息" })).toBeVisible();
+});
+
+test("定价工具可以创建不写入商品数据的临时 SKU", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.goto("/pricing");
+  await page.getByRole("button", { name: "临时 SKU" }).click();
+  await page.getByLabel("临时商品名称").fill("新品试算商品");
+  await page.getByLabel("规格名称").fill("试算装");
+  await page.getByLabel("预设售价（元）").fill("39.90");
+  await page.getByRole("button", { name: "开始试算" }).click();
+  await expect(page.getByText(/新品试算商品 · 试算装 · 仅本机临时数据/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "单件利润拆解" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("新品试算商品")).toHaveCount(0);
+});
+
 test("经营建议可以转成待办并在刷新后保留分析基线", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.goto("/dashboard");
@@ -147,11 +180,11 @@ test("全站精致与简单动效可切换、详细过场显示并在刷新后�
   const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(refinedTransition).toBeVisible();
   await expect.poll(() => refinedTransition.evaluate(element => { const rect = element.getBoundingClientRect(); return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)]; })).toEqual([0, 0, 390, 844]);
-  await expect(refinedTransition).toContainText("启用液态玻璃、柔光粒子与丰富的层级动效");
+  await expect(refinedTransition).toContainText("启用按压倾斜、柔光模糊、粒子与丰富的浮层滑动");
   await expect(refinedTransition).toContainText("切换底栏与页面反馈");
   await expect(refinedTransition).toHaveCount(0, { timeout: 6000 });
   expect(await page.locator("html").getAttribute("data-motion")).toBe("refined");
-  expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toContain("blur(30px)");
+  expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toContain("blur(18px)");
 
   await page.getByRole("button", { name: /简单/ }).click();
   const simpleTransition = page.getByRole("status", { name: "正在切换到简单动效" });

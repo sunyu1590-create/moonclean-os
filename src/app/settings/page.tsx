@@ -15,6 +15,7 @@ import {
   Sparkles,
   Zap,
   CircleOff,
+  Activity,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -36,6 +37,7 @@ import {
 import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
 import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
+import { PERFORMANCE_DEBUG_EVENT, readPerformanceDebugEnabled, setPerformanceDebugEnabled } from "@/lib/debug-preferences";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
   const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
@@ -51,10 +53,25 @@ export default function SettingsPage() {
   const [localImportPreview, setLocalImportPreview] = useState<AppData | null>(null);
   const [localImportError, setLocalImportError] = useState("");
   const [localImportBusy, setLocalImportBusy] = useState(false);
+  const [debugEnabled, setDebugEnabled] = useState(false);
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
   }, [data]);
+  useEffect(() => {
+    const updateDebug = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      setDebugEnabled(typeof detail === "boolean" ? detail : readPerformanceDebugEnabled());
+    };
+    const frame = window.requestAnimationFrame(() => setDebugEnabled(readPerformanceDebugEnabled()));
+    window.addEventListener(PERFORMANCE_DEBUG_EVENT, updateDebug);
+    window.addEventListener("storage", updateDebug);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(PERFORMANCE_DEBUG_EVENT, updateDebug);
+      window.removeEventListener("storage", updateDebug);
+    };
+  }, []);
   if (!data || !draft) return <p>正在加载数据…</p>;
   async function save() {
     if (!draft) return;
@@ -161,20 +178,27 @@ export default function SettingsPage() {
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-5">
           <SectionCard title="全站动效风格" sub="选择后会立即应用到当前设备；偏好保存在浏览器，不同步店铺数据。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
               {MOTION_LEVELS.map((option) => {
                 const selected = motionLevel === option.id;
                 const Icon = option.id === "refined" ? Sparkles : option.id === "standard" ? Zap : CircleOff;
-                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[150px] rounded-2xl border p-4 text-left ${selected ? "motion-choice-selected border-[#7eb9ed] bg-[#f0f8ff] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-[#e7edf3] bg-white hover:border-[#cbdced]"}`}>
-                  {selected && <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-[#378de0] text-white"><CheckIcon size={12}/></span>}
-                  <span className={`mb-3 grid size-10 place-items-center rounded-[14px] ${selected ? "bg-white text-[#3287d5]" : "bg-[#f4f7fa] text-[#8496a8]"}`}><Icon size={19}/></span>
-                  <strong className="block text-sm font-semibold text-[#263d54]">{option.label}<span className="ml-1.5 text-[10px] font-medium text-[#94a2af]">{option.short}</span></strong>
-                  <span className="mt-1 block text-[10px] font-medium text-[#5f89ae]">{option.experience}</span>
-                  <span className="mt-2 block text-[11px] leading-[1.55] text-[#8797a6]">{option.detail}</span>
+                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[124px] rounded-xl border p-2 text-left sm:min-h-[150px] sm:rounded-2xl sm:p-4 ${selected ? "motion-choice-selected border-[#7eb9ed] bg-[#f0f8ff] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-[#e7edf3] bg-white hover:border-[#cbdced]"}`}>
+                  {selected && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-[#378de0] text-white sm:right-3 sm:top-3 sm:size-5"><CheckIcon size={10}/></span>}
+                  <span className={`mb-2 grid size-7 place-items-center rounded-[10px] sm:mb-3 sm:size-10 sm:rounded-[14px] ${selected ? "bg-white text-[#3287d5]" : "bg-[#f4f7fa] text-[#8496a8]"}`}><Icon size={15} className="sm:size-[19px]"/></span>
+                  <strong className="block text-[11px] font-semibold text-[#263d54] sm:text-sm">{option.label}<span className="mt-0.5 block text-[9px] font-medium text-[#94a2af] sm:ml-1.5 sm:inline sm:text-[10px]">{option.short}</span></strong>
+                  <span className="mt-1 hidden text-[10px] font-medium text-[#5f89ae] sm:block">{option.experience}</span>
+                  <span className="mt-1 line-clamp-3 block text-[9px] leading-[1.4] text-[#8797a6] sm:mt-2 sm:text-[11px] sm:leading-[1.55]">{option.detail}</span>
                 </button>;
               })}
             </div>
-            <p className="mt-3 text-[11px] leading-5 text-[#93a1af]">精致模式会使用更强的模糊、光影和粒子动画；旧款设备可切换到标准或简单以获得更流畅的操作。</p>
+            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效只保存在当前设备。精致包含流光与按压反馈；旧款手机可选择标准或简单。</p>
+          </SectionCard>
+          <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。" action={<Activity size={19} className="text-[#3b91eb]" />}>
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-3 sm:p-4">
+              <div className="min-w-0"><strong className="block text-sm text-[#263d54]">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-[#899aaa] sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
+              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !debugEnabled; setDebugEnabled(next); setPerformanceDebugEnabled(next); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-[#3b91eb]" : "bg-[#cbd5df]"}`}><span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-[#96a4b2]">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
           </SectionCard>
           <SectionCard
             title="店铺信息"

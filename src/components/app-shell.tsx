@@ -42,6 +42,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useApp } from "./app-provider";
 import { getMobileNavigationSlot } from "@/lib/mobile-navigation";
 import { DataTransitionOverlay } from "@/components/data-transition-overlay";
+import { PerformanceDebugCapsule } from "@/components/performance-debug-capsule";
 import { useMotionPreferences } from "@/components/motion-preferences";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
@@ -547,6 +548,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-xs leading-5 text-[#91a0af]">本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。</p>
         </DialogContent>
       </Dialog>
+      <PerformanceDebugCapsule motionLevel={motionLevel} dataMode={mode}/>
       <DataTransitionOverlay transition={dataTransition}/>
     </div>
   );

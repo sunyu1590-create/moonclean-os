@@ -16,7 +16,7 @@ export type IntegrationSnapshot = {
   history:{id:string;external_sku_id:string;sku_id:string|null;action:string;created_at:string}[];
   internalSkus:{id:string;sku_name:string;sku_code:string|null;product_id:string}[];
   orders:{id:string;external_id:string;status:string;placed_at:string;gross_sales:string;is_demo:boolean}[];
-  refunds:{id:string;external_id:string;order_id:string;amount:string;status:string}[];
+  refunds:{id:string;connection_id:string;external_id:string;order_id:string;amount:string;status:string;reason?:import("@/lib/after-sales").RefundReason|null;note?:string}[];
   cursors:{connection_id:string;kind:string;cursor_value:string|null;updated_at:string}[];
 };
 async function json(response:Response){

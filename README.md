@@ -2,6 +2,14 @@
 
 在第一阶段 Next.js 项目上增加 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。原有经营总览、推广、商品、财务、数据中心和统一十进制财务计算继续使用。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。
 
+## DeepSeek 售后总结（可选）
+
+售后分析页提供人工问题分类和 DeepSeek 总结窗口。要启用 AI 总结，在 Vercel Project Settings → Environment Variables 中添加服务端变量 `DEEPSEEK_API_KEY`，选择 Production、Preview（按需）和 Development 环境后重新部署。可选变量 `DEEPSEEK_MODEL` 默认使用 `deepseek-chat`。不要添加 `NEXT_PUBLIC_` 前缀，也不要把密钥提交到仓库或发到浏览器。
+
+AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSeek 提交统计周期、订单/退款数量、金额汇总和问题类别，不提交订单号、买家信息或客服备注。未配置密钥时，分析窗口会明确提示如何启用，其他售后统计与分类照常使用。
+
+运行诊断胶囊为可选功能，可在系统设置打开。FPS 是页面动画帧采样值；JavaScript 堆、设备内存、网络细节、长任务和屏幕刷新率取决于浏览器支持情况，界面会标注不可读取的数据，不把估算值当作系统真实占用。
+
 第三阶段新增拼多多模拟同步预接入：`/integrations` 平台连接、`/sync-center` 同步任务、Mock Adapter、云端订单与退款、SKU 映射、增量游标及演示数据经营汇总。**尚未连接拼多多官方开放平台。** 使用说明见 [模拟同步](docs/mock-sync.md)，待申请接口见 [官方能力清单](docs/pinduoduo-api-capabilities.md)。
 
 ## 已创建的 Supabase 项目

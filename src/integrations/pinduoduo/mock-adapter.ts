@@ -89,7 +89,7 @@ export class MockPinduoduoAdapter implements PinduoduoAdapter {
     this.fail(options);
     const base: NormalizedRefund[] = [{
       externalId: "mock-refund-1", orderExternalId: "mock-order-2",
-      amount: "10.00", status: "succeeded", updatedAt: at(this.createdAt, 0, 20),
+      amount: "10.00", status: "succeeded", reason: "damaged", note: "外包装有轻微渗漏（模拟）", updatedAt: at(this.createdAt, 0, 20),
     }];
     const byId = new Map(base.map((r) => [r.externalId, r]));
     for (const event of this.events.filter((e) => e.kind === "refund")) {
@@ -101,6 +101,8 @@ export class MockPinduoduoAdapter implements PinduoduoAdapter {
         orderExternalId: value.orderExternalId || old!.orderExternalId,
         amount: value.amount || old!.amount,
         status: value.status || old?.status || "pending",
+        reason: value.reason ?? old?.reason,
+        note: value.note ?? old?.note,
         updatedAt: new Date(event.updated_at).toISOString(),
       });
     }

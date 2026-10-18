@@ -1,6 +1,8 @@
 "use client";
 
 import { ArrowRight, Check, Circle, Cloud, HardDrive, LoaderCircle } from "lucide-react";
+import { APP_VERSION } from "@/lib/release-notes";
+import { MOTION_LEVELS, useMotionPreferences } from "@/components/motion-preferences";
 
 type Mode = "local" | "cloud";
 type Step = { label: string; status: "pending" | "active" | "done" };
@@ -13,8 +15,10 @@ const ModeIcon = ({ mode, size = 17 }: { mode: Mode; size?: number }) =>
   mode === "cloud" ? <Cloud size={size} /> : <HardDrive size={size} />;
 
 export function DataTransitionOverlay({ transition }: { transition: Transition | null }) {
+  const { level, ready } = useMotionPreferences();
   const switching = transition?.kind === "switching";
   const targetMode = !transition ? "local" : transition.kind === "opening" ? transition.mode : transition.to;
+  const motionLabel = MOTION_LEVELS.find((item) => item.id === level)?.label || "标准";
   return (
     <div
       role="status"
@@ -59,6 +63,7 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
         <div aria-hidden="true" className="mt-4 h-1 overflow-hidden rounded-full bg-[#eaf2f8]">
           <span className="data-space-progress block h-full w-2/5 rounded-full bg-[#3b91eb] motion-reduce:animate-none" />
         </div>
+        <p className="mt-3 text-center text-[10px] font-medium tracking-wide text-[#8b9caf]">v{APP_VERSION} · {ready ? `${motionLabel}动效` : "正在读取动效档位"}</p>
       </div>
     </div>
   );

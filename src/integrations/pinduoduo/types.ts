@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { refundReasonSchema } from "@/lib/after-sales";
 
 export const money = z.string().regex(/^\d+(\.\d{1,2})?$/);
 export const orderSchema = z.object({
@@ -29,6 +30,8 @@ export const refundSchema = z.object({
   orderExternalId: z.string().min(1),
   amount: money,
   status: z.enum(["pending", "succeeded", "rejected"]),
+  reason: refundReasonSchema.nullable().optional(),
+  note: z.string().max(300).optional(),
   updatedAt: z.iso.datetime(),
 });
 export type NormalizedOrder = z.infer<typeof orderSchema>;

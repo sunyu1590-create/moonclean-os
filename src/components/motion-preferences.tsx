@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Check, Sparkles, Zap } from "lucide-react";
+import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
@@ -31,6 +32,11 @@ function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
     "同步更新手机底栏、导航菜单与全站交互",
     "设置已保存，可随时在系统设置中切换",
   ];
+  const preview = transition.to === "refined"
+    ? "流光边缘 · 按压倾斜 · 局部柔光"
+    : transition.to === "standard"
+      ? "平滑过场 · 轻量反馈 · 手势跟随"
+      : "静态界面 · 无模糊 · 直接切换";
   return <div className={`motion-switch-screen motion-switch-${transition.to}`} role="status" aria-live="polite" aria-label={`正在切换到${target.label}动效`}>
     {transition.to === "refined" && <div aria-hidden="true" className="motion-particle-field">{Array.from({ length: 22 }, (_, index) => <i key={index} style={{ left: `${(index * 47 + 7) % 100}%`, width: `${2 + index % 4}px`, height: `${2 + index % 4}px`, animationDuration: `${5 + index % 7}s`, animationDelay: `${index * -.53}s`, "--particle-drift": `${((index % 5) - 2) * 34}px` } as CSSProperties}/>)}</div>}
     <div className="motion-switch-orbit motion-switch-orbit-a" aria-hidden="true"/>
@@ -40,6 +46,11 @@ function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
       <p className="motion-switch-kicker">全局体验正在更新</p>
       <h2>{transition.step >= STEPS.length ? `${target.label}模式已就绪` : `正在切换至「${target.label}」`}</h2>
       <p className="motion-switch-description">{target.detail}</p>
+      <div className={`motion-effect-preview motion-effect-preview-${transition.to}`}>
+        <span className="motion-effect-swatch" aria-hidden="true"><i/><i/><i/></span>
+        <span className="min-w-0"><strong>效果预览 · {target.label}</strong><small>{preview}</small></span>
+        <span className="motion-effect-state">{transition.step >= STEPS.length ? "已应用" : "正在应用"}</span>
+      </div>
       <div className="motion-switch-steps">
         {STEPS.map((step, index) => {
           const completed = transition.step > index;
@@ -52,7 +63,7 @@ function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
         })}
       </div>
       <div className="motion-switch-progress"><span style={{ width: `${(transition.step / STEPS.length) * 100}%` }}/></div>
-      <p className="motion-switch-footnote">偏好保存在当前设备，不影响你的店铺数据。</p>
+      <p className="motion-switch-footnote">v{APP_VERSION} · {transition.step >= STEPS.length ? `当前为${target.label}动效` : `正在切换至${target.label}动效`} · 偏好保存在当前设备</p>
     </div>
   </div>;
 }
