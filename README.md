@@ -4,6 +4,10 @@
 
 ## 配置与启动
 
+想直接从 GitHub 仓库试用，可在仓库点击 **Code → Codespaces → Create codespace on main**。首次启动会自动安装依赖并运行本地演示版；在 Codespaces 的 **Ports** 面板打开 3000 端口即可操作。演示数据保存在打开页面的浏览器中。Codespace 关闭后预览网址会停止，使用时受 GitHub Codespaces 配额限制。
+
+若已配置 Supabase，可在 Codespaces 仓库 Secrets 中设置 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`，重建或重启 Codespace 后会启动云端模式。使用云端模式前仍需应用数据库迁移，并把 Codespaces 转发的 HTTPS 域名加入 Supabase Auth 的回调地址。
+
 1. 在 Supabase 创建项目，并开启 **Email / Password** 登录与邮箱验证。
 2. 将 `supabase/migrations/` 内的迁移按文件名顺序应用到项目。推荐使用 Supabase CLI 的 `supabase link` 和 `supabase db push`。先在测试项目验证，再应用生产项目。
 3. 在 Supabase Authentication 的 URL Configuration 中设置 Site URL 和 Redirect URLs：`http://localhost:3000/auth/callback`、`http://localhost:3000/auth/confirm`，部署时再加入正式域名的相同路径。密码重置经 `/auth/callback?next=/reset-password` 返回。

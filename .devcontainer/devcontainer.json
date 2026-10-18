@@ -1,0 +1,13 @@
+{
+  "name": "MoonClean OS",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "npm ci",
+  "postStartCommand": "bash .devcontainer/start.sh",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "MoonClean OS",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
