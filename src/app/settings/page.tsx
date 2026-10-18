@@ -35,6 +35,9 @@ export default function SettingsPage() {
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupMessage, setBackupMessage] = useState("");
+  const [backupError, setBackupError] = useState("");
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -65,6 +68,40 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 3000);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "保存失败");
+    }
+  }
+  async function downloadFullBackup() {
+    setBackupBusy(true);
+    setBackupMessage("");
+    setBackupError("");
+    try {
+      const response = await fetch("/api/backup", {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error || `备份失败（${response.status}）`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `moonclean-full-backup-${new Date()
+        .toISOString()
+        .slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBackupMessage("完整云端备份已生成并开始下载。");
+    } catch (cause) {
+      setBackupError(cause instanceof Error ? cause.message : "备份失败，请重试");
+    } finally {
+      setBackupBusy(false);
     }
   }
   return (
@@ -217,7 +254,7 @@ export default function SettingsPage() {
             title="数据管理"
             sub={
               mode === "cloud"
-                ? "云端数据备份和本地迁移"
+                ? "备份全部自有店铺的云端业务数据，便于迁移和留档"
                 : "数据保存在当前浏览器"
             }
             action={<ShieldCheck size={19} className="text-[#3b91eb]" />}
@@ -235,8 +272,29 @@ export default function SettingsPage() {
                 }
               >
                 <Download size={16} />
-                导出当前店铺 JSON
+                导出当前店铺轻量 JSON
               </Button>
+              {mode === "cloud" && role === "owner" && (
+                <Button
+                  className="w-full justify-start"
+                  variant="outline"
+                  disabled={backupBusy}
+                  onClick={() => void downloadFullBackup()}
+                >
+                  <DatabaseZap size={16} />
+                  {backupBusy ? "正在备份全部云端数据…" : "备份全部云端数据"}
+                </Button>
+              )}
+              {backupMessage && (
+                <p role="status" className="text-xs text-[#168a70]">
+                  {backupMessage}
+                </p>
+              )}
+              {backupError && (
+                <p role="alert" className="text-xs text-[#e85d65]">
+                  {backupError}
+                </p>
+              )}
               {mode === "cloud" ? (
                 <Link
                   href="/migrate"
@@ -258,7 +316,7 @@ export default function SettingsPage() {
             </div>
             <p className="mt-4 text-xs leading-5 text-[#9aabba]">
               {mode === "cloud"
-                ? "云端数据不会静默回退到 localStorage。本地数据迁移需主动确认。"
+                ? "完整备份包括业务记录、SKU 成本历史、订单、库存、成员关系与操作日志。出于安全考虑，登录密码和平台访问令牌不导出；迁移后需重新邀请成员并配置平台连接。"
                 : "重置将覆盖当前浏览器的修改；建议先备份。"}
             </p>
           </SectionCard>
