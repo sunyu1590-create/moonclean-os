@@ -30,6 +30,7 @@ import {
 } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { OperationsWidget } from "@/components/operations-widget";
+import { DashboardIntelligence } from "@/components/dashboard-intelligence";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 export default function Dashboard() {
@@ -40,6 +41,8 @@ export default function Dashboard() {
   const rows = periodRows(data.daily, days, currentDate),
     ads = periodRows(data.advertising, days, currentDate);
   const summary = financialSummary(rows, ads);
+  const weekRows = periodRows(data.daily, 7, currentDate);
+  const weekAds = periodRows(data.advertising, 7, currentDate);
   const todayRows = data.daily.filter((r) => r.date === currentDate),
     todayAds = data.advertising.filter((r) => r.date === currentDate);
   const current = financialSummary(todayRows, todayAds);
@@ -92,23 +95,21 @@ export default function Dashboard() {
           </div>
         }
       />
-      <section className="relative mb-5 overflow-hidden rounded-[28px] bg-[#202936] p-6 text-white shadow-[0_22px_48px_rgba(32,41,54,0.16)] md:p-9">
-        <div className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full border border-white/10" />
-        <div className="pointer-events-none absolute -right-12 -top-16 size-52 rounded-full border border-white/10" />
-        <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">
+      <section className="mb-5 overflow-hidden rounded-[22px] border border-[#e2ebf4] bg-white shadow-[0_10px_34px_rgba(41,76,108,0.065)]">
+        <div className="grid gap-5 p-5 md:grid-cols-[1.45fr_1fr] md:items-center md:px-6 md:py-5">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-medium tracking-[.1em] text-[#c5d4e5]"><span className="size-1.5 rounded-full bg-[#72b6ff]" />近 {days} 天经营快照</span>
-            <h2 className="mt-5 text-[26px] font-semibold tracking-[-.04em] md:text-[32px]">好生意，心中有数。</h2>
-            <p className="mt-2 text-sm leading-6 text-[#aebdd0]">销售、成本与推广变化，在这里清晰呈现。</p>
-            <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-5">
-              <div><p className="mb-1.5 text-xs text-[#b6c4d4]">期间净销售额</p><p className="number text-[34px] font-semibold tracking-[-.05em] md:text-[42px]">{formatMoney(summary.netSales)}</p></div>
-              <div><p className="mb-1.5 text-xs text-[#b6c4d4]">估算经营利润</p><p className={`number text-[25px] font-semibold tracking-[-.04em] md:text-[30px] ${Number(summary.profit)<0?"text-[#ffb5b9]":"text-[#a9dcce]"}`}>{formatMoney(summary.profit)}</p></div>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#eff7ff] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-[#5286b5]"><span className="size-1.5 rounded-full bg-[#3b91eb]" />近 {days} 天经营快照</span>
+            <h2 className="mt-2.5 text-[20px] font-semibold tracking-[-.035em] text-[#1e344a] md:text-[23px]">经营表现，清晰可见。</h2>
+            <p className="mt-1 text-xs leading-5 text-[#8798a9]">销售、利润与经营目标集中呈现，数据更新后自动同步。</p>
+            <div className="mt-4 grid max-w-[500px] grid-cols-2 gap-4">
+              <div className="border-r border-[#eaf0f5] pr-3"><p className="text-[11px] text-[#8898a8]">期间净销售额</p><p className="number mt-1 text-[25px] font-semibold tracking-[-.04em] text-[#223c56] md:text-[29px]">{formatMoney(summary.netSales)}</p></div>
+              <div><p className="text-[11px] text-[#8898a8]">估算经营利润</p><p className={`number mt-1 text-[23px] font-semibold tracking-[-.04em] md:text-[27px] ${Number(summary.profit)<0?"text-[#e85d65]":"text-[#168c76]"}`}>{formatMoney(summary.profit)}</p></div>
             </div>
           </div>
-          <div className="rounded-[20px] border border-white/10 bg-white/[.07] p-5 backdrop-blur-sm">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-xs text-[#b6c4d4]">本月销售目标</p><p className="number mt-2 text-[24px] font-semibold tracking-tight">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="rounded-full bg-[#6daff7]/15 p-2.5 text-[#9dceff]"><Target size={17}/></span></div>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[#76b8ff]" style={{width:`${targetProgress}%`}}/></div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-[#c1cfde]"><span>已完成 {formatMoney(monthSales)} / 目标 {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-white hover:text-[#a9d5ff]">查看数据 <ArrowRight size={13}/></Link></div>
+          <div className="rounded-[17px] border border-[#e5eff8] bg-[linear-gradient(130deg,#f5faff_0%,#eef7ff_100%)] p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-medium text-[#71889e]">本月销售目标</p><p className="number mt-1 text-[22px] font-semibold tracking-tight text-[#223c56]">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="grid size-9 place-items-center rounded-xl bg-white text-[#438ed2] shadow-sm"><Target size={17}/></span></div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#dcebf8]"><div className="h-full rounded-full bg-[#3b91eb] transition-[width] duration-500 motion-reduce:transition-none" style={{width:`${targetProgress}%`}}/></div>
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#758ba0]"><span>已完成 {formatMoney(monthSales)} / {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-[#3189e8]">经营数据 <ArrowRight size={12}/></Link></div>
           </div>
         </div>
       </section>
@@ -154,6 +155,7 @@ export default function Dashboard() {
           icon={<ChartNoAxesCombined size={18} />}
         />
       </div>
+      <DashboardIntelligence daily={weekRows} advertising={weekAds} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
           <div className="chart-wrap">

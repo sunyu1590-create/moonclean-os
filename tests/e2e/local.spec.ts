@@ -83,6 +83,10 @@ test("本机与云端工作区切换会呈现过场并保持数据各自独立",
   await page.reload();
   await expect(page.getByRole("button", { name: "切换本地数据或云端数据" })).toContainText("本地数据");
   await expect(page.getByText("只保存在本地的任务")).toBeVisible();
+  await page.goto("/dashboard");
+  await expect(page.getByRole("heading", { name: "AI 智能经营建议" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "运营待办" })).toBeVisible();
+  await expect(page.getByText("只保存在本地的任务")).toBeVisible();
 });
 
 test("本地全量备份可以预览、备份当前数据并恢复", async ({ page }) => {
