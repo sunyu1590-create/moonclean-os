@@ -6,15 +6,14 @@
 
 - 项目：`MoonClean OS`，组织：`m`，区域：Singapore (`ap-southeast-1`)
 - Project ID：`duolfhyodjhuatucjhtz`，URL：`https://duolfhyodjhuatucjhtz.supabase.co`
-- `supabase/migrations/` 中的五个迁移已按顺序应用到该项目。12 张业务表均已启用 RLS。项目的 Publishable Key 存于本地 `.env.local`，不提交到仓库。
-- **GitHub Codespaces 仍需设置两个 Secrets**：打开仓库 **Settings → Secrets and variables → Codespaces → New repository secret**，分别填写 `NEXT_PUBLIC_SUPABASE_URL`（上面的项目 URL）及 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`（在 [Supabase 项目 API Keys](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/settings/api-keys) 复制 Publishable Key）。当前 GitHub 集成对仓库 Secrets API 返回 403，因此这一步需在 GitHub 网页完成。设置后重建或重启 Codespace。
+- `supabase/migrations/` 中的五个迁移已按顺序应用到该项目。12 张业务表均已启用 RLS。`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
 - **邮箱回调还需设置**：在 [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/auth/url-configuration) 添加 Codespaces 端口 3000 的实际 HTTPS 转发域名，并将该域名下的 `/auth/callback` 与 `/auth/confirm` 加入 Redirect URLs。本地运行时使用 `http://localhost:3000` 对应路径。未完成前不要依赖邮件验证或密码重置流程。
 
 ## 配置与启动
 
-想直接从 GitHub 仓库试用，可在仓库点击 **Code → Codespaces → Create codespace on main**。首次启动会自动安装依赖并运行本地演示版；在 Codespaces 的 **Ports** 面板打开 3000 端口即可操作。演示数据保存在打开页面的浏览器中。Codespace 关闭后预览网址会停止，使用时受 GitHub Codespaces 配额限制。
+想直接从 GitHub 仓库试用，可在仓库点击 **Code → Codespaces → Create codespace on main**。首次启动会自动安装依赖并连接上方 Supabase 项目；在 Codespaces 的 **Ports** 面板打开 3000 端口即可操作。Codespace 关闭后预览网址会停止，使用时受 GitHub Codespaces 配额限制。
 
-若已配置 Supabase，可在 Codespaces 仓库 Secrets 中设置 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`，重建或重启 Codespace 后会启动云端模式。使用云端模式前仍需应用数据库迁移，并把 Codespaces 转发的 HTTPS 域名加入 Supabase Auth 的回调地址。
+新建 Codespace 无需添加 GitHub Secrets。已有 Codespace 可执行 `git pull` 后重建容器，或新建一个 Codespace。注册邮件和密码重置邮件仍需要将 Codespaces 转发的 HTTPS 域名加入 Supabase Auth 的回调地址。
 
 1. 在 Supabase 创建项目，并开启 **Email / Password** 登录与邮箱验证。
 2. 将 `supabase/migrations/` 内的迁移按文件名顺序应用到项目。推荐使用 Supabase CLI 的 `supabase link` 和 `supabase db push`。先在测试项目验证，再应用生产项目。
