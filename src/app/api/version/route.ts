@@ -37,24 +37,28 @@ function getCurrentCommit() {
 export async function GET() {
   const dispatcher = new EnvHttpProxyAgent();
   try {
-    const [commitResponse, packageResponse] = await Promise.all([
-      fetch(`https://api.github.com/repos/${repository}/commits/main`, {
+    const githubRequest = (url: string) =>
+      fetch(url, {
         headers: { Accept: "application/vnd.github+json" },
-        next: { revalidate: 60 },
+        cache: "no-store",
         dispatcher,
-      } as RequestInit & { dispatcher: EnvHttpProxyAgent }),
-      fetch(`https://raw.githubusercontent.com/${repository}/main/package.json`, {
-        next: { revalidate: 60 },
-        dispatcher,
-      } as RequestInit & { dispatcher: EnvHttpProxyAgent }),
-    ]);
-    if (!commitResponse.ok || !packageResponse.ok)
-      throw new Error("暂时无法读取 GitHub 最新版本");
-
-    const [latestCommit, latestPackage] = await Promise.all([
-      commitResponse.json() as Promise<GitHubCommit>,
-      packageResponse.json() as Promise<{ version?: string }>,
-    ]);
+      } as RequestInit & { dispatcher: EnvHttpProxyAgent });
+    const commitResponse = await githubRequest(
+      `https://api.github.com/repos/${repository}/commits/main`,
+    );
+    if (!commitResponse.ok) throw new Error("暂时无法读取 GitHub 最新提交");
+    const latestCommit = (await commitResponse.json()) as GitHubCommit;
+    const packageResponse = await githubRequest(
+      `https://api.github.com/repos/${repository}/contents/package.json?ref=${latestCommit.sha}`,
+    );
+    if (!packageResponse.ok) throw new Error("暂时无法读取 GitHub 最新版本号");
+    const packageFile = (await packageResponse.json()) as {
+      content?: string;
+      encoding?: string;
+    };
+    const latestPackage = JSON.parse(
+      Buffer.from(packageFile.content || "", packageFile.encoding === "base64" ? "base64" : "utf8").toString("utf8"),
+    ) as { version?: string };
     const currentCommit = getCurrentCommit();
     const currentShort = currentCommit.slice(0, 7);
     const latestShort = latestCommit.sha.slice(0, 7);
