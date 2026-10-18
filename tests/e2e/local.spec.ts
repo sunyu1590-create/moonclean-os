@@ -133,9 +133,10 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   await page.goto("/settings");
   await page.getByRole("button", { name: /精致/ }).click();
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
-  await expect(transition).toContainText("流光边缘");
-  await expect(transition).toContainText("v0.8.1");
-  await expect(transition).toContainText("当前为精致动效");
+  await expect(transition).toContainText("切换到精致模式");
+  await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
+  await expect(transition).toContainText("v0.8.2");
+  await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
   const refreshOption = page.locator("label").filter({ hasText: "屏幕刷新率" }).locator("input[type=checkbox]");
   await refreshOption.uncheck();
