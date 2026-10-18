@@ -85,7 +85,9 @@ export const dataSchema = z.object({
       net_sales: money, profit: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
       roas: z.number().nullable(), refund_rate: z.number().nullable(),
     }).nullable().optional(),
-  })).optional(),
+    source_module: z.enum(["notes", "experiments", "competitors", "service-cases", "copilot-conversations"]).nullable().optional(),
+    source_id: z.uuid().nullable().optional(),
+  }).refine(value => Boolean(value.source_module) === Boolean(value.source_id), { message: "任务来源必须同时包含模块和 ID" })).optional(),
   skuDaily: z.array(z.object({
     id: z.string(), skuId: z.string(), date: z.iso.date(),
     quantitySold: z.number().int().nonnegative(), grossSales: money, refundAmount: money,

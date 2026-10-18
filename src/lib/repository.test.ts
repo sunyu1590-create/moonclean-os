@@ -19,13 +19,15 @@ describe("数据版本迁移", () => {
     const data = demoData();
     data.daily[0].source = "official_pinduoduo";
     data.skuDaily = [{ id: "line-1", skuId: "sku-1", date: "2026-10-18", quantitySold: 2, grossSales: "30.00", refundAmount: "0.00" }];
-    data.tasks = [{ id: "task-1", title: "补货", detail: "", priority: "high", status: "todo", due_date: null, created_at: "2026-10-18T00:00:00.000Z", updated_at: "2026-10-18T00:00:00.000Z" }];
+    data.tasks = [{ id: "task-1", title: "补货", detail: "", priority: "high", status: "todo", due_date: null, created_at: "2026-10-18T00:00:00.000Z", updated_at: "2026-10-18T00:00:00.000Z", source_module: "notes", source_id: "81000000-0000-4000-8000-000000000001" }];
     data.inventory = [{ sku_id: "sku-1", quantity: 8, low_stock_threshold: 10, updated_at: "2026-10-18T00:00:00.000Z" }];
     const parsed = dataSchema.parse(data);
     expect(parsed.skuDaily).toEqual(data.skuDaily);
     expect(parsed.tasks).toEqual(data.tasks);
     expect(parsed.inventory).toEqual(data.inventory);
     expect(parsed.daily[0].source).toBe("official_pinduoduo");
+    expect(parsed.tasks?.[0].source_id).toBe("81000000-0000-4000-8000-000000000001");
+    expect(dataSchema.safeParse({ ...data, tasks: [{ ...data.tasks[0], source_id: null }] }).success).toBe(false);
   });
 
   it("新建的本地工作区从空白数据开始且可安全持久化", () => {

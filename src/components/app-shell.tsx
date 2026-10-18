@@ -33,6 +33,11 @@ import {
   Sparkles,
   Moon,
   Sun,
+  NotebookPen,
+  BrainCircuit,
+  FlaskConical,
+  SearchCheck,
+  Headset,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -54,6 +59,11 @@ const nav = [
   { href: "/orders", label: "订单中心", icon: ShoppingCart },
   { href: "/inventory", label: "库存管理", icon: Boxes },
   { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
+  { href: "/notes", label: "运营备忘录", icon: NotebookPen },
+  { href: "/copilot", label: "AI 运营助手", icon: BrainCircuit },
+  { href: "/experiments", label: "运营实验室", icon: FlaskConical },
+  { href: "/competitors", label: "竞品情报", icon: SearchCheck },
+  { href: "/service", label: "客服与售后", icon: Headset },
   { href: "/product-insights", label: "商品诊断", icon: ChartNoAxesCombined },
   { href: "/pricing", label: "定价模拟", icon: Calculator },
   { href: "/after-sales", label: "售后分析", icon: ReceiptText },

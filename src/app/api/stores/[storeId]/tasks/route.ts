@@ -12,7 +12,7 @@ async function authorize(context: Context, write = false) {
 export async function GET(_request: Request, context: Context) {
   const result = await authorize(context); if (result.error) return result.error;
   const { data, error } = await result.auth!.supabase.from("operation_tasks")
-    .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
+    .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline,source_module,source_id")
     .eq("store_id",result.storeId!).order("created_at",{ascending:false}).limit(500);
   if (error) return apiError(error,"待办读取失败");
   return NextResponse.json({ tasks: data });
@@ -22,9 +22,15 @@ export async function POST(request: Request, context: Context) {
   const result = await authorize(context,true); if (result.error) return result.error;
   try {
     const row = taskSchema.parse(await request.json());
+    const sourceTables = { notes:"operation_notes", experiments:"operation_experiments", competitors:"competitors", "service-cases":"service_cases", "copilot-conversations":"copilot_conversations" } as const;
+    if (row.sourceModule && row.sourceId) {
+      const { data: source, error: sourceError } = await result.auth!.supabase.from(sourceTables[row.sourceModule]).select("id").eq("store_id",result.storeId!).eq("id",row.sourceId).maybeSingle();
+      if (sourceError) throw sourceError;
+      if (!source) return NextResponse.json({error:"关联来源不存在或不属于当前店铺"},{status:400});
+    }
     if (row.recommendationKey) {
       const { data: existing, error: lookupError } = await result.auth!.supabase.from("operation_tasks")
-        .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
+        .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline,source_module,source_id")
         .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle();
       if (lookupError) throw lookupError;
       if (existing) return NextResponse.json(existing, { status: 200 });
@@ -33,11 +39,12 @@ export async function POST(request: Request, context: Context) {
       store_id:result.storeId!,created_by:result.auth!.user.id,title:row.title,
       detail:row.detail,priority:row.priority,status:row.status,due_date:row.dueDate,
       recommendation_key:row.recommendationKey||null,recommendation_baseline:row.recommendationBaseline||null,
-    }).select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline").single();
+      source_module:row.sourceModule||null,source_id:row.sourceId||null,
+    }).select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline,source_module,source_id").single();
     if (error) {
       if (error.code === "23505" && row.recommendationKey) {
         const { data: existing } = await result.auth!.supabase.from("operation_tasks")
-          .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline")
+          .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline,source_module,source_id")
           .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle();
         if (existing) return NextResponse.json(existing, { status: 200 });
       }

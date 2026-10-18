@@ -115,6 +115,8 @@ export interface LocalOperationTask {
   completed_at?: string | null;
   recommendation_key?: string | null;
   recommendation_baseline?: RecommendationBaseline | null;
+  source_module?: "notes" | "experiments" | "competitors" | "service-cases" | "copilot-conversations" | null;
+  source_id?: string | null;
 }
 export interface RecommendationBaseline {
   captured_at: string;

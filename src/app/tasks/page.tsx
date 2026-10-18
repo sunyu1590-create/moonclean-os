@@ -1,5 +1,6 @@
 "use client";
 import { AppSelect } from "@/components/ui/app-select";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
@@ -14,6 +15,12 @@ type Status=OperationTask["status"];
 type Priority=OperationTask["priority"];
 const statusName:Record<Status,string>={todo:"待处理",doing:"进行中",done:"已完成"};
 const priorityName:Record<Priority,string>={low:"低",normal:"普通",high:"高"};
+const taskSourceHref=(task:OperationTask)=>{
+  if(!task.source_module||!task.source_id)return null;
+  const routes={notes:"/notes",experiments:"/experiments",competitors:"/competitors","service-cases":"/service","copilot-conversations":"/copilot"} as const;
+  const query=task.source_module==="copilot-conversations"?"conversation":"id";
+  return {href:`${routes[task.source_module]}?${query}=${encodeURIComponent(task.source_id)}`,label:{notes:"运营备忘录",experiments:"运营实验",competitors:"竞品档案","service-cases":"售后工单","copilot-conversations":"AI 对话"}[task.source_module]};
+};
 const blank={title:"",detail:"",priority:"normal" as Priority,status:"todo" as Status,dueDate:""};
 const quickTasks=[
   {label:"核对库存",title:"核对热销商品库存",detail:"检查各 SKU 可售库存与预警线，确认是否需要补货。",priority:"high" as Priority},
@@ -92,9 +99,10 @@ export default function TasksPage(){
     <AiInsightPanel feature="tasks" context={{ totalTasks: tasks.length, openTasks: open.length, overdueTasks: overdue.length, doingTasks: tasks.filter(task=>task.status==="doing").length, highPriorityOpen: open.filter(task=>task.priority==="high").length, dueSoon: open.filter(task=>task.due_date&&task.due_date>=today&&task.due_date<=dueSoonLimit).length }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
       <SectionCard title="任务列表" sub="按当前店铺查看，已完成任务保留记录" action={<AppSelect aria-label="筛选任务状态" value={filter} onChange={e=>setFilter(e.target.value as Status|"all")} className="rounded-xl border border-[#e3eaf1] bg-white px-3 py-2 text-xs"><option value="all">全部</option>{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect>}>
-        {loading?<p className="text-sm text-[#8194a8]">正在读取云端待办…</p>:visible.length===0?<p className="text-sm text-[#8194a8]">暂无任务，可在右侧创建。</p>:<div className="space-y-3">{visible.map(task=>{const late=task.status!=="done"&&!!task.due_date&&task.due_date<today;return <div key={task.id} className="rounded-2xl border border-[#e9eef3] p-4">
+        {loading?<p className="text-sm text-[#8194a8]">正在读取云端待办…</p>:visible.length===0?<p className="text-sm text-[#8194a8]">暂无任务，可在右侧创建。</p>:<div className="space-y-3">{visible.map(task=>{const late=task.status!=="done"&&!!task.due_date&&task.due_date<today;const source=taskSourceHref(task);return <div key={task.id} className="rounded-2xl border border-[#e9eef3] p-4">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold text-[#26374c]">{task.title}</h3><p className="mt-1 text-xs text-[#8c9aaa]">{statusName[task.status]} · {priorityName[task.priority]}优先级 {task.due_date?`· 截止 ${task.due_date}`:""} {late&&<span className="font-semibold text-[#e85d65]">· 已逾期</span>} {task.recommendation_key&&<span className="font-semibold text-[#4389c8]">· 智能建议跟进</span>}</p></div>{canEdit&&<div className="flex gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={()=>startEdit(task)}>编辑</Button><Button size="sm" variant="outline" disabled={busy} aria-label={`删除 ${task.title}`} onClick={()=>void remove(task)}><Trash2 size={14}/></Button></div>}</div>
           {task.detail&&<p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#66788b]">{task.detail}</p>}
+          {source&&<Link href={source.href} className="mt-2 inline-flex text-xs font-medium text-[#287fe2] hover:underline">返回来源：{source.label}</Link>}
           {canEdit&&<div className="mt-3 flex gap-2">{task.status!=="doing"&&task.status!=="done"&&<Button size="sm" variant="outline" disabled={busy} onClick={()=>void changeStatus(task,"doing")}>开始处理</Button>}{task.status!=="done"?<Button size="sm" variant="outline" disabled={busy} onClick={()=>void changeStatus(task,"done")}>标记完成</Button>:<Button size="sm" variant="outline" disabled={busy} onClick={()=>void changeStatus(task,"todo")}>重新打开</Button>}</div>}
         </div>;})}</div>}
       </SectionCard>

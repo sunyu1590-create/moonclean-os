@@ -19,6 +19,12 @@ export const taskSchema = z.object({
     net_sales: z.string().regex(/^\d+(\.\d{1,2})?$/), profit: z.string().regex(/^-?\d+(\.\d{1,2})?$/),
     roas: z.number().nullable(), refund_rate: z.number().nullable(),
   }).nullable().optional(),
+  sourceModule: z.enum(["notes", "experiments", "competitors", "service-cases", "copilot-conversations"]).nullable().optional(),
+  sourceId: z.uuid().nullable().optional(),
+}).superRefine((value, context) => {
+  if (Boolean(value.sourceModule) !== Boolean(value.sourceId)) {
+    context.addIssue({ code: "custom", path: ["sourceId"], message: "任务来源模块和记录 ID 必须同时提供" });
+  }
 });
 export type OperationTask = {
   id: string; title: string; detail: string; priority: "low" | "normal" | "high";
@@ -30,6 +36,8 @@ export type OperationTask = {
     captured_at: string; coverage_days: number; net_sales: string;
     profit: string; roas: number | null; refund_rate: number | null;
   } | null;
+  source_module?: "notes" | "experiments" | "competitors" | "service-cases" | "copilot-conversations" | null;
+  source_id?: string | null;
 };
 export type InventoryBalance = { sku_id: string; quantity: number; low_stock_threshold: number; updated_at: string };
 export type InventoryMovement = { id: string; sku_id: string; quantity_before: number; quantity_after: number; delta: number; note: string; created_at: string };

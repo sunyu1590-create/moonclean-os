@@ -137,7 +137,7 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   const transition = page.getByRole("status", { name: "正在切换到精致动效" });
   await expect(transition).toContainText("切换到精致模式");
   await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
-  await expect(transition).toContainText("v0.8.6");
+  await expect(transition).toContainText("v0.9.0");
   await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
   const debugOptions = page.getByRole("button", { name: "调试选项（自定义显示内容）" });
