@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
+import { VersionPanel } from "@/components/version-panel";
 import { PageHead, SectionCard, downloadText } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,6 +277,7 @@ export default function SettingsPage() {
               </Link>
             )}
           </SectionCard>
+          <VersionPanel />
         </div>
       </div>
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
