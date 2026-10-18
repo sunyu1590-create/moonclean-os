@@ -71,6 +71,7 @@ test("本机与云端工作区切换会呈现过场并保持数据各自独立",
   const sourceDialog = page.getByRole("dialog");
   await sourceDialog.getByRole("button").filter({ hasText: "安全保存在云端" }).click();
   await expect(page.getByText("正在切换到云端数据")).toBeVisible();
+  await expect(page.getByText("读取可访问的云端店铺")).toBeVisible();
   await expect(page.getByRole("button", { name: "切换本地数据或云端数据" })).toContainText("云端数据");
   await expect(page.getByText("只保存在本地的任务")).toHaveCount(0);
 
@@ -82,4 +83,29 @@ test("本机与云端工作区切换会呈现过场并保持数据各自独立",
   await page.reload();
   await expect(page.getByRole("button", { name: "切换本地数据或云端数据" })).toContainText("本地数据");
   await expect(page.getByText("只保存在本地的任务")).toBeVisible();
+});
+
+test("本地全量备份可以预览、备份当前数据并恢复", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  const backup = demoData();
+  backup.settings.store.name = "从备份恢复的店铺";
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: /让工作空间贴合你的店铺/ })).toBeVisible();
+  await page.getByRole("button", { name: "导入本地全量备份" }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "moonclean-backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(backup)),
+  });
+  const preview = page.getByRole("alertdialog");
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText("从备份恢复的店铺")).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await preview.getByRole("button", { name: "备份当前数据并导入" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain("moonclean-local-before-restore");
+  await expect(page.getByText("从备份恢复的店铺").first()).toBeVisible();
+  await page.reload();
+  await page.goto("/settings");
+  await expect(page.locator('input').first()).toHaveValue("从备份恢复的店铺");
 });

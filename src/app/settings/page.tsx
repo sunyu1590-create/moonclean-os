@@ -1,6 +1,6 @@
 "use client";
 import { AppSelect } from "@/components/ui/app-select";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Download,
@@ -29,7 +29,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { AppSettings, Platform } from "@/lib/model";
+import type { AppData, AppSettings, Platform } from "@/lib/model";
+import { parseAppData } from "@/lib/repository";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
   const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -40,6 +41,10 @@ export default function SettingsPage() {
   const [backupMessage, setBackupMessage] = useState("");
   const [backupError, setBackupError] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
+  const localFileRef = useRef<HTMLInputElement>(null);
+  const [localImportPreview, setLocalImportPreview] = useState<AppData | null>(null);
+  const [localImportError, setLocalImportError] = useState("");
+  const [localImportBusy, setLocalImportBusy] = useState(false);
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -104,6 +109,37 @@ export default function SettingsPage() {
       setBackupError(cause instanceof Error ? cause.message : "备份失败，请重试");
     } finally {
       setBackupBusy(false);
+    }
+  }
+  async function inspectLocalBackup(file: File | undefined) {
+    setLocalImportError("");
+    if (!file) return;
+    try {
+      if (file.size > 20 * 1024 * 1024) throw new Error("备份文件不能超过 20 MB。");
+      const parsed = parseAppData(JSON.parse(await file.text()));
+      const duplicateDates = (items: { date: string }[]) => new Set(items.map((item) => item.date)).size !== items.length;
+      if (duplicateDates(parsed.daily) || duplicateDates(parsed.advertising)) {
+        throw new Error("备份中存在重复日期的经营或推广记录，请修复文件后再导入。");
+      }
+      setLocalImportPreview(parsed);
+    } catch (cause) {
+      setLocalImportError(cause instanceof Error ? `无法导入：${cause.message}` : "无法读取备份文件，请确认文件格式正确。");
+    }
+  }
+  async function restoreLocalBackup() {
+    if (!localImportPreview) return;
+    setLocalImportBusy(true);
+    setLocalImportError("");
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      downloadText(`moonclean-local-before-restore-${date}.json`, exportBackup(), "application/json");
+      await update(() => localImportPreview);
+      setBackupMessage("本地全量备份已导入，原工作区备份也已开始下载。");
+      setLocalImportPreview(null);
+    } catch (cause) {
+      setLocalImportError(cause instanceof Error ? cause.message : "导入失败，原有数据未确认更新。");
+    } finally {
+      setLocalImportBusy(false);
     }
   }
   return (
@@ -262,20 +298,23 @@ export default function SettingsPage() {
             action={<ShieldCheck size={19} className="text-[#3b91eb]" />}
           >
             <div className="space-y-3">
+              {mode === "local" && <input ref={(node) => { localFileRef.current = node; }} type="file" accept=".json,application/json" className="hidden" onChange={(event) => { void inspectLocalBackup(event.target.files?.[0]); event.target.value = ""; }} />}
               <Button
                 className="w-full justify-start"
                 variant="outline"
                 onClick={() =>
                   downloadText(
-                    `moonclean-backup-${new Date().toISOString().slice(0, 10)}.json`,
+                    `moonclean-${mode === "local" ? "local-full" : "backup"}-${new Date().toISOString().slice(0, 10)}.json`,
                     exportBackup(),
                     "application/json",
                   )
                 }
               >
                 <Download size={16} />
-                导出当前店铺轻量 JSON
+                {mode === "local" ? "导出本地全量备份" : "导出当前店铺轻量 JSON"}
               </Button>
+              {mode === "local" && <Button className="w-full justify-start" variant="outline" onClick={() => localFileRef.current?.click()}><DatabaseZap size={16} />导入本地全量备份</Button>}
+              {localImportError && <p role="alert" className="text-xs leading-5 text-[#e85d65]">{localImportError}</p>}
               {mode === "cloud" && role === "owner" && (
                 <Button
                   className="w-full justify-start"
@@ -319,7 +358,7 @@ export default function SettingsPage() {
             <p className="mt-4 text-xs leading-5 text-[#9aabba]">
               {mode === "cloud"
                 ? "完整备份包括业务记录、SKU 成本历史、订单、库存、成员关系与操作日志。出于安全考虑，登录密码和平台访问令牌不导出；迁移后需重新邀请成员并配置平台连接。"
-                : "重置将覆盖当前浏览器的修改；建议先备份。"}
+                : "本地全量备份包含商品及 SKU 成本、经营日报、推广、待办、库存、设置和其他本地工作区数据。导入会替换当前本地工作区，并在替换前自动下载现有备份。云端订单、售后和平台连接数据不属于本地工作区。"}
             </p>
           </SectionCard>
           <SectionCard
@@ -365,6 +404,26 @@ export default function SettingsPage() {
               }}
             >
               {resetBusy ? "正在清除…" : "确认重置"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!localImportPreview} onOpenChange={(open) => { if (!open && !localImportBusy) setLocalImportPreview(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认导入本地全量备份？</AlertDialogTitle>
+            <AlertDialogDescription>文件已通过格式、版本和重复日期校验。导入会替换当前浏览器的本地工作区；开始替换前，系统会先下载当前数据备份。</AlertDialogDescription>
+          </AlertDialogHeader>
+          {localImportPreview && <div className="rounded-xl bg-[#f4f9fe] p-3 text-sm leading-6 text-[#526a80]">
+            <p className="font-semibold text-[#172b45]">{localImportPreview.settings.store.name} · {localImportPreview.settings.store.platform === "pinduoduo" ? "拼多多" : localImportPreview.settings.store.platform === "douyin" ? "抖音电商" : "其他平台"}</p>
+            <p>商品 {localImportPreview.products.length} 个，经营日报 {localImportPreview.daily.length} 条，推广记录 {localImportPreview.advertising.length} 条</p>
+            <p>待办 {localImportPreview.tasks?.length || 0} 条，库存 SKU {localImportPreview.inventory?.length || 0} 个</p>
+          </div>}
+          {localImportError && <p role="alert" className="text-sm text-[#e85d65]">{localImportError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={localImportBusy}>取消</AlertDialogCancel>
+            <AlertDialogAction disabled={localImportBusy || !localImportPreview} onClick={(event) => { event.preventDefault(); void restoreLocalBackup(); }}>
+              {localImportBusy ? "正在备份并导入…" : "备份当前数据并导入"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

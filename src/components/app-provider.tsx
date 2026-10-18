@@ -23,7 +23,7 @@ import {
 interface ContextValue {
   data: AppData | null;
   mode: "local" | "cloud";
-  dataTransition: { kind: "opening" } | { kind: "switching"; from: "local" | "cloud"; to: "local" | "cloud" } | null;
+  dataTransition: DataTransition | null;
   loading: boolean;
   saving: boolean;
   error: string | null;
@@ -44,11 +44,38 @@ interface ContextValue {
   }) => Promise<void>;
   exportBackup: () => string;
 }
+type DataMode = "local" | "cloud";
+type TransitionStep = { label: string; status: "pending" | "active" | "done" };
+type DataTransition =
+  | { kind: "opening"; mode: DataMode; steps: TransitionStep[] }
+  | { kind: "switching"; from: DataMode; to: DataMode; steps: TransitionStep[] };
+const transitionLabels = (mode: DataMode, opening = false) => {
+  if (opening) return mode === "local"
+    ? ["识别本机数据模式", "读取本机保存的数据", "校验数据结构与版本", "准备经营分析界面"]
+    : ["验证登录与数据权限", "获取当前账号的店铺", "读取经营数据与商品成本", "准备图表和经营页面"];
+  return mode === "local"
+    ? ["检查未完成的数据保存", "读取本机工作区", "校验业务数据与版本", "切换至本机工作区"]
+    : ["检查 Supabase 登录状态", "读取可访问的云端店铺", "加载经营数据和成本版本", "切换至云端工作区"];
+};
+const makeTransition = (kind: "opening" | "switching", mode: DataMode, from?: DataMode): DataTransition => ({
+  ...(kind === "opening" ? { kind, mode } : { kind, from: from || "local", to: mode }),
+  steps: transitionLabels(mode, kind === "opening").map((label, index) => ({ label, status: index === 0 ? "active" : "pending" })),
+}) as DataTransition;
+const updateTransitionStep = (transition: DataTransition, activeIndex: number): DataTransition => ({
+  ...transition,
+  steps: transition.steps.map((step, index) => ({ ...step, status: index < activeIndex ? "done" : index === activeIndex ? "active" : "pending" })),
+});
+const finishTransition = (transition: DataTransition): DataTransition => ({
+  ...transition,
+  steps: transition.steps.map((step) => ({ ...step, status: "done" })),
+});
 const Context = createContext<ContextValue | null>(null);
 const ACTIVE_KEY = "moonclean-active-store";
 const DATA_MODE_KEY = "moonclean-data-mode-v1";
 const DATA_MODE_COOKIE = "moonclean-data-mode";
 const MIN_TRANSITION_MS = 460;
+const TRANSITION_STEP_MS = 85;
+const waitForTransitionStep = () => new Promise<void>((resolve) => window.setTimeout(resolve, TRANSITION_STEP_MS));
 function persistDataMode(target: "local" | "cloud") {
   try { localStorage.setItem(DATA_MODE_KEY, target); } catch { /* Data source still changes for this session. */ }
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
@@ -68,7 +95,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mode, setMode] = useState<"local" | "cloud">(() => localDemoEnabled() ? "local" : "cloud");
   const [modeReady, setModeReady] = useState(false);
-  const [dataTransition, setDataTransition] = useState<ContextValue["dataTransition"]>({kind:"opening"});
+  const [dataTransition, setDataTransition] = useState<ContextValue["dataTransition"]>(makeTransition("opening", localDemoEnabled() ? "local" : "cloud"));
   const hasLoadedRef = useRef(false);
   const loadedModeRef = useRef<"local" | "cloud" | null>(null);
   const modeSwitchRef = useRef(false);
@@ -98,12 +125,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (preferred?: string) => {
       const showOpening = !hasLoadedRef.current;
       const startedAt = Date.now();
-      if (showOpening) setDataTransition({kind:"opening"});
+      if (showOpening) {
+        setDataTransition(makeTransition("opening", mode));
+        await waitForTransitionStep();
+      }
       setLoading(true);
       setError(null);
       try {
         if (mode === "local") {
+          if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 1) : current); await waitForTransitionStep(); }
           const loaded = repository.load();
+          if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 2) : current);
           setDisplayCurrency(loaded.settings.store.currency);
           dataRef.current = loaded;
           setData(loaded);
@@ -113,6 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             throw new Error(
               "尚未配置 Supabase，请参照 .env.example 设置项目地址和 Publishable Key",
             );
+          if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 1) : current); await waitForTransitionStep(); }
           const response = await listStores();
           setStores(response.stores);
           setUser(response.user);
@@ -125,7 +158,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setActiveStoreId(id || null);
           if (id) {
             try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* Keep the current session usable if storage is blocked. */ }
+            if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 2) : current); await waitForTransitionStep(); }
             const loaded = await cloud.load(id);
+            if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 3) : current);
             setDisplayCurrency(loaded.settings.store.currency);
             dataRef.current = loaded;
             setData(loaded);
@@ -140,6 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setData(null);
       } finally {
         if (showOpening) {
+          setDataTransition((current) => current ? finishTransition(current) : current);
           const remaining = MIN_TRANSITION_MS - (Date.now() - startedAt);
           if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
           hasLoadedRef.current = true;
@@ -210,13 +246,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const previousMode = mode;
     modeRef.current = target;
     const startedAt = Date.now();
-    setDataTransition({kind:"switching",from:mode,to:target});
+    let transition = makeTransition("switching", target, mode);
+    setDataTransition(transition);
+    await waitForTransitionStep();
     setLoading(true);
     setError(null);
     try {
       if (target === "local") {
+        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep();
         const hasSavedLocalData = hasLocalData();
         const loaded = hasSavedLocalData ? repository.load() : createEmptyLocalData();
+        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep();
         if (!hasSavedLocalData) await repository.save(loaded);
         setMode("local");
         setStores([]);
@@ -224,11 +264,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyData(loaded);
       } else {
         if (!supabaseConfig()) throw new Error("尚未配置 Supabase，暂时无法切换到云端数据。");
+        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep();
         const response = await listStores();
         let saved: string | null = null;
         try { saved = localStorage.getItem(ACTIVE_KEY); } catch { /* Use the first authorized store. */ }
         const id = response.stores.some((store) => store.id === saved) ? saved : response.stores[0]?.id;
+        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep();
         const loaded = id ? await cloud.load(id) : null;
+        transition = updateTransitionStep(transition, 3); setDataTransition(transition);
         setStores(response.stores);
         setUser(response.user);
         setActiveStoreId(id || null);
@@ -246,6 +289,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setError(message);
       throw new Error(message);
     } finally {
+      setDataTransition((current) => current ? finishTransition(current) : current);
       const remaining = MIN_TRANSITION_MS - (Date.now() - startedAt);
       if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
       setDataTransition(null);
@@ -274,6 +318,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = fn(current);
       if (mode === "local") {
         repository.save(next);
+        setActiveStoreId(next.settings.store.id);
         applyData(next);
       } else {
         await cloud.save(next, current);
