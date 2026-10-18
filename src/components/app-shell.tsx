@@ -32,7 +32,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
@@ -166,6 +166,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
+  const sheetDrag = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
+  const suppressSheetHandleClick = useRef(false);
+  const [sheetDragging, setSheetDragging] = useState(false);
   const [customizingNav, setCustomizingNav] = useState(false);
   const [mobilePrimary, setMobilePrimary] = useState(defaultMobilePrimary);
   const [logoutBusy, setLogoutBusy] = useState(false);
@@ -235,6 +238,58 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setModeSwitchError(cause instanceof Error ? cause.message : "切换失败，请重试。");
     } finally {
       setModeSwitchBusy(false);
+    }
+  }
+  function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    const sheet = event.currentTarget.closest<HTMLElement>(".mobile-more-sheet");
+    if (!sheet) return;
+    sheetDrag.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startHeight: sheet.getBoundingClientRect().height,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSheetDragging(true);
+    event.preventDefault();
+  }
+  function onSheetHandlePointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const drag = sheetDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const sheet = event.currentTarget.closest<HTMLElement>(".mobile-more-sheet");
+    if (!sheet) return;
+    const minHeight = window.innerHeight * 0.56;
+    const delta = drag.startY - event.clientY;
+    if (mobileMenuExpanded || delta < 0) {
+      const height = Math.max(minHeight, Math.min(window.innerHeight, drag.startHeight + delta));
+      sheet.style.height = `${height}px`;
+      sheet.style.translate = "";
+    } else {
+      sheet.style.height = `${drag.startHeight}px`;
+      sheet.style.translate = `0 ${Math.max(0, -delta)}px`;
+    }
+  }
+  function onSheetHandlePointerEnd(event: React.PointerEvent<HTMLButtonElement>) {
+    const drag = sheetDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const delta = drag.startY - event.clientY;
+    const sheet = event.currentTarget.closest<HTMLElement>(".mobile-more-sheet");
+    sheetDrag.current = null;
+    setSheetDragging(false);
+    if (Math.abs(delta) > 12) {
+      suppressSheetHandleClick.current = true;
+      window.setTimeout(() => { suppressSheetHandleClick.current = false; }, 350);
+    }
+    if (sheet) {
+      sheet.style.translate = "";
+      window.requestAnimationFrame(() => sheet.style.removeProperty("height"));
+    }
+    if (mobileMenuExpanded) {
+      if (delta < -55) setMobileMenuExpanded(false);
+    } else if (delta > 65) {
+      setMobileMenuExpanded(true);
+    } else if (delta < -85) {
+      setMobileMenuOpen(false);
     }
   }
   const mobileNavItems = nav.filter((item) => mobilePrimary.includes(item.href));
@@ -435,7 +490,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
-        <SheetContent side="bottom" onScroll={(event) => { if (event.currentTarget.scrollTop > 0) setMobileMenuExpanded(true); }} className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded")}>
+        <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
+          <button type="button" aria-label={mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能"} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title="上下滑动展开或收起">
+            <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[#c7d3df]" />
+          </button>
           <SheetHeader className="px-1 pb-4 text-left">
             <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[#eaf4ff] text-[#3189e8]"><Sparkles size={21}/></div>
             <SheetTitle className="text-xl">更多功能</SheetTitle>

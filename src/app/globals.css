@@ -363,16 +363,18 @@ html[data-motion="standard"] .mobile-more-sheet[data-ending-style] {
   translate: 0 100dvh !important;
 }
 .mobile-more-sheet[data-side="bottom"] {
-  height: auto !important;
-  max-height: 56dvh !important;
-  transition-property: translate, height, max-height, border-radius !important;
+  height: 56dvh;
+  max-height: 100dvh;
+  transition-property: translate, height, border-radius !important;
 }
 .mobile-more-sheet[data-side="bottom"].is-expanded {
-  height: 100dvh !important;
-  max-height: 100dvh !important;
+  height: 100dvh;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
 }
+.mobile-more-sheet[data-side="bottom"].is-dragging { transition: none !important; }
+.mobile-more-drag-handle { cursor: grab; }
+.mobile-more-drag-handle:active { cursor: grabbing; }
 html[data-motion="simple"] *,
 html[data-motion="simple"] *::before,
 html[data-motion="simple"] *::after {
