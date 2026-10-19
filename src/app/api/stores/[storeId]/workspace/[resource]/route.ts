@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, rejectCrossOriginMutation, requireStore } from "@/lib/supabase/auth";
-import { appendOnlyResources, resourceSchemas, softDeleteResources, workspaceResource, workspaceTable } from "@/lib/workspace";
+import { appendOnlyResources, resourceSchemas, softDeleteResources, workspacePatchSchema, workspaceResource, workspaceTable } from "@/lib/workspace";
 
 type Context = { params: Promise<{ storeId: string; resource: string }> };
 type DynamicQuery = {
@@ -48,10 +48,16 @@ export async function PATCH(request: Request, context: Context) {
   const result = await authorize(context, true); if (result.error) return result.error;
   if (appendOnlyResources.has(result.resource!)) return NextResponse.json({ error: "历史记录不可编辑" }, { status: 405 });
   try {
-    const parsed = resourceSchemas[result.resource!].partial().parse(await request.json());
-    const { id, ...fields } = parsed;
+    const parsed = workspacePatchSchema(result.resource!).parse(await request.json());
+    const { id } = parsed;
     if (!id) return NextResponse.json({ error: "缺少记录 ID" }, { status: 400 });
-    const { data, error } = await (result.auth!.supabase as unknown as DynamicClient).from(result.table!).update(fields).eq("store_id", result.storeId!).eq("id", id).select("*").maybeSingle();
+    const client = (result.auth!.supabase as unknown as DynamicClient).from(result.table!);
+    const { data: existing, error: readError } = await client.select("*").eq("store_id", result.storeId!).eq("id", id).maybeSingle();
+    if (readError) throw readError;
+    if (!existing) return NextResponse.json({ error: "记录不存在或无权修改" }, { status: 404 });
+    resourceSchemas[result.resource!].parse({ ...(existing as Record<string, unknown>), ...parsed });
+    const fields = Object.fromEntries(Object.entries(parsed).filter(([key]) => key !== "id"));
+    const { data, error } = await client.update(fields).eq("store_id", result.storeId!).eq("id", id).select("*").maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ error: "记录不存在或无权修改" }, { status: 404 });
     return NextResponse.json(data);

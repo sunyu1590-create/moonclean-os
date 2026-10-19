@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.16";
+export const APP_VERSION = "0.9.17";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.17",
+    date: "2026-10-19",
+    title: "数据源切换动画与笔记保存修复",
+    changes: [
+      "恢复云端与本地数据切换时的分步加载动画，并按 Max、Standard、Low 档位和系统减少动态效果设置控制节奏。",
+      "修复笔记 PATCH 更新触发 Zod .partial() 细化校验异常的问题；本地和云端保存均会校验合并后的笔记关联数据。",
+    ],
+  },
   {
     version: "0.9.16",
     date: "2026-10-19",

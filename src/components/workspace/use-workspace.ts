@@ -4,7 +4,7 @@ import { useApp } from "@/components/app-provider";
 import { notifyFeedback } from "@/lib/feedback";
 import { getWorkspaceCache, setWorkspaceCache, WORKSPACE_CACHE_TTL, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
 import type { WorkspaceFeature } from "@/lib/workspace-usage";
-import { localWorkspaceKey, resourceSchemas, type WorkspaceResource, type WorkspaceRow } from "@/lib/workspace";
+import { localWorkspaceKey, resourceSchemas, workspacePatchSchema, type WorkspaceResource, type WorkspaceRow } from "@/lib/workspace";
 
 function readLocal(storeId: string, resource: WorkspaceResource): WorkspaceRow[] {
   try { const value: unknown = JSON.parse(localStorage.getItem(localWorkspaceKey(storeId,resource)) || "[]"); return Array.isArray(value) ? value as WorkspaceRow[] : []; }
@@ -128,15 +128,17 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
         const next=current.map(row=>row.id===id?{...row,[field]:restore?null:new Date().toISOString()}:row);
         writeLocal(activeStoreId,resource,next); commitRows(next);
       } else {
-        const checked=(method==="PATCH"?resourceSchemas[resource].partial():resourceSchemas[resource]).parse(value) as Record<string,unknown>;
+        const checked=(method==="PATCH"?workspacePatchSchema(resource):resourceSchemas[resource]).parse(value) as Record<string,unknown>;
         const now=new Date().toISOString();
         if(method==="POST") {
           const row={...checked,id:crypto.randomUUID(),store_id:activeStoreId,created_by:"local-user",created_at:now,updated_at:now} as WorkspaceRow;
           const next=[row,...current];writeLocal(activeStoreId,resource,next);commitRows(next);created=row;
         } else {
           const id=String(checked.id||"");
+          const source=current.find(row=>row.id===id);
+          if(!source) throw new Error("记录不存在，可能已被删除或切换了店铺。");
+          const merged=resourceSchemas[resource].parse({...source,...checked}) as Record<string,unknown>;
           if ((resource === "notes" || resource === "service-templates") && current.some(row => row.id === id && Object.keys(checked).some(key => !["id"].includes(key) && row[key] !== checked[key]))) {
-            const source=current.find(row=>row.id===id)!;
             const historyResource:WorkspaceResource=resource === "notes" ? "note-versions" : "service-template-versions";
             const history=readLocal(activeStoreId,historyResource);
             const historyRow:WorkspaceRow=resource === "notes"
@@ -144,7 +146,7 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
               : {id:crypto.randomUUID(),store_id:activeStoreId,template_id:id,version_number:history.filter(v=>v.template_id===id).length+1,title:String(checked.title??source.title),category:String(checked.category??source.category),body:String(checked.body??source.body),created_at:now};
             writeLocal(activeStoreId,historyResource,[historyRow,...history]);
           }
-          const next=current.map(row=>row.id===id?{...row,...checked,updated_at:now}:row);
+          const next=current.map(row=>row.id===id?{...row,...merged,updated_at:now}:row);
           writeLocal(activeStoreId,resource,next);commitRows(next);
         }
       }

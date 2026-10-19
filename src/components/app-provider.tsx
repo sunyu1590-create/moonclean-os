@@ -74,9 +74,14 @@ const Context = createContext<ContextValue | null>(null);
 const ACTIVE_KEY = "moonclean-active-store";
 const DATA_MODE_KEY = "moonclean-data-mode-v1";
 const DATA_MODE_COOKIE = "moonclean-data-mode";
-const MIN_SWITCH_TRANSITION_MS = 360;
-const TRANSITION_STEP_MS = 85;
-const waitForTransitionStep = () => new Promise<void>((resolve) => window.setTimeout(resolve, TRANSITION_STEP_MS));
+function dataSwitchTiming() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return { minimum: 0, step: 0 };
+  const level = document.documentElement.dataset.motion;
+  if (level === "refined") return { minimum: 1_050, step: 170 };
+  if (level === "simple") return { minimum: 0, step: 0 };
+  return { minimum: 480, step: 100 };
+}
+const waitForTransitionStep = (duration: number) => new Promise<void>((resolve) => window.setTimeout(resolve, duration));
 function persistDataMode(target: "local" | "cloud") {
   try { localStorage.setItem(DATA_MODE_KEY, target); } catch { /* Data source still changes for this session. */ }
   const secure = window.location.protocol === "https:" ? "; Secure" : "";
@@ -249,17 +254,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const previousMode = mode;
     modeRef.current = target;
     const startedAt = Date.now();
+    const timing = dataSwitchTiming();
     let transition = makeTransition("switching", target, mode);
     setDataTransition(transition);
-    await waitForTransitionStep();
+    await waitForTransitionStep(timing.step);
     setLoading(true);
     setError(null);
     try {
       if (target === "local") {
-        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep();
+        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep(timing.step);
         const hasSavedLocalData = hasLocalData();
         const loaded = hasSavedLocalData ? repository.load() : createEmptyLocalData();
-        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep();
+        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep(timing.step);
         if (!hasSavedLocalData) await repository.save(loaded);
         setMode("local");
         setStores([]);
@@ -267,12 +273,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyData(loaded);
       } else {
         if (!supabaseConfig()) throw new Error("尚未配置 Supabase，暂时无法切换到云端数据。");
-        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep();
+        transition = updateTransitionStep(transition, 1); setDataTransition(transition); await waitForTransitionStep(timing.step);
         const response = await listStores();
         let saved: string | null = null;
         try { saved = localStorage.getItem(ACTIVE_KEY); } catch { /* Use the first authorized store. */ }
         const id = response.stores.some((store) => store.id === saved) ? saved : response.stores[0]?.id;
-        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep();
+        transition = updateTransitionStep(transition, 2); setDataTransition(transition); await waitForTransitionStep(timing.step);
         const loaded = id ? await cloud.load(id) : null;
         transition = updateTransitionStep(transition, 3); setDataTransition(transition);
         setStores(response.stores);
@@ -293,7 +299,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error(message);
     } finally {
       setDataTransition((current) => current ? finishTransition(current) : current);
-      const remaining = MIN_SWITCH_TRANSITION_MS - (Date.now() - startedAt);
+      const remaining = timing.minimum - (Date.now() - startedAt);
       if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
       setDataTransition(null);
       setLoading(false);

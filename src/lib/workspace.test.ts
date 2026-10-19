@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendOnlyResources, resourceSchemas, workspaceResource, workspaceTable } from "@/lib/workspace";
+import { appendOnlyResources, resourceSchemas, workspacePatchSchema, workspaceResource, workspaceTable } from "@/lib/workspace";
 
 describe("运营工作台数据校验", () => {
   it("只允许列出的工作台资源", () => {
@@ -18,6 +18,16 @@ describe("运营工作台数据校验", () => {
   });
   it("工单赔付不得为负数", () => {
     expect(resourceSchemas["service-cases"].safeParse({ issue_category: "refund", description: "商品漏液", compensation_amount: -1 }).success).toBe(false);
+  });
+  it("笔记 PATCH 支持只更新部分字段，并在合并后保留关联成对校验", () => {
+    const id = "81000000-0000-4000-8000-000000000001";
+    const relatedId = "81000000-0000-4000-8000-000000000002";
+    const existing = resourceSchemas.notes.parse({ id, title: "原笔记", related_type: "product", related_id: relatedId });
+    const contentPatch = workspacePatchSchema("notes").parse({ id, body_markdown: "更新内容" });
+    expect(resourceSchemas.notes.safeParse({ ...existing, ...contentPatch }).success).toBe(true);
+    const invalidRelationPatch = workspacePatchSchema("notes").parse({ id, related_type: null });
+    expect(resourceSchemas.notes.safeParse({ ...existing, ...invalidRelationPatch }).success).toBe(false);
+    expect(workspacePatchSchema("notes").safeParse({ id, title: "更新标题" }).success).toBe(true);
   });
   it("历史与 AI 用量资源只读或追加，不提供普通覆盖", () => {
     expect(appendOnlyResources.has("note-versions")).toBe(true);
