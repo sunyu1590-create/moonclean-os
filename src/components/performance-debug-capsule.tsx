@@ -29,7 +29,7 @@ const emptyMetrics: DebugMetrics = {
   fps: null, frameMs: null, heapUsed: null, heapLimit: null, viewport: "—", dpr: 1,
   deviceMemory: null, cores: null, displayHz: null, online: true, network: "不可用", longTasks: null, firstPaint: null,
 };
-const motionLabels: Record<MotionLevel, string> = { refined: "精致", standard: "标准", simple: "简单" };
+const motionLabels: Record<MotionLevel, string> = { refined: "Max", standard: "Standard", simple: "Low" };
 const formatBytes = (bytes: number | null) => bytes === null ? "浏览器未开放" : `${(bytes / 1024 / 1024).toFixed(0)} MB`;
 
 export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel: MotionLevel; dataMode: "local" | "cloud" }) {

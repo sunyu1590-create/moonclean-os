@@ -20,7 +20,7 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
   const switching = transition?.kind === "switching";
   const complete = transition?.steps.every(step => step.status === "done") ?? false;
   const targetMode = !transition ? "local" : transition.kind === "opening" ? transition.mode : transition.to;
-  const motionLabel = MOTION_LEVELS.find((item) => item.id === level)?.label || "标准";
+  const motionLabel = MOTION_LEVELS.find((item) => item.id === level)?.label || "Standard";
   return (
     <div
       role="status"

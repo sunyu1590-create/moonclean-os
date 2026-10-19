@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.15";
+export const APP_VERSION = "0.9.16";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.16",
+    date: "2026-10-19",
+    title: "动效档位命名与 Max 节奏优化",
+    changes: [
+      "动效档位显示名称调整为 Max、Standard、Low，保留现有偏好设置兼容。",
+      "Max 页面、弹窗、底栏和模式切换动画节奏更舒展；Standard 与 Low 维持各自原有速度等级。",
+    ],
+  },
   {
     version: "0.9.15",
     date: "2026-10-19",

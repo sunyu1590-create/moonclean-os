@@ -7,9 +7,9 @@ import { APP_VERSION } from "@/lib/release-notes";
 export type MotionLevel = "refined" | "standard" | "simple";
 export type PageTransitionStyle = "blur-fade" | "blur-lift";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
-  { id: "refined", label: "精致", short: "丰富动效", detail: "流动柔光、页面景深与细腻交互反馈。", experience: "丰富细腻" },
-  { id: "standard", label: "标准", short: "适中动效", detail: "清晰短促的过渡和基础交互反馈。", experience: "轻盈克制" },
-  { id: "simple", label: "简单", short: "关闭动效", detail: "直接显示内容，关闭装饰性过渡。", experience: "清爽直接" },
+  { id: "refined", label: "Max", short: "丰富动效", detail: "舒展的页面过渡、流动柔光与细腻交互反馈。", experience: "丰富细腻" },
+  { id: "standard", label: "Standard", short: "适中动效", detail: "适中的页面过渡与基础交互反馈。", experience: "轻盈克制" },
+  { id: "simple", label: "Low", short: "关闭动效", detail: "直接显示内容，关闭装饰性过渡。", experience: "清爽直接" },
 ];
 
 type MotionTransition = { id: number; to: MotionLevel };
@@ -92,7 +92,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
       return;
     }
     setTransition({ id, to: next });
-    timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "standard" ? 320 : 700);
+    timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "standard" ? 320 : 1_050);
   }, [level, reducedMotion]);
 
   const setPageTransitionStyle = useCallback((next: PageTransitionStyle) => {
