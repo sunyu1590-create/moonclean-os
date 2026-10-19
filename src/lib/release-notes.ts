@@ -1,6 +1,14 @@
-export const APP_VERSION = "0.9.5";
+export const APP_VERSION = "0.9.6";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.6",
+    date: "2026-10-19",
+    title: "底栏页面非线性展开",
+    changes: [
+      "手机端从底栏切换页面时，内容从触点位置以带轻微回弹的非线性曲线展开；标准档更轻，简单档和系统减少动态效果保持直接切换。",
+    ],
+  },
   {
     version: "0.9.5",
     date: "2026-10-19",

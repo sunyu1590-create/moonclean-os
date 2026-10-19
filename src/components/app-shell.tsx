@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchStore,
     switchDataMode,
   } = useApp();
-  const { level: motionLevel } = useMotionPreferences();
+  const { level: motionLevel, reducedMotion } = useMotionPreferences();
   const [nightMode, setNightMode] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -193,6 +193,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
+  const [mobileRouteReveal, setMobileRouteReveal] = useState<{ href: string; x: number; y: number } | null>(null);
+  const mobileRouteRevealTimer = useRef<number | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       let enabled = false;
@@ -222,6 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => () => { if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current); }, []);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -273,6 +276,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.theme = next ? "night" : "day";
     document.documentElement.style.colorScheme = next ? "dark" : "light";
     try { localStorage.setItem(themeStorageKey, next ? "night" : "day"); } catch { /* Apply the theme for this session even when storage is unavailable. */ }
+  }
+  function navigateFromMobileNav(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || pathname === href) return;
+    event.preventDefault();
+    if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current);
+    if (motionLevel !== "simple" && !reducedMotion) {
+      const main = event.currentTarget.closest(".app-shell-root")?.querySelector("main");
+      const mainBounds = main?.getBoundingClientRect();
+      const origin = event.currentTarget.getBoundingClientRect();
+      setMobileRouteReveal({
+        href,
+        x: origin.left + origin.width / 2 - (mainBounds?.left ?? 0),
+        y: origin.top + origin.height / 2 - (mainBounds?.top ?? 0),
+      });
+      mobileRouteRevealTimer.current = window.setTimeout(() => setMobileRouteReveal(null), motionLevel === "refined" ? 820 : 470);
+    } else {
+      setMobileRouteReveal(null);
+    }
+    router.push(href);
   }
   function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -476,7 +498,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mode === "local" && user && <button type="button" aria-label="退出登录" title="退出登录" disabled={logoutBusy} onClick={signOut} className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"><LogOut size={17}/></button>}
           </div>
         </header>
-        <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
+        <main
+          key={`${mode}-${pathname}`}
+          className={cn("mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10", mobileRouteReveal?.href === pathname && `mobile-route-reveal mobile-route-reveal-${motionLevel}`)}
+          style={mobileRouteReveal?.href === pathname ? { "--nav-reveal-x": `${mobileRouteReveal.x}px`, "--nav-reveal-y": `${mobileRouteReveal.y}px` } as React.CSSProperties : undefined}
+        >
           {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为 0.9.3 旧预览版本，不会为新变化做适配</div>}
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
           {error && (
@@ -522,7 +548,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
+            return <Link key={href} href={href} onClick={event => navigateFromMobileNav(event, href)} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}
