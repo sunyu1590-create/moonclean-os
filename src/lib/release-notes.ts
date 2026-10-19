@@ -1,6 +1,14 @@
-export const APP_VERSION = "0.9.1";
+export const APP_VERSION = "0.9.2";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.2",
+    date: "2026-10-19",
+    title: "DeepSeek 配置诊断优化",
+    changes: [
+      "DeepSeek 设置现可区分 Supabase 服务端密钥错误、权限不足、数据库迁移缺失和网络连接问题，并提供对应排查提示。",
+    ],
+  },
   {
     version: "0.9.1",
     date: "2026-10-19",

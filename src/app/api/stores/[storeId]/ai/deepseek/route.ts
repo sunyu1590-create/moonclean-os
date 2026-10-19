@@ -8,8 +8,13 @@ const uuid = z.uuid();
 const bodySchema = z.object({ apiKey: z.string().trim().min(20).max(512) });
 const configError = (cause: unknown) => {
   const message = cause && typeof cause === "object" && "message" in cause ? String(cause.message) : "配置操作失败";
+  const code = cause && typeof cause === "object" && "code" in cause ? String(cause.code) : "";
+  const status = cause && typeof cause === "object" && "status" in cause && typeof cause.status === "number" ? cause.status : 0;
   if (/store_ai_credentials|schema cache|does not exist/i.test(message)) return "数据库尚未安装 DeepSeek 密钥迁移。请先应用仓库中的 store_deepseek_credentials 数据库迁移。";
   if (/SUPABASE_SECRET_KEY/i.test(message)) return message;
+  if (status === 401 || /invalid api key|invalid jwt|jwt expired|unauthorized/i.test(`${code} ${message}`)) return "Vercel 中的 SUPABASE_SECRET_KEY 未被当前 Supabase 项目接受。请确认它来自 MoonClean OS 项目的 Secret keys，并保存到 Production 后重新部署。";
+  if (status === 403 || code === "42501" || /permission denied|insufficient privilege/i.test(message)) return "Supabase 已拒绝服务端密钥访问。请确认填入的是当前项目的 Secret key，而不是 Publishable 或 anon key。";
+  if (/fetch failed|timeout|econnrefused|network/i.test(message)) return "服务器无法连接 Supabase。请检查项目地址、网络状态和 Vercel 部署环境。";
   return "读取或保存配置失败，请检查数据库迁移和服务端环境变量后重试。";
 };
 
