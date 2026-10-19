@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchStore,
     switchDataMode,
   } = useApp();
-  const { level: motionLevel, reducedMotion, pageTransitionStyle } = useMotionPreferences();
+  const { level: motionLevel, pageTransitionStyle } = useMotionPreferences();
   const [nightMode, setNightMode] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -193,7 +193,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
-  const mobileRouteAnimation = useRef<Animation | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       let enabled = false;
@@ -223,7 +222,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
-  useEffect(() => () => { mobileRouteAnimation.current?.cancel(); }, []);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -275,38 +273,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.theme = next ? "night" : "day";
     document.documentElement.style.colorScheme = next ? "dark" : "light";
     try { localStorage.setItem(themeStorageKey, next ? "night" : "day"); } catch { /* Apply the theme for this session even when storage is unavailable. */ }
-  }
-  function navigateFromMobileNav(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || pathname === href) return;
-    if (pageTransitionStyle === "apple" && motionLevel !== "simple" && !reducedMotion) {
-      const main = event.currentTarget.closest(".app-shell-root")?.querySelector("main");
-      const mainBounds = main?.getBoundingClientRect();
-      const origin = event.currentTarget.getBoundingClientRect();
-      if (main && mainBounds) {
-        mobileRouteAnimation.current?.cancel();
-        main.style.transformOrigin = `${origin.left + origin.width / 2 - mainBounds.left}px ${origin.top + origin.height / 2 - mainBounds.top}px`;
-        if (typeof main.animate === "function") {
-          try {
-            const animation = main.animate(
-              [
-                { transform: "scale(.985)" },
-                { transform: "scale(1.006)", offset: 0.76 },
-                { transform: "scale(1)" },
-              ],
-              { duration: motionLevel === "refined" ? 260 : 200, easing: "cubic-bezier(.2,.85,.25,1)", fill: "none" },
-            );
-            mobileRouteAnimation.current = animation;
-            animation.onfinish = () => {
-              if (mobileRouteAnimation.current !== animation) return;
-              main.style.removeProperty("transform-origin");
-              mobileRouteAnimation.current = null;
-            };
-          } catch {
-            main.style.removeProperty("transform-origin");
-          }
-        }
-      }
-    }
   }
   function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -556,7 +522,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} onClick={event => navigateFromMobileNav(event, href)} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}

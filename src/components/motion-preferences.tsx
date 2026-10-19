@@ -5,7 +5,7 @@ import { Check, Sparkles, Zap } from "lucide-react";
 import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
-export type PageTransitionStyle = "dynamic-lift" | "apple";
+export type PageTransitionStyle = "blur-fade" | "blur-lift";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
   { id: "refined", label: "精致", short: "丰富动效", detail: "流动柔光、页面景深与细腻交互反馈。", experience: "丰富细腻" },
   { id: "standard", label: "标准", short: "适中动效", detail: "清晰短促的过渡和基础交互反馈。", experience: "轻盈克制" },
@@ -42,7 +42,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   const [level, setLevelState] = useState<MotionLevel>("standard");
   const [ready, setReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("apple");
+  const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("blur-fade");
   const [transition, setTransition] = useState<MotionTransition | null>(null);
   const transitionId = useRef(0);
   const timer = useRef<number | null>(null);
@@ -53,7 +53,14 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved === "refined" || saved === "standard" || saved === "simple") setLevelState(saved);
         const savedPageTransition = localStorage.getItem(PAGE_TRANSITION_STORAGE_KEY);
-        if (savedPageTransition === "dynamic-lift" || savedPageTransition === "apple") setPageTransitionStyleState(savedPageTransition);
+        if (savedPageTransition === "blur-fade" || savedPageTransition === "blur-lift") setPageTransitionStyleState(savedPageTransition);
+        else if (savedPageTransition === "dynamic-lift") {
+          setPageTransitionStyleState("blur-lift");
+          localStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, "blur-lift");
+        } else if (savedPageTransition === "apple") {
+          setPageTransitionStyleState("blur-fade");
+          localStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, "blur-fade");
+        }
       } catch { /* Keep the default for private browsing modes that block storage. */ }
       setReady(true);
     });

@@ -18,7 +18,6 @@ import {
   Activity,
   ChevronDown,
   MoveUpRight,
-  Expand,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -256,8 +255,8 @@ export default function SettingsPage() {
               <p className="mb-2 text-xs font-semibold text-[#526a80]">底栏页面切换</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { id: "dynamic-lift", label: "动态上浮", description: "保留旧版淡入上浮效果", Icon: MoveUpRight },
-                  { id: "apple", label: "苹果样式", description: "从点击位置弹性展开", Icon: Expand },
+                  { id: "blur-fade", label: "模糊渐显", description: "轻微虚化后渐显，切换更轻", Icon: Sparkles },
+                  { id: "blur-lift", label: "模糊上浮", description: "轻微虚化并向上浮现", Icon: MoveUpRight },
                 ] as const).map(({ id, label, description, Icon }) => {
                   const selected = pageTransitionStyle === id;
                   return <button key={id} type="button" aria-pressed={selected} onClick={() => setPageTransitionStyle(id as PageTransitionStyle)} className={cn("flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors sm:gap-3 sm:p-3", selected ? "border-[#9cc8ee] bg-[#f0f8ff] text-[#287fe2]" : "border-[#e7edf3] bg-white text-[#718296] hover:border-[#cbdced]")}>

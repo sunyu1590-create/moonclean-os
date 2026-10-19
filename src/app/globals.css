@@ -234,15 +234,6 @@ button {
   border-color: rgba(190, 210, 230, 0.95);
   box-shadow: 0 16px 38px rgba(29, 43, 62, 0.065), 0 3px 9px rgba(29, 43, 62, 0.025);
 }
-@media (prefers-reduced-motion: no-preference) {
-  main > * {
-    animation: page-enter 180ms ease-out both;
-  }
-  @keyframes page-enter {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
@@ -292,13 +283,18 @@ html[data-motion="refined"] main > *:nth-child(2) { animation-delay: 35ms; }
 html[data-motion="refined"] main > *:nth-child(3) { animation-delay: 70ms; }
 html[data-motion="refined"] main > *:nth-child(4) { animation-delay: 105ms; }
 html[data-motion="standard"] main > * { animation: premium-page-enter 220ms var(--mc-ease-standard) both; }
-.app-shell-root.page-transition-apple main > * {
+.app-shell-root.page-transition-blur-fade main > * {
+  animation: page-enter-blur-fade 220ms cubic-bezier(.2,.7,.25,1) both;
+}
+.app-shell-root.page-transition-blur-lift main > * {
+  animation: page-enter-blur-lift 280ms cubic-bezier(.2,.75,.25,1) both;
+}
+.app-shell-root.motion-level-simple main > * {
   animation: none !important;
   filter: none !important;
   opacity: 1 !important;
   transform: none !important;
 }
-.app-shell-root.page-transition-dynamic-lift main > * { animation: page-enter 180ms ease-out both; }
 html[data-motion="refined"] .glass-card {
   box-shadow: 0 18px 48px rgba(34, 75, 117, .075), 0 2px 8px rgba(34, 75, 117, .035), inset 0 1px 0 rgba(255,255,255,.9);
   transition: transform var(--mc-motion-emphasis) var(--mc-ease-emphasis), box-shadow var(--mc-motion-emphasis) ease, border-color var(--mc-motion-normal) ease;
@@ -500,6 +496,14 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
   from { opacity: 0; filter: blur(4px); transform: translateY(12px) scale(.994); }
   68% { filter: blur(.7px); }
   to { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+}
+@keyframes page-enter-blur-fade {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes page-enter-blur-lift {
+  from { opacity: 0; filter: blur(3px); transform: translateY(9px); }
+  to { opacity: 1; filter: blur(0); transform: translateY(0); }
 }
 @keyframes page-ambient-drift {
   from { transform: translate3d(-1.2%, -1%, 0) scale(1); }

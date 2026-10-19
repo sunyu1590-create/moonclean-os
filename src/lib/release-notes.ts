@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.9";
+export const APP_VERSION = "0.9.10";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.10",
+    date: "2026-10-19",
+    title: "底栏页面过渡方案更新",
+    changes: [
+      "移除苹果展开动画，改为可选的“模糊渐显”与“模糊上浮”；渐显更轻，上浮保留方向感。",
+      "保留旧设备的动效偏好并自动映射到新方案，减少重复动画逻辑，简单档和系统减少动态效果仍会关闭页面过渡。",
+    ],
+  },
   {
     version: "0.9.9",
     date: "2026-10-19",
