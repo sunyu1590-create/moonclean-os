@@ -290,7 +290,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         x: origin.left + origin.width / 2 - (mainBounds?.left ?? 0),
         y: origin.top + origin.height / 2 - (mainBounds?.top ?? 0),
       });
-      mobileRouteRevealTimer.current = window.setTimeout(() => setMobileRouteReveal(null), motionLevel === "refined" ? 820 : 470);
+      mobileRouteRevealTimer.current = window.setTimeout(() => setMobileRouteReveal(null), motionLevel === "refined" ? 620 : 390);
     } else {
       setMobileRouteReveal(null);
     }

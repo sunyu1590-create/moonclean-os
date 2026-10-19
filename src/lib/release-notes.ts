@@ -1,6 +1,14 @@
-export const APP_VERSION = "0.9.6";
+export const APP_VERSION = "0.9.7";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.7",
+    date: "2026-10-19",
+    title: "底栏展开卡顿修复",
+    changes: [
+      "切换页面时停用旧的渐入上浮动效，改为从点击位置以 transform 执行轻量非线性展开，避免裁切和模糊动画造成卡顿。",
+    ],
+  },
   {
     version: "0.9.6",
     date: "2026-10-19",

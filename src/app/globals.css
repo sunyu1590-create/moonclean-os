@@ -293,9 +293,15 @@ html[data-motion="refined"] main > *:nth-child(3) { animation-delay: 70ms; }
 html[data-motion="refined"] main > *:nth-child(4) { animation-delay: 105ms; }
 html[data-motion="standard"] main > * { animation: premium-page-enter 220ms var(--mc-ease-standard) both; }
 html[data-motion="refined"] main.mobile-route-reveal > *,
-html[data-motion="standard"] main.mobile-route-reveal > * { animation: none; }
-main.mobile-route-reveal-refined { animation: mobile-page-reveal-refined 760ms cubic-bezier(.2,1.24,.34,1) both; }
-main.mobile-route-reveal-standard { animation: mobile-page-reveal-standard 380ms cubic-bezier(.2,1.08,.34,1) both; }
+html[data-motion="standard"] main.mobile-route-reveal > * {
+  animation: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+main.mobile-route-reveal { will-change: transform; }
+main.mobile-route-reveal-refined { transform-origin: var(--nav-reveal-x) var(--nav-reveal-y); animation: mobile-page-expand-refined 560ms cubic-bezier(.2,1.2,.32,1) both; }
+main.mobile-route-reveal-standard { transform-origin: var(--nav-reveal-x) var(--nav-reveal-y); animation: mobile-page-expand-standard 340ms cubic-bezier(.2,1.1,.32,1) both; }
 html[data-motion="refined"] .glass-card {
   box-shadow: 0 18px 48px rgba(34, 75, 117, .075), 0 2px 8px rgba(34, 75, 117, .035), inset 0 1px 0 rgba(255,255,255,.9);
   transition: transform var(--mc-motion-emphasis) var(--mc-ease-emphasis), box-shadow var(--mc-motion-emphasis) ease, border-color var(--mc-motion-normal) ease;
@@ -498,14 +504,15 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
   68% { filter: blur(.7px); }
   to { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
 }
-@keyframes mobile-page-reveal-refined {
-  from { clip-path: circle(0 at var(--nav-reveal-x) var(--nav-reveal-y)); filter: blur(5px); opacity: .78; }
-  74% { clip-path: circle(174vmax at var(--nav-reveal-x) var(--nav-reveal-y)); filter: blur(.4px); opacity: 1; }
-  to { clip-path: circle(160vmax at var(--nav-reveal-x) var(--nav-reveal-y)); filter: blur(0); opacity: 1; }
+@keyframes mobile-page-expand-refined {
+  from { transform: scale(.68); }
+  76% { transform: scale(1.035); }
+  to { transform: scale(1); }
 }
-@keyframes mobile-page-reveal-standard {
-  from { clip-path: circle(0 at var(--nav-reveal-x) var(--nav-reveal-y)); opacity: .8; }
-  to { clip-path: circle(160vmax at var(--nav-reveal-x) var(--nav-reveal-y)); opacity: 1; }
+@keyframes mobile-page-expand-standard {
+  from { transform: scale(.88); }
+  78% { transform: scale(1.012); }
+  to { transform: scale(1); }
 }
 @keyframes page-ambient-drift {
   from { transform: translate3d(-1.2%, -1%, 0) scale(1); }
@@ -626,7 +633,7 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
   .app-shell-root::before, .app-shell-root::after { animation:none !important; }
   .app-shell-root::before, .app-shell-root::after { opacity:0 !important; }
   html[data-motion="refined"] main > * { animation-name:premium-page-enter !important; }
-  main.mobile-route-reveal { animation:none !important; clip-path:none !important; filter:none !important; }
+  main.mobile-route-reveal { animation:none !important; filter:none !important; transform:none !important; will-change:auto; }
   .data-transition-card, .motion-switch-panel { backdrop-filter:none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
