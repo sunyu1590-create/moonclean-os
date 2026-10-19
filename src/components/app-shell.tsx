@@ -193,8 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
-  const [mobileRouteReveal, setMobileRouteReveal] = useState<{ href: string; fromPath: string; x: number; y: number } | null>(null);
-  const mobileRouteRevealTimer = useRef<number | null>(null);
+  const mobileRouteAnimation = useRef<Animation | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       let enabled = false;
@@ -224,14 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
-  useEffect(() => () => { if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current); }, []);
-  useEffect(() => {
-    if (authPaths.includes(pathname)) return;
-    const timer = window.setTimeout(() => {
-      for (const href of mobilePrimary) router.prefetch(href);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [mobilePrimary, pathname, router]);
+  useEffect(() => () => { mobileRouteAnimation.current?.cancel(); }, []);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -285,24 +277,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem(themeStorageKey, next ? "night" : "day"); } catch { /* Apply the theme for this session even when storage is unavailable. */ }
   }
   function navigateFromMobileNav(event: React.MouseEvent<HTMLAnchorElement>, href: string) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || pathname === href) return;
-    event.preventDefault();
-    if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current);
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || pathname === href) return;
     if (pageTransitionStyle === "apple" && motionLevel !== "simple" && !reducedMotion) {
       const main = event.currentTarget.closest(".app-shell-root")?.querySelector("main");
       const mainBounds = main?.getBoundingClientRect();
       const origin = event.currentTarget.getBoundingClientRect();
-      setMobileRouteReveal({
-        href,
-        fromPath: pathname,
-        x: origin.left + origin.width / 2 - (mainBounds?.left ?? 0),
-        y: origin.top + origin.height / 2 - (mainBounds?.top ?? 0),
-      });
-      mobileRouteRevealTimer.current = window.setTimeout(() => setMobileRouteReveal(null), motionLevel === "refined" ? 620 : 390);
-    } else {
-      setMobileRouteReveal(null);
+      if (main && mainBounds) {
+        mobileRouteAnimation.current?.cancel();
+        main.style.transformOrigin = `${origin.left + origin.width / 2 - mainBounds.left}px ${origin.top + origin.height / 2 - mainBounds.top}px`;
+        if (typeof main.animate === "function") {
+          try {
+            const animation = main.animate(
+              [
+                { transform: "scale(.985)" },
+                { transform: "scale(1.006)", offset: 0.76 },
+                { transform: "scale(1)" },
+              ],
+              { duration: motionLevel === "refined" ? 260 : 200, easing: "cubic-bezier(.2,.85,.25,1)", fill: "none" },
+            );
+            mobileRouteAnimation.current = animation;
+            animation.onfinish = () => {
+              if (mobileRouteAnimation.current !== animation) return;
+              main.style.removeProperty("transform-origin");
+              mobileRouteAnimation.current = null;
+            };
+          } catch {
+            main.style.removeProperty("transform-origin");
+          }
+        }
+      }
     }
-    router.push(href);
   }
   function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -364,7 +368,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const indicatorTransform = `translateX(${activeIndicatorSlot * 100}%)`;
   return (
-    <div className={cn("app-shell-root min-h-screen md:flex", `motion-level-${motionLevel} page-transition-${pageTransitionStyle}`, mobileRouteReveal && "is-navigating")}>
+    <div className={cn("app-shell-root min-h-screen md:flex", `motion-level-${motionLevel} page-transition-${pageTransitionStyle}`)}>
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[#eaedf1] bg-white transition-all md:flex",
@@ -506,11 +510,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {mode === "local" && user && <button type="button" aria-label="退出登录" title="退出登录" disabled={logoutBusy} onClick={signOut} className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"><LogOut size={17}/></button>}
           </div>
         </header>
-        <main
-          key={mode}
-          className={cn("mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10", pageTransitionStyle === "apple" && mobileRouteReveal && (mobileRouteReveal.fromPath === pathname || mobileRouteReveal.href === pathname) && "mobile-route-reveal")}
-          style={pageTransitionStyle === "apple" && mobileRouteReveal && (mobileRouteReveal.fromPath === pathname || mobileRouteReveal.href === pathname) ? { "--nav-reveal-x": `${mobileRouteReveal.x}px`, "--nav-reveal-y": `${mobileRouteReveal.y}px` } as React.CSSProperties : undefined}
-        >
+        <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
           {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为 0.9.3 旧预览版本，不会为新变化做适配</div>}
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
           {error && (
