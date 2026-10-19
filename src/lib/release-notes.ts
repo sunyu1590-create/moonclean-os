@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.10";
+export const APP_VERSION = "0.9.11";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.11",
+    date: "2026-10-19",
+    title: "页面过渡动效细化",
+    changes: [
+      "模糊渐显从 70% 尺寸柔和展开至完整页面，同时由虚化过渡到清晰。",
+      "模糊上浮延长过渡时间，让上浮与清晰过程更舒展；标准档稍快，简单档保持静态。",
+    ],
+  },
   {
     version: "0.9.10",
     date: "2026-10-19",
