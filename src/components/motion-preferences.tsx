@@ -57,9 +57,8 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
         else if (savedPageTransition === "dynamic-lift") {
           setPageTransitionStyleState("blur-lift");
           localStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, "blur-lift");
-        } else if (savedPageTransition === "apple") {
-          setPageTransitionStyleState("blur-fade");
-          localStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, "blur-fade");
+        } else if (savedPageTransition) {
+          localStorage.removeItem(PAGE_TRANSITION_STORAGE_KEY);
         }
       } catch { /* Keep the default for private browsing modes that block storage. */ }
       setReady(true);

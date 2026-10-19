@@ -498,20 +498,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span aria-hidden="true" className="mc-saving-glide" />
             </div>
           )}
-          {loading ? (
-            <div className="mc-workspace-skeleton" role="status" aria-label="正在加载店铺数据">
-              <span className="sr-only">正在加载店铺数据…</span>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">{Array.from({length:4},(_,index)=><div key={index} className="glass-card p-4"><Skeleton className="h-3 w-20"/><Skeleton className="mt-4 h-7 w-28"/><Skeleton className="mt-3 h-3 w-24"/></div>)}</div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-                <div className="glass-card p-4 md:p-6"><Skeleton className="h-4 w-32"/><Skeleton className="mt-2 h-3 w-52"/><div className="mt-6 flex h-44 items-end gap-2">{[42,65,50,78,57,88,68,74,52,80,61].map((height,index)=><Skeleton key={index} className="flex-1 rounded-t-md" style={{height:`${height}%`}}/>)}</div></div>
-                <div className="glass-card space-y-4 p-4 md:p-6"><Skeleton className="h-4 w-28"/>{Array.from({length:4},(_,index)=><div key={index} className="flex items-center gap-3"><Skeleton className="size-8 rounded-xl"/><div className="flex-1"><Skeleton className="h-3 w-4/5"/><Skeleton className="mt-2 h-2.5 w-2/5"/></div></div>)}</div>
+          <div key={pathname} className="app-page-transition">
+            {loading ? (
+              <div className="mc-workspace-skeleton" role="status" aria-label="正在加载店铺数据">
+                <span className="sr-only">正在加载店铺数据…</span>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">{Array.from({length:4},(_,index)=><div key={index} className="glass-card p-4"><Skeleton className="h-3 w-20"/><Skeleton className="mt-4 h-7 w-28"/><Skeleton className="mt-3 h-3 w-24"/></div>)}</div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+                  <div className="glass-card p-4 md:p-6"><Skeleton className="h-4 w-32"/><Skeleton className="mt-2 h-3 w-52"/><div className="mt-6 flex h-44 items-end gap-2">{[42,65,50,78,57,88,68,74,52,80,61].map((height,index)=><Skeleton key={index} className="flex-1 rounded-t-md" style={{height:`${height}%`}}/>)}</div></div>
+                  <div className="glass-card space-y-4 p-4 md:p-6"><Skeleton className="h-4 w-28"/>{Array.from({length:4},(_,index)=><div key={index} className="flex items-center gap-3"><Skeleton className="size-8 rounded-xl"/><div className="flex-1"><Skeleton className="h-3 w-4/5"/><Skeleton className="mt-2 h-2.5 w-2/5"/></div></div>)}</div>
+                </div>
               </div>
-            </div>
-          ) : mode === "cloud" && !activeStoreId && !error ? (
-            <StoreOnboarding />
-          ) : error && !data ? null : (
-            children
-          )}
+            ) : mode === "cloud" && !activeStoreId && !error ? (
+              <StoreOnboarding />
+            ) : error && !data ? null : (
+              children
+            )}
+          </div>
         </main>
       </div>
       <nav aria-label="主导航" className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`)}>

@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.13";
+export const APP_VERSION = "0.9.14";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.14",
+    date: "2026-10-19",
+    title: "页面过渡触发范围修复",
+    changes: [
+      "清除旧苹果动效偏好与底栏弹性入场动画，旧无效设置会自动清理。",
+      "页面过渡只作用于路由内容，保存、错误和加载状态不再误触发页面缩放动画。",
+    ],
+  },
   {
     version: "0.9.13",
     date: "2026-10-19",

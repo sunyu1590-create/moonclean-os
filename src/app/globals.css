@@ -276,23 +276,20 @@ select:focus-visible {
 .app-shell-root.motion-level-standard::before { opacity: .4; }
 .mobile-primary-nav a,
 .mobile-primary-nav button { -webkit-user-drag: none; user-select: none; }
-html[data-motion="refined"] main > * {
+html[data-motion="refined"] .app-page-transition {
   animation: premium-page-enter-refined var(--mc-motion-emphasis) var(--mc-ease-emphasis) both;
 }
-html[data-motion="refined"] main > *:nth-child(2) { animation-delay: 35ms; }
-html[data-motion="refined"] main > *:nth-child(3) { animation-delay: 70ms; }
-html[data-motion="refined"] main > *:nth-child(4) { animation-delay: 105ms; }
-html[data-motion="standard"] main > * { animation: premium-page-enter 220ms var(--mc-ease-standard) both; }
-.app-shell-root.page-transition-blur-fade main > * {
+html[data-motion="standard"] .app-page-transition { animation: premium-page-enter 220ms var(--mc-ease-standard) both; }
+.app-shell-root.page-transition-blur-fade .app-page-transition {
   animation: page-enter-blur-fade 480ms cubic-bezier(.16,1,.3,1) both;
 }
-.app-shell-root.page-transition-blur-lift main > * {
+.app-shell-root.page-transition-blur-lift .app-page-transition {
   animation: page-enter-blur-lift 500ms cubic-bezier(.2,.75,.25,1) both;
 }
-.app-shell-root.motion-level-standard.page-transition-blur-lift main > * {
+.app-shell-root.motion-level-standard.page-transition-blur-lift .app-page-transition {
   animation-duration: 440ms;
 }
-.app-shell-root.motion-level-simple main > * {
+.app-shell-root.motion-level-simple .app-page-transition {
   animation: none !important;
   filter: none !important;
   opacity: 1 !important;
@@ -336,7 +333,6 @@ html[data-motion="refined"] .mobile-primary-nav-refined {
   box-shadow: 0 18px 48px rgba(33,69,105,.19), 0 5px 15px rgba(31,69,111,.09), inset 0 1.5px 0 rgba(255,255,255,.96), inset 0 -1px 0 rgba(255,255,255,.48);
   -webkit-backdrop-filter: blur(18px) saturate(1.35);
   backdrop-filter: blur(18px) saturate(1.35);
-  animation: liquid-nav-arrive 620ms cubic-bezier(.16,.88,.28,1.08) both;
 }
 html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator {
   isolation: isolate;
@@ -486,7 +482,7 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mc-skeleton, .mc-skeleton::after, .mc-motion-spinner, .mc-button-spinner, .mc-saving-glide, .mc-chart-reveal,
-  html[data-motion] main > *, html[data-motion] [data-slot="button"],
+  html[data-motion] .app-page-transition, html[data-motion] [data-slot="button"],
   html[data-motion] [data-slot="dialog-content"], html[data-motion] [data-slot="dialog-overlay"] { animation: none !important; transition: none !important; }
   .mc-skeleton { background: #edf2f7; }
 }
@@ -515,11 +511,6 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
 @keyframes page-particle-drift {
   from { background-position: 8px 12px, 53px 37px, 19px 71px; }
   to { background-position: 8px -68px, 53px 117px, 19px -79px; }
-}
-@keyframes liquid-nav-arrive {
-  from { opacity: 0; transform: translateY(24px) scale(.94); }
-  70% { transform: translateY(-3px) scale(1.01); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 @keyframes nav-sparkle { 0%, 100% { transform: scale(.45); opacity: .24; } 48% { transform: scale(1.55); opacity: .95; } }
 @keyframes motion-screen-enter { from { opacity: 0; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
@@ -626,7 +617,7 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
   .data-mode-particle, .data-loader-spinner, .motion-switch-screen::before,
   .app-shell-root::before, .app-shell-root::after { animation:none !important; }
   .app-shell-root::before, .app-shell-root::after { opacity:0 !important; }
-  html[data-motion="refined"] main > * { animation-name:premium-page-enter !important; }
+  html[data-motion="refined"] .app-page-transition { animation-name:premium-page-enter !important; }
   .data-transition-card, .motion-switch-panel { backdrop-filter:none !important; }
 }
 @media (prefers-reduced-motion: reduce) {
