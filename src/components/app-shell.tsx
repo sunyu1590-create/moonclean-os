@@ -178,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchStore,
     switchDataMode,
   } = useApp();
-  const { level: motionLevel, reducedMotion } = useMotionPreferences();
+  const { level: motionLevel, reducedMotion, pageTransitionStyle } = useMotionPreferences();
   const [nightMode, setNightMode] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -193,7 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [dataModeDialogOpen, setDataModeDialogOpen] = useState(false);
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
-  const [mobileRouteReveal, setMobileRouteReveal] = useState<{ href: string; x: number; y: number } | null>(null);
+  const [mobileRouteReveal, setMobileRouteReveal] = useState<{ href: string; fromPath: string; x: number; y: number } | null>(null);
   const mobileRouteRevealTimer = useRef<number | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -225,6 +225,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.cancelAnimationFrame(frame);
   }, []);
   useEffect(() => () => { if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current); }, []);
+  useEffect(() => {
+    if (authPaths.includes(pathname)) return;
+    const timer = window.setTimeout(() => {
+      for (const href of mobilePrimary) router.prefetch(href);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [mobilePrimary, pathname, router]);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -281,12 +288,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || pathname === href) return;
     event.preventDefault();
     if (mobileRouteRevealTimer.current !== null) window.clearTimeout(mobileRouteRevealTimer.current);
-    if (motionLevel !== "simple" && !reducedMotion) {
+    if (pageTransitionStyle === "apple" && motionLevel !== "simple" && !reducedMotion) {
       const main = event.currentTarget.closest(".app-shell-root")?.querySelector("main");
       const mainBounds = main?.getBoundingClientRect();
       const origin = event.currentTarget.getBoundingClientRect();
       setMobileRouteReveal({
         href,
+        fromPath: pathname,
         x: origin.left + origin.width / 2 - (mainBounds?.left ?? 0),
         y: origin.top + origin.height / 2 - (mainBounds?.top ?? 0),
       });
@@ -356,7 +364,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const indicatorTransform = `translateX(${activeIndicatorSlot * 100}%)`;
   return (
-    <div className={`app-shell-root min-h-screen md:flex motion-level-${motionLevel}`}>
+    <div className={cn("app-shell-root min-h-screen md:flex", `motion-level-${motionLevel} page-transition-${pageTransitionStyle}`, mobileRouteReveal && "is-navigating")}>
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[#eaedf1] bg-white transition-all md:flex",
@@ -499,9 +507,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main
-          key={`${mode}-${pathname}`}
-          className={cn("mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10", mobileRouteReveal?.href === pathname && `mobile-route-reveal mobile-route-reveal-${motionLevel}`)}
-          style={mobileRouteReveal?.href === pathname ? { "--nav-reveal-x": `${mobileRouteReveal.x}px`, "--nav-reveal-y": `${mobileRouteReveal.y}px` } as React.CSSProperties : undefined}
+          key={mode}
+          className={cn("mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10", pageTransitionStyle === "apple" && mobileRouteReveal && (mobileRouteReveal.fromPath === pathname || mobileRouteReveal.href === pathname) && "mobile-route-reveal")}
+          style={pageTransitionStyle === "apple" && mobileRouteReveal && (mobileRouteReveal.fromPath === pathname || mobileRouteReveal.href === pathname) ? { "--nav-reveal-x": `${mobileRouteReveal.x}px`, "--nav-reveal-y": `${mobileRouteReveal.y}px` } as React.CSSProperties : undefined}
         >
           {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为 0.9.3 旧预览版本，不会为新变化做适配</div>}
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}

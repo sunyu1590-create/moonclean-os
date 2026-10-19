@@ -17,6 +17,8 @@ import {
   CircleOff,
   Activity,
   ChevronDown,
+  MoveUpRight,
+  Expand,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -37,13 +39,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
-import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
+import { MOTION_LEVELS, useMotionPreferences, type MotionLevel, type PageTransitionStyle } from "@/components/motion-preferences";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { notifyFeedback } from "@/lib/feedback";
 import { AttachmentBackup } from "@/components/attachment-backup";
+import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
-  const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
+  const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel, pageTransitionStyle, setPageTransitionStyle } = useMotionPreferences();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -249,7 +252,23 @@ export default function SettingsPage() {
                 </button>;
               })}
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效只保存在当前设备。精致增强光环与弹性反馈，标准采用短过渡，简单关闭装饰动效；系统开启“减少动态效果”时会自动静态呈现。</p>
+            <div className="mt-4 border-t border-[#edf1f5] pt-3">
+              <p className="mb-2 text-xs font-semibold text-[#526a80]">底栏页面切换</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "dynamic-lift", label: "动态上浮", description: "保留旧版淡入上浮效果", Icon: MoveUpRight },
+                  { id: "apple", label: "苹果样式", description: "从点击位置弹性展开", Icon: Expand },
+                ] as const).map(({ id, label, description, Icon }) => {
+                  const selected = pageTransitionStyle === id;
+                  return <button key={id} type="button" aria-pressed={selected} onClick={() => setPageTransitionStyle(id as PageTransitionStyle)} className={cn("flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors sm:gap-3 sm:p-3", selected ? "border-[#9cc8ee] bg-[#f0f8ff] text-[#287fe2]" : "border-[#e7edf3] bg-white text-[#718296] hover:border-[#cbdced]")}>
+                    <Icon size={17} className="shrink-0"/>
+                    <span className="min-w-0 flex-1"><strong className="block text-[11px] sm:text-xs">{label}</strong><span className="mt-0.5 block truncate text-[9px] text-[#8999a8] sm:text-[10px]">{description}</span></span>
+                    {selected && <CheckIcon size={14} className="shrink-0"/>}
+                  </button>;
+                })}
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效偏好只保存在当前设备。简单档或系统开启“减少动态效果”时，页面切换会静态呈现。</p>
           </SectionCard>
           <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-[#3b91eb]" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-3 sm:p-4">

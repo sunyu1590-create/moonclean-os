@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.7";
+export const APP_VERSION = "0.9.8";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.8",
+    date: "2026-10-19",
+    title: "底栏切换方案可选与延迟优化",
+    changes: [
+      "设置中可选择旧版“动态上浮”或“苹果样式”；苹果样式从点击瞬间开始，切页时不再叠加全局渐入动画。",
+      "页面切换改用单一 transform 弹性动画并预热底栏入口，移除昂贵的模糊和裁切动画。",
+    ],
+  },
   {
     version: "0.9.7",
     date: "2026-10-19",

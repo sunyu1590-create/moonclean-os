@@ -5,6 +5,7 @@ import { Check, Sparkles, Zap } from "lucide-react";
 import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
+export type PageTransitionStyle = "dynamic-lift" | "apple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
   { id: "refined", label: "精致", short: "丰富动效", detail: "流动柔光、页面景深与细腻交互反馈。", experience: "丰富细腻" },
   { id: "standard", label: "标准", short: "适中动效", detail: "清晰短促的过渡和基础交互反馈。", experience: "轻盈克制" },
@@ -12,8 +13,9 @@ export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; det
 ];
 
 type MotionTransition = { id: number; to: MotionLevel };
-type MotionContextValue = { level: MotionLevel; ready: boolean; reducedMotion: boolean; setLevel: (level: MotionLevel) => void };
+type MotionContextValue = { level: MotionLevel; ready: boolean; reducedMotion: boolean; pageTransitionStyle: PageTransitionStyle; setLevel: (level: MotionLevel) => void; setPageTransitionStyle: (style: PageTransitionStyle) => void };
 const STORAGE_KEY = "moonclean-motion-level-v1";
+const PAGE_TRANSITION_STORAGE_KEY = "moonclean-page-transition-style-v1";
 const MotionContext = createContext<MotionContextValue | null>(null);
 
 export function useMotionPreferences() {
@@ -40,6 +42,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   const [level, setLevelState] = useState<MotionLevel>("standard");
   const [ready, setReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("apple");
   const [transition, setTransition] = useState<MotionTransition | null>(null);
   const transitionId = useRef(0);
   const timer = useRef<number | null>(null);
@@ -49,6 +52,8 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved === "refined" || saved === "standard" || saved === "simple") setLevelState(saved);
+        const savedPageTransition = localStorage.getItem(PAGE_TRANSITION_STORAGE_KEY);
+        if (savedPageTransition === "dynamic-lift" || savedPageTransition === "apple") setPageTransitionStyleState(savedPageTransition);
       } catch { /* Keep the default for private browsing modes that block storage. */ }
       setReady(true);
     });
@@ -84,7 +89,12 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
     timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "standard" ? 320 : 700);
   }, [level, reducedMotion]);
 
-  return <MotionContext.Provider value={{ level, ready, reducedMotion, setLevel }}>
+  const setPageTransitionStyle = useCallback((next: PageTransitionStyle) => {
+    setPageTransitionStyleState(next);
+    try { localStorage.setItem(PAGE_TRANSITION_STORAGE_KEY, next); } catch { /* Keep the current session preference when storage is unavailable. */ }
+  }, []);
+
+  return <MotionContext.Provider value={{ level, ready, reducedMotion, pageTransitionStyle, setLevel, setPageTransitionStyle }}>
     {children}
     {transition && <MotionSwitchScreen transition={transition}/>}
   </MotionContext.Provider>;
