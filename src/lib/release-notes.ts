@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.11";
+export const APP_VERSION = "0.9.12";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.12",
+    date: "2026-10-19",
+    title: "运营工作区轻量云端缓存",
+    changes: [
+      "运营备忘录、实验、竞品、客服与 AI 工作区使用按账号和店铺隔离的短期内存缓存，切页优先显示缓存并每 30 秒后台检查云端。",
+      "新增工作区手动刷新；缓存限制为最多 12 份且约 3 MB，超大内容不保留缓存，页面隐藏时暂停轮询。",
+    ],
+  },
   {
     version: "0.9.11",
     date: "2026-10-19",

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Archive, Check, Copy, FilePlus2, FlaskConical, Headset, History, MessageSquareText, NotebookPen, Plus, RotateCcw, Search, Send, Sparkles, Star, Trash2 } from "lucide-react";
+import { Archive, Check, Copy, FilePlus2, FlaskConical, Headset, History, MessageSquareText, NotebookPen, Plus, RefreshCw, RotateCcw, Search, Send, Sparkles, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,7 @@ import type { WorkspaceResource, WorkspaceRow } from "@/lib/workspace";
 import { operationsRequest } from "@/lib/operations";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { AppData } from "@/lib/model";
+import { getLatestWorkspaceCacheTime, refreshWorkspacePage, WORKSPACE_CACHE_UPDATED_EVENT } from "@/lib/workspace-cache";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type Module = "notes"|"experiments"|"competitors"|"service"|"copilot";
@@ -185,4 +186,35 @@ function CopilotModule({initialQuestion="",initialCompetitorId="",initialConvers
  <SectionCard title={activeConversationId?String(conversations.rows.find(c=>c.id===activeConversationId)?.title||"AI 运营分析"):"开始一次经营分析"} sub={mode!=="cloud"?"本地演示数据不会发送给 AI。切换云端店铺后，助手会使用授权经营数据。":configured===false?"请先到系统设置配置 DeepSeek 服务。未配置前不会生成虚假回答。":"对话会保存在当前云端店铺，并记录真实数据来源。"} className="flex min-h-[68vh] flex-col"><div className="mb-3 flex flex-wrap gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] ${configured?"bg-[#e8f7f2] text-[#16866f]":"bg-[#f0f3f6] text-[#78899a]"}`}>{configured?"DeepSeek 已配置":"DeepSeek 未连接"}</span><span className="rounded-full bg-[#f0f5fa] px-2.5 py-1 text-[10px] text-[#7a8c9e]">数据范围：近 30 日 · 商品 · 成本版本 · 实验 · 竞品</span><span className="rounded-full bg-[#f0f5fa] px-2.5 py-1 text-[10px] text-[#7a8c9e]">近500次调用 {usage.rows.length} 条 · Token {usage.rows.reduce((n,row)=>n+Number(row.prompt_tokens||0)+Number(row.completion_tokens||0),0)} · 失败 {usage.rows.filter(row=>row.outcome==="failed").length}</span></div><div className="mb-3"><p className="mb-2 text-[11px] font-semibold text-[#8191a1]">选择关联商品（可选）</p><div className="flex flex-wrap gap-1.5">{data?.products.slice(0,10).map(p=><button key={p.id} type="button" onClick={()=>setProductIds(current=>current.includes(p.id)?current.filter(id=>id!==p.id):[...current,p.id].slice(-10))} className={`rounded-full border px-2.5 py-1 text-[10px] ${productIds.includes(p.id)?"border-[#6ea9e9] bg-[#eaf4ff] text-[#287fe2]":"border-[#e3eaf0] text-[#75879a]"}`}>{p.name}</button>)}</div></div><div className="flex-1 space-y-3 overflow-y-auto rounded-2xl bg-[#f7fafd] p-3 md:p-4">{activeMessages.length===0?<div className="mx-auto max-w-xl py-10 text-center"><span className="mx-auto grid size-12 place-items-center rounded-2xl bg-[#e8f3ff] text-[#3888d7]"><Sparkles size={22}/></span><h3 className="mt-3 text-sm font-semibold">今天想分析什么？</h3><p className="mt-1 text-xs text-[#8191a1]">例如：哪个商品利润最高？近期 ROAS 合理吗？哪些实验值得继续？</p><div className="mt-4 flex flex-wrap justify-center gap-2">{["近 30 天经营表现与主要风险是什么？","哪些商品成本数据不完整，影响利润判断？","现有竞品与自有商品有哪些可验证的差异？","哪些运营实验可以继续，依据是什么？"].map(q=><button key={q} onClick={()=>setQuestion(q)} className="rounded-xl border border-[#e4edf5] bg-white px-3 py-2 text-left text-xs text-[#65778a] hover:bg-[#edf6ff]">{q}</button>)}</div></div>:activeMessages.map(m=><article key={m.id} className={`max-w-[92%] rounded-2xl p-3 md:p-4 ${m.role==="user"?"ml-auto bg-[#e7f2ff] text-[#304a64]":"border border-[#e8edf3] bg-white text-[#34475a]"}`}><p className="mb-2 text-[10px] font-semibold text-[#8192a3]">{m.role==="user"?"你":"MoonClean Copilot"}</p><MarkdownReply content={String(m.content)}/>{m.role==="assistant"&&<><div className="mt-3 flex flex-wrap gap-2"><Button size="xs" variant="outline" onClick={()=>void saveNote(String(m.content))}>保存为备忘录</Button><Button size="xs" variant="outline" onClick={()=>void createExperiment(String(m.content))}>转为实验草稿</Button><Button size="xs" variant="outline" onClick={()=>void createTask(String(m.content))}>创建任务</Button><Button size="xs" variant="outline" onClick={()=>void navigator.clipboard.writeText(String(m.content)).then(()=>notifyFeedback({kind:"success",title:"分析内容已复制"})).catch(()=>report(new Error("剪贴板不可用"),"复制失败"))}><Copy size={12}/>复制</Button></div>{Array.isArray(m.citations)&&(m.citations as {label:string;count:number}[]).length>0&&<p className="mt-2 text-[10px] text-[#8998a7]">数据引用：{(m.citations as {label:string;count:number}[]).map(c=>`${c.label} ${c.count} 条`).join(" · ")}</p>}</>}</article>)}</div><form onSubmit={send} className="mt-3"><Textarea value={question} onChange={e=>setQuestion(e.target.value)} maxLength={4000} rows={3} placeholder={!configured?"请先在系统设置连接 DeepSeek。":"输入经营问题；回答只引用当前店铺的真实数据。"} disabled={sending||mode!=="cloud"||!configured} className="resize-y rounded-2xl bg-white"/><div className="mt-2 flex items-center justify-between gap-2"><p className="text-[10px] text-[#8a99a8]">分析不构成自动经营操作；所有建议均需人工复核。</p><Button type="submit" disabled={sending||!question.trim()||mode!=="cloud"||!configured}>{sending?"正在读取数据并分析…":<><Send size={14}/>发送</>}</Button></div></form></SectionCard></div></>;
 }
 
-export function WorkspacePage({module,initialQuestion,initialCompetitorId,initialNoteId,initialRecordId,initialConversationId}:{module:Module;initialQuestion?:string;initialCompetitorId?:string;initialNoteId?:string;initialRecordId?:string;initialConversationId?:string}){switch(module){case"notes":return <NotesModule initialNoteId={initialNoteId}/>;case"experiments":return <ExperimentsModule initialRecordId={initialRecordId}/>;case"competitors":return <CompetitorsModule initialRecordId={initialRecordId}/>;case"service":return <ServiceModule initialRecordId={initialRecordId}/>;case"copilot":return <CopilotModule initialQuestion={initialQuestion} initialCompetitorId={initialCompetitorId} initialConversationId={initialConversationId}/>;}}
+export function WorkspacePage({module,initialQuestion,initialCompetitorId,initialNoteId,initialRecordId,initialConversationId}:{module:Module;initialQuestion?:string;initialCompetitorId?:string;initialNoteId?:string;initialRecordId?:string;initialConversationId?:string}){
+ const {mode,activeStoreId,user}=useApp();
+ const [refreshing,setRefreshing]=useState(false);
+ const [cacheUpdate,setCacheUpdate]=useState<{scope:string;updatedAt:number}|null>(null);
+ const cacheScope=mode==="cloud"&&activeStoreId&&user?.id?`${user.id}:${activeStoreId}`:"";
+ const lastUpdated=cacheScope?(cacheUpdate?.scope===cacheScope?cacheUpdate.updatedAt:getLatestWorkspaceCacheTime(user!.id,activeStoreId!)):null;
+ useEffect(()=>{
+  if(!cacheScope||!activeStoreId||!user?.id)return;
+  const onUpdated=(event:Event)=>{
+   const detail=(event as CustomEvent<{storeId:string;userId:string;updatedAt:number}>).detail;
+   if(detail?.storeId===activeStoreId&&detail.userId===user.id)setCacheUpdate({scope:cacheScope,updatedAt:detail.updatedAt});
+  };
+  window.addEventListener(WORKSPACE_CACHE_UPDATED_EVENT,onUpdated);
+  return()=>window.removeEventListener(WORKSPACE_CACHE_UPDATED_EVENT,onUpdated);
+ },[activeStoreId,cacheScope,user?.id]);
+ const refresh=async()=>{setRefreshing(true);try{await refreshWorkspacePage();notifyFeedback({kind:"success",title:"云端内容已刷新",description:"当前页面的数据已重新检查。"});}catch(cause){notifyFeedback({kind:"error",title:"部分内容刷新失败",description:cause instanceof Error?cause.message:"请检查网络后重试。"});}finally{setRefreshing(false);if(cacheScope&&activeStoreId&&user?.id)setCacheUpdate({scope:cacheScope,updatedAt:getLatestWorkspaceCacheTime(user.id,activeStoreId)||Date.now()});}};
+ let content:React.ReactNode;
+ switch(module){
+  case"notes":content=<NotesModule initialNoteId={initialNoteId}/>;break;
+  case"experiments":content=<ExperimentsModule initialRecordId={initialRecordId}/>;break;
+  case"competitors":content=<CompetitorsModule initialRecordId={initialRecordId}/>;break;
+  case"service":content=<ServiceModule initialRecordId={initialRecordId}/>;break;
+  case"copilot":content=<CopilotModule initialQuestion={initialQuestion} initialCompetitorId={initialCompetitorId} initialConversationId={initialConversationId}/>;break;
+ }
+ return <>
+  {mode==="cloud"&&<div className="mb-2 flex items-center justify-end gap-2 px-1 text-[10px] text-[#8b9bab] sm:mb-3">
+   <span>{lastUpdated?`最近同步 ${new Date(lastUpdated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})} · 30 秒自动检查`:"云端缓存 · 30 秒自动检查"}</span>
+   <Button size="xs" variant="outline" disabled={refreshing} onClick={()=>void refresh()}><RefreshCw size={12} className={refreshing?"animate-spin":""}/>{refreshing?"刷新中":"手动刷新"}</Button>
+  </div>}
+  {content}
+ </>;
+}
