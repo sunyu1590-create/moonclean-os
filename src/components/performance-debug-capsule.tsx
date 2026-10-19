@@ -159,10 +159,10 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
         {show("longtasks") && <DebugMetric label="长任务监测" value={metrics.longTasks === null ? "浏览器未开放" : `${metrics.longTasks} 次`} detail={metrics.firstPaint === null ? "FCP 暂不可用" : `首次内容绘制 ${Math.round(metrics.firstPaint)} ms`} icon={<Activity size={15}/>} />}
         {show("workspace") && <DebugMetric label="当前工作区" value={dataMode === "cloud" ? "云端数据" : "本地数据"} detail={`动效：${motionLabels[motionLevel]}`} icon={<Network size={15}/>} />}
       </div>
-      {visibleMetrics.length === 0 && <p className="rounded-xl bg-[#f4f8fc] p-3 text-xs text-[#7f91a2]">尚未选择指标。请前往系统设置，自定义要显示的诊断信息。</p>}
+      {visibleMetrics.length === 0 && <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs text-muted-foreground">尚未选择指标。请前往系统设置，自定义要显示的诊断信息。</p>}
       <p className="performance-debug-note">FPS 与帧耗时由页面动画帧估算；硬件内存和真实屏幕刷新率受浏览器权限限制，不可用时会如实标注。</p>
       <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => void copyDiagnostics()}><Copy size={14}/>{copied ? "已复制诊断信息" : "复制诊断信息"}</Button>
-      {copyError && <p role="alert" className="mt-2 text-xs text-[#e85d65]">{copyError}</p>}
+      {copyError && <p role="alert" className="mt-2 text-xs text-[var(--mc-color-danger)]">{copyError}</p>}
     </section>}
   </div>;
 }

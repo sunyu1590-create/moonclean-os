@@ -187,11 +187,11 @@ export default function Advertising() {
                       {form.formState.errors.attributedOrders?.message}
                     </p>
                   </div>
-                  <p className="text-xs text-[#8296a9]">
+                  <p className="text-xs text-muted-foreground">
                     请填写广告平台报告中的归因成交额，勿填全店成交额。
                   </p>
                   {form.formState.errors.root?.message && (
-                    <p role="alert" className="text-sm text-[#e85d65]">
+                    <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
                       {form.formState.errors.root.message}
                     </p>
                   )}
@@ -253,8 +253,8 @@ export default function Advertising() {
         </SectionCard>
         <SectionCard title="推广效率分析" sub="用于判断投入产出与成本安全线">
           <div className="space-y-4">
-            <div className="rounded-2xl bg-[#f2f9ff] p-5">
-              <p className="text-xs text-[#7894ae]">投入产出状态</p>
+            <div className="rounded-2xl bg-[var(--mc-tint-blue)] p-5">
+              <p className="text-xs text-muted-foreground">投入产出状态</p>
               <p className="mt-2 text-lg font-bold">
                 {summary.roas === null
                   ? "暂无广告消耗"
@@ -264,12 +264,12 @@ export default function Advertising() {
                       ? "高于估算盈亏平衡线"
                       : "低于估算盈亏平衡线"}
               </p>
-              <p className="mt-2 text-xs leading-5 text-[#8296a9]">
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 估算盈亏平衡 ROAS = 1 ÷（1 − 非广告成本 ÷
                 净销售额）。该指标使用全店平均贡献率，仅供经营参考。
               </p>
             </div>
-            <p className="text-xs leading-5 text-[#8a9eb0]">
+            <p className="text-xs leading-5 text-muted-foreground">
               广告 ROAS
               仅使用录入的广告归因成交额。净利润仍以全店实际销售额和费用汇总计算。
             </p>
@@ -283,7 +283,7 @@ export default function Advertising() {
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b text-xs text-[#90a2b3]">
+            <thead className="border-b text-xs text-muted-foreground">
               <tr>
                 <th className="py-3">日期</th>
                 <th>广告消耗</th>
@@ -297,13 +297,13 @@ export default function Advertising() {
               {[...ads].reverse().map((ad) => (
                 <tr
                   key={ad.id}
-                  className="border-b border-[#edf2f7] last:border-0"
+                  className="border-b border-border last:border-0"
                 >
                   <td className="py-3 font-medium">{ad.date}</td>
                   <td>{formatMoney(ad.spend)}</td>
                   <td>{formatMoney(ad.attributedSales)}</td>
                   <td>{adRoas([ad]) !== null ? adRoas([ad]) + "x" : "—"}</td>
-                  <td className="text-xs text-[#8ca0b2]">
+                  <td className="text-xs text-muted-foreground">
                     {ad.isDemo ? "模拟数据" : ad.source === "image_import" ? "截图识别" : ad.source === "csv_import" ? "CSV 导入" : "手动录入"}
                   </td>
                   <td className="text-right">

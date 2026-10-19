@@ -111,11 +111,11 @@ function StoreOnboarding() {
   }
   return (
     <div className="mx-auto mt-10 max-w-lg glass-card p-7">
-      <span className="grid size-12 place-items-center rounded-2xl bg-[#e8f5ff] text-[#3b91eb]">
+      <span className="grid size-12 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary">
         <Cloud size={24} />
       </span>
       <h1 className="mt-5 text-2xl font-bold">创建第一个店铺</h1>
-      <p className="mt-2 text-sm text-[#8194a8]">
+      <p className="mt-2 text-sm text-muted-foreground">
         店铺数据会安全保存在云端，并可在手机和电脑间同步。
       </p>
       <form onSubmit={submit} className="mt-6 space-y-4">
@@ -139,7 +139,7 @@ function StoreOnboarding() {
           </label>
           <AppSelect
             id="store-platform"
-            className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
+            className="mt-2 flex h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
           >
@@ -149,7 +149,7 @@ function StoreOnboarding() {
           </AppSelect>
         </div>
         {error && (
-          <p role="alert" className="text-sm text-[#e85d65]">
+          <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
             {error}
           </p>
         )}
@@ -179,7 +179,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchDataMode,
   } = useApp();
   const { level: motionLevel, pageTransitionStyle } = useMotionPreferences();
-  const [nightMode, setNightMode] = useState(false);
+  const [themePreference, setThemePreference] = useState<"system" | "day" | "night">("system");
+  const [systemDark, setSystemDark] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+  const nightMode = themePreference === "night" || (themePreference === "system" && systemDark);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
@@ -194,15 +197,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [modeSwitchBusy, setModeSwitchBusy] = useState(false);
   const [modeSwitchError, setModeSwitchError] = useState("");
   useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystem = () => setSystemDark(media.matches);
+    syncSystem();
+    media.addEventListener("change", syncSystem);
     const frame = window.requestAnimationFrame(() => {
-      let enabled = false;
-      try { enabled = localStorage.getItem(themeStorageKey) === "night"; } catch { /* Keep the light default when storage is unavailable. */ }
-      setNightMode(enabled);
-      document.documentElement.dataset.theme = enabled ? "night" : "day";
-      document.documentElement.style.colorScheme = enabled ? "dark" : "light";
+      try {
+        const saved = localStorage.getItem(themeStorageKey);
+        if (saved === "night" || saved === "day") setThemePreference(saved);
+      } catch { /* Use the system theme when storage is unavailable. */ }
+      setThemeReady(true);
     });
-    return () => window.cancelAnimationFrame(frame);
+    return () => { window.cancelAnimationFrame(frame); media.removeEventListener("change", syncSystem); };
   }, []);
+  useEffect(() => {
+    if (!themeReady) return;
+    document.documentElement.dataset.theme = nightMode ? "night" : "day";
+    document.documentElement.style.colorScheme = nightMode ? "dark" : "light";
+  }, [nightMode, themeReady]);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
@@ -267,12 +279,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setModeSwitchBusy(false);
     }
   }
-  function toggleNightMode() {
-    const next = !nightMode;
-    setNightMode(next);
-    document.documentElement.dataset.theme = next ? "night" : "day";
-    document.documentElement.style.colorScheme = next ? "dark" : "light";
-    try { localStorage.setItem(themeStorageKey, next ? "night" : "day"); } catch { /* Apply the theme for this session even when storage is unavailable. */ }
+  function cycleTheme() {
+    const next = themePreference === "system" ? "day" : themePreference === "day" ? "night" : "system";
+    setThemePreference(next);
+    try { localStorage.setItem(themeStorageKey, next); } catch { /* Apply the theme for this session. */ }
   }
   function onSheetHandlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -337,11 +347,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className={cn("app-shell-root min-h-screen md:flex", `motion-level-${motionLevel} page-transition-${pageTransitionStyle}`)}>
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[#eaedf1] bg-white transition-all md:flex",
+          "mc-sidebar sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border transition-all md:flex",
           collapsed ? "w-[82px]" : "w-[252px]",
         )}
       >
-        <div className="flex h-[84px] items-center justify-between border-b border-[#f0f2f5] px-5">
+        <div className="flex h-[84px] items-center justify-between border-b border-border px-5">
           <Link
             href="/dashboard"
             className="flex items-center gap-3 overflow-hidden"
@@ -349,14 +359,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Image src="/yue-ming-jing-logo.png" alt="月明净" width={56} height={56} className="size-12 shrink-0 object-contain" priority />
             {!collapsed && (
               <span className="flex flex-col whitespace-nowrap">
-                <span className="text-[17px] font-bold tracking-[-.045em] text-[#202936]">MoonClean <span className="text-[#287fe2]">OS</span></span>
-                <span className="text-[10px] font-medium tracking-[.16em] text-[#98a3af]">月明净智能经营</span>
+                <span className="text-[17px] font-bold tracking-[-.045em] text-foreground">MoonClean <span className="text-primary">OS</span></span>
+                <span className="text-[10px] font-medium tracking-[.16em] text-muted-foreground">月明净智能经营</span>
               </span>
             )}
           </Link>
           <button
             aria-label="切换侧边栏"
-            className="rounded-lg p-1.5 text-[#9aa5b1] hover:bg-[#f2f5f8] hover:text-[#202936]"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-[var(--mc-tint-blue)] hover:text-foreground"
             onClick={() => setCollapsed((v) => !v)}
           >
             <PanelLeftClose size={18} />
@@ -365,7 +375,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 overflow-y-auto px-4 pb-6 pt-7">
           <p
             className={cn(
-              "mb-3 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]",
+              "mb-3 px-3 text-[11px] font-semibold tracking-[.16em] text-muted-foreground",
               collapsed && "sr-only",
             )}
           >
@@ -377,11 +387,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 title={label}
+                aria-current={pathname === href ? "page" : undefined}
                 className={cn(
                   "flex h-11 items-center gap-3 rounded-[13px] px-3 text-sm font-medium transition-colors",
                   pathname === href
-                    ? "bg-[#eaf2fd] font-semibold text-[#287fe2]"
-                    : "text-[#6f7d8d] hover:bg-[#f5f7f9] hover:text-[#202936]",
+                    ? "bg-[var(--mc-tint-blue)] font-semibold text-primary"
+                    : "text-muted-foreground hover:bg-[var(--mc-tint-blue)] hover:text-foreground",
                   collapsed && "justify-center",
                 )}
               >
@@ -390,12 +401,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-[#9ca7b4]", collapsed && "sr-only")}>经营工具与连接</p>
+          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-muted-foreground", collapsed && "sr-only")}>经营工具与连接</p>
           <nav className="space-y-1">
             {nav.slice(9).map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} title={label} className={cn(
+              <Link key={href} href={href} title={label} aria-current={pathname === href ? "page" : undefined} className={cn(
                 "flex h-11 items-center gap-3 rounded-[13px] px-3 text-sm font-medium transition-colors",
-                pathname === href ? "bg-[#eaf2fd] font-semibold text-[#287fe2]" : "text-[#6f7d8d] hover:bg-[#f5f7f9] hover:text-[#202936]",
+                pathname === href ? "bg-[var(--mc-tint-blue)] font-semibold text-primary" : "text-muted-foreground hover:bg-[var(--mc-tint-blue)] hover:text-foreground",
                 collapsed && "justify-center",
               )}>
                 <Icon size={19} strokeWidth={pathname === href ? 2.2 : 1.8} />{!collapsed && label}
@@ -405,36 +416,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="mt-auto p-4">
           {!collapsed && (
-            <div className="rounded-[18px] border border-[#e8edf2] bg-[#f7f9fb] p-4">
-              <div className="mb-1 truncate text-xs font-semibold text-[#202936]">
+            <div className="material-subtle rounded-[18px] p-4">
+              <div className="mb-1 truncate text-xs font-semibold text-foreground">
                 {data?.settings.store.name || "当前店铺"}
               </div>
-              <div className="text-xs text-[#8fa1b3]">
+              <div className="text-xs text-muted-foreground">
                 {mode === "cloud"
                   ? `云端数据 · ${role ? roleLabels[role] : ""}`
                   : "本地数据 · 当前设备"}
               </div>
             </div>
           )}
-          <div className="mt-4 px-2 text-[11px] text-[#a8b3bf]">
+          <div className="mt-4 px-2 text-[11px] text-muted-foreground">
             {!collapsed ? "MOONCLEAN OS · 工作台" : "OS"}
           </div>
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 border-b border-white/80 bg-white/82 px-3 py-1.5 shadow-[0_3px_18px_rgba(31,57,82,0.045)] backdrop-blur-md sm:px-5 md:h-[68px] md:px-9">
+        <header className="mc-toolbar material-standard sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 px-3 py-1.5 sm:px-5 md:h-[68px] md:px-9">
           <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.png" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
-          <div className="hidden items-center gap-2 text-xs text-[#92a0ae] md:flex">
+          <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
             <span>工作空间</span>
             <ChevronRight size={14} />
-            <span className="font-medium text-[#45617d]">{currentLabel}</span>
+            <span className="font-medium text-muted-foreground">{currentLabel}</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+            <button type="button" onClick={cycleTheme} title="切换外观" aria-label={`外观：${themePreference === "system" ? "跟随系统" : themePreference === "night" ? "深色" : "浅色"}，点击切换`} className="mc-toolbar-action hidden size-9 items-center justify-center rounded-xl md:inline-flex">
+              {nightMode ? <Moon size={17}/> : <Sun size={17}/>}
+            </button>
             {mode === "cloud" && stores.length > 0 && (
               <AppSelect
                 aria-label="切换店铺"
                 disabled={loading||modeSwitchBusy}
-                className="max-w-[30vw] rounded-xl border border-[#e4e9ef] bg-white/75 px-2 py-1.5 text-[11px] font-medium text-[#39485a] sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
+                className="max-w-[30vw] rounded-xl border border-border bg-card/75 px-2 py-1.5 text-[11px] font-medium text-foreground sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
                 value={activeStoreId || ""}
                 onChange={(e) => void switchStore(e.target.value).catch(() => {})}
               >
@@ -446,10 +460,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </AppSelect>
             )}
             <button type="button" onClick={() => { setModeSwitchError(""); setDataModeDialogOpen(true); }} disabled={loading||modeSwitchBusy} aria-label="切换本地数据或云端数据" title="切换数据存储位置" className={cn(
-              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[#d9f0e8] px-2 py-1.5 text-[10px] font-semibold transition-colors hover:bg-[#dff4ee] disabled:opacity-60 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
+              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border px-2 py-1.5 text-[10px] font-semibold transition-colors hover:bg-[var(--mc-tint-green)] disabled:opacity-60 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
               error
-                ? "bg-[#fff0f1] text-[#e85d65]"
-                : "bg-[#e9f7f3] text-[#16a085]",
+                ? "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]"
+                : "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]",
             )}>
               <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-current" />{mode === "local" ? error ? "本地异常" : saving ? "本机保存中…" : "本地数据" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}<ChevronDown size={12}/>
             </button>
@@ -458,7 +472,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href="/account"
                   title="账号设置"
-                  className="grid size-8 shrink-0 place-items-center rounded-full bg-[#edf3fb] text-[#287fe2] sm:size-9"
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--mc-tint-blue)] text-primary sm:size-9"
                 >
                   <CircleUserRound size={18} />
                 </Link>
@@ -467,22 +481,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title="退出登录"
                   disabled={logoutBusy}
                   onClick={signOut}
-                  className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"
+                  className="shrink-0 p-1 text-muted-foreground hover:text-[var(--mc-color-danger)]"
                 >
                   <LogOut size={17} />
                 </button>
               </>
             )}
-            {mode === "local" && user && <button type="button" aria-label="退出登录" title="退出登录" disabled={logoutBusy} onClick={signOut} className="shrink-0 p-1 text-[#8fa1b3] hover:text-[#e85d65]"><LogOut size={17}/></button>}
+            {mode === "local" && user && <button type="button" aria-label="退出登录" title="退出登录" disabled={logoutBusy} onClick={signOut} className="shrink-0 p-1 text-muted-foreground hover:text-[var(--mc-color-danger)]"><LogOut size={17}/></button>}
           </div>
         </header>
         <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
-          {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为 0.9.3 旧预览版本，不会为新变化做适配</div>}
-          {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
+          {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]">{logoutError}</div>}
           {error && (
             <div
               role="alert"
-              className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#f5d7da] bg-[#fff4f5] px-5 py-4 text-sm text-[#b9555d]"
+              className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-[var(--mc-tint-red)] px-5 py-4 text-sm text-[var(--mc-color-danger)]"
             >
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={() => void retry()}>
@@ -492,7 +505,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
           {saving && (
-            <div role="status" aria-live="polite" className="mc-saving-status mb-4 flex items-center gap-2 overflow-hidden rounded-xl border border-[#dcecff] bg-white/85 px-3 py-2.5 text-xs text-[#3b91eb]">
+            <div role="status" aria-live="polite" className="mc-saving-status mb-4 flex items-center gap-2 overflow-hidden rounded-xl border border-border bg-card/85 px-3 py-2.5 text-xs text-primary">
               <LoaderCircle size={15} className="mc-motion-spinner shrink-0" aria-hidden="true" />
               <span>{mode === "local" ? "正在保存到此设备…" : "正在保存到云端…"}</span>
               <span aria-hidden="true" className="mc-saving-glide" />
@@ -516,72 +529,72 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
-      <nav aria-label="主导航" className={cn("mobile-primary-nav fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] border border-white/80 bg-white/72 p-1.5 shadow-[0_8px_28px_rgba(31,57,82,0.14),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-md md:hidden", `mobile-primary-nav-${motionLevel}`)}>
+      <nav aria-label="主导航" className={cn("mobile-primary-nav material-standard fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] p-1.5 md:hidden", `mobile-primary-nav-${motionLevel}`)}>
         <div className="relative grid grid-cols-5">
-          <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[#e8f4ff]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform } as React.CSSProperties}>
+          <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[var(--mc-tint-blue)]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform } as React.CSSProperties}>
             {motionLevel === "refined" && <span className="mobile-active-spectrum"/>}
             {motionLevel === "refined" && <><i/><i/><i/><i/></>}
           </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-[#287fe2]" : "text-[#798898]")}>
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}
-          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-[#287fe2]" : "text-[#798898]")}>
+          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-primary" : "text-muted-foreground")}>
             <Menu size={20}/><span>更多</span>
           </button>
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
-        <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-[#e5edf5] bg-white/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
+        <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
           <button type="button" aria-label={mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能"} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title="上下滑动展开或收起">
-            <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[#c7d3df]" />
+            <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[var(--mc-tint-blue)]" />
           </button>
           <SheetHeader className="px-1 pb-4 text-left">
-            <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[#eaf4ff] text-[#3189e8]"><Sparkles size={21}/></div>
+            <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={21}/></div>
             <SheetTitle className="text-xl">更多功能</SheetTitle>
-            <p className="text-sm text-[#8192a3]">常用经营工具与系统管理</p>
+            <p className="text-sm text-muted-foreground">常用经营工具与系统管理</p>
           </SheetHeader>
-          <button type="button" aria-label={nightMode ? "切换日间模式" : "切换夜间模式"} aria-pressed={nightMode} onClick={toggleNightMode} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-[#e5edf5] bg-white p-3.5 text-left transition-colors hover:bg-[#f7fbff]">
-            <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[#eef6ff] text-[#3189e8]">{nightMode ? <Sun size={18}/> : <Moon size={18}/>}</span><span><span className="block text-sm font-semibold text-[#203751]">夜间模式</span><span className="mt-0.5 block text-xs text-[#8294a8]">{nightMode ? "已开启 · 点击切换日间" : "已关闭 · 点击切换夜间"}</span></span></span>
-            <span className={cn("relative h-6 w-11 rounded-full transition-colors", nightMode ? "bg-[#3189e8]" : "bg-[#d5dee7]")}><span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform", nightMode ? "translate-x-[22px]" : "translate-x-0.5")}/></span>
+          <button type="button" aria-label="切换外观" onClick={cycleTheme} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted">
+            <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary">{nightMode ? <Moon size={18}/> : <Sun size={18}/>}</span><span><span className="block text-sm font-semibold text-foreground">外观模式</span><span className="mt-0.5 block text-xs text-muted-foreground">{themePreference === "system" ? "跟随系统" : themePreference === "night" ? "深色" : "浅色"} · 点击切换</span></span></span>
+            <ChevronRight size={18} className="text-muted-foreground" />
           </button>
-          <button type="button" onClick={() => setCustomizingNav((value) => !value)} className="mb-5 flex w-full items-center justify-between rounded-2xl border border-[#dcecff] bg-gradient-to-r from-[#f1f8ff] to-white p-4 text-left transition-colors hover:bg-[#eaf4ff]">
-            <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-white text-[#3189e8] shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-[#203751]">自定义底栏</span><span className="mt-0.5 block text-xs text-[#8294a8]">选择常用入口，最多显示 4 个</span></span></span>
-            <ChevronRight size={18} className={cn("text-[#8ba0b4] transition-transform", customizingNav && "rotate-90")}/>
+          <button type="button" onClick={() => setCustomizingNav((value) => !value)} className="mb-5 flex w-full items-center justify-between rounded-2xl border border-border bg-gradient-to-r from-[var(--mc-tint-blue)] to-card p-4 text-left transition-colors hover:bg-[var(--mc-tint-blue)]">
+            <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-card text-primary shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-foreground">自定义底栏</span><span className="mt-0.5 block text-xs text-muted-foreground">选择常用入口，最多显示 4 个</span></span></span>
+            <ChevronRight size={18} className={cn("text-muted-foreground transition-transform", customizingNav && "rotate-90")}/>
           </button>
-          {customizingNav && <div className="mb-5 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-[#243c56]">底栏快捷入口</p><span className="text-xs text-[#8799ab]">已选 {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-[#b8d9fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#536579]")}><Icon size={17}/><span className="flex-1 truncate">{label}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-[#3b91eb] bg-[#3b91eb] text-white" : "border-[#d7e0e9]")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-[#66809a] hover:text-[#287fe2]">恢复默认底栏</button></div>}
-          <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-[#94a4b4]">经营工具</p>
+          {customizingNav && <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-foreground">底栏快捷入口</p><span className="text-xs text-muted-foreground">已选 {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground")}><Icon size={17}/><span className="flex-1 truncate">{label}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-border bg-primary text-primary-foreground" : "border-border")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-muted-foreground hover:text-primary">恢复默认底栏</button></div>}
+          <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground">经营工具</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-[#c8e1fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#42566b] hover:border-[#d7e9fb] hover:bg-[#f7fbff]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><Icon size={18}/></span>{label}</Link>)}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
           </div>
-          <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-[#94a4b4]">系统与账号</p>
+          <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-muted-foreground">系统与账号</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-[#c8e1fb] bg-[#eef7ff] text-[#287fe2]" : "border-[#edf1f5] bg-white text-[#42566b] hover:border-[#d7e9fb] hover:bg-[#f7fbff]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><Icon size={18}/></span>{label}</Link>)}
-            {mode==="cloud"&&<Link href="/account" onClick={()=>setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-[#edf1f5] bg-white p-3.5 text-sm font-medium text-[#42566b]"><span className="grid size-9 place-items-center rounded-xl bg-[#f2f7fb] text-[#5b83aa]"><CircleUserRound size={18}/></span>账号设置</Link>}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {mode==="cloud"&&<Link href="/account" onClick={()=>setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm font-medium text-foreground"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><CircleUserRound size={18}/></span>账号设置</Link>}
           </div>
         </SheetContent>
       </Sheet>
       <Dialog open={dataModeDialogOpen} onOpenChange={open=>{if(!modeSwitchBusy)setDataModeDialogOpen(open);}}>
-        <DialogContent className="rounded-[28px] border border-[#e3edf6] p-6 sm:max-w-lg">
+        <DialogContent className="rounded-[28px] border border-border p-6 sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl text-[#172b45]">选择数据存储位置</DialogTitle>
+            <DialogTitle className="text-xl text-foreground">选择数据存储位置</DialogTitle>
             <DialogDescription className="leading-6">切换只会更改当前读取的数据源，不会自动复制或合并两边的数据。</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             {(["cloud","local"] as const).map(target=>{
               const active=mode===target;
-              return <button key={target} type="button" disabled={modeSwitchBusy||loading} onClick={()=>void chooseDataMode(target)} className={cn("rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-wait disabled:opacity-60",active?"border-[#9cccf8] bg-[#f0f8ff] shadow-[inset_0_0_0_1px_#d5eaff]":"border-[#e6edf3] bg-white hover:border-[#c8def1]")}>
-                <span className={cn("mb-3 grid size-10 place-items-center rounded-xl",target==="cloud"?"bg-[#e8f5ff] text-[#3189e8]":"bg-[#eaf7f2] text-[#15987c]")}>{target==="cloud"?<Cloud size={20}/>:<HardDrive size={20}/>}</span>
-                <span className="block text-sm font-semibold text-[#253b53]">{target==="cloud"?"云端数据":"本地数据"}{active&&<span className="ml-2 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-[#4581b2]">当前使用</span>}</span>
-                <span className="mt-1.5 block text-xs leading-5 text-[#8092a4]">{target==="cloud"?"安全保存在云端，手机和电脑可同步，支持店铺与团队协作。":"保存在此设备的浏览器中；不会自动上传或跨设备同步。"}</span>
+              return <button key={target} type="button" disabled={modeSwitchBusy||loading} onClick={()=>void chooseDataMode(target)} className={cn("rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-wait disabled:opacity-60",active?"border-border bg-[var(--mc-tint-blue)] shadow-[inset_0_0_0_1px_#d5eaff]":"border-border bg-card hover:border-border")}>
+                <span className={cn("mb-3 grid size-10 place-items-center rounded-xl",target==="cloud"?"bg-[var(--mc-tint-blue)] text-primary":"bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]")}>{target==="cloud"?<Cloud size={20}/>:<HardDrive size={20}/>}</span>
+                <span className="block text-sm font-semibold text-foreground">{target==="cloud"?"云端数据":"本地数据"}{active&&<span className="ml-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-primary">当前使用</span>}</span>
+                <span className="mt-1.5 block text-xs leading-5 text-muted-foreground">{target==="cloud"?"安全保存在云端，手机和电脑可同步，支持店铺与团队协作。":"保存在此设备的浏览器中；不会自动上传或跨设备同步。"}</span>
               </button>;
             })}
           </div>
-          {modeSwitchError&&<p role="alert" className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#d35760]">{modeSwitchError}</p>}
-          {modeSwitchError.includes("登录")&&<Link href="/login" onClick={()=>setDataModeDialogOpen(false)} className="text-sm font-semibold text-[#287fe2]">前往登录云端账号 →</Link>}
-          <p className="text-xs leading-5 text-[#91a0af]">本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。</p>
+          {modeSwitchError&&<p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]">{modeSwitchError}</p>}
+          {modeSwitchError.includes("登录")&&<Link href="/login" onClick={()=>setDataModeDialogOpen(false)} className="text-sm font-semibold text-primary">前往登录云端账号 →</Link>}
+          <p className="text-xs leading-5 text-muted-foreground">本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。</p>
         </DialogContent>
       </Dialog>
       <PerformanceDebugCapsule motionLevel={motionLevel} dataMode={mode}/>

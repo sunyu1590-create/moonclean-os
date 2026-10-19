@@ -53,7 +53,7 @@ export function AppSelect({
       <SelectTrigger className={className} aria-required={required || undefined} {...triggerProps}>
         <span data-slot="select-value" className="min-w-0 flex-1 truncate text-left">{displayedLabel ?? "请选择"}</span>
       </SelectTrigger>
-      <SelectContent align="start" className="rounded-xl border border-[#dce8f4] bg-white p-1.5 shadow-[0_12px_32px_rgba(31,57,82,0.16)]">
+      <SelectContent align="start" className="rounded-xl border border-border bg-card p-1.5 shadow-[0_12px_32px_rgba(31,57,82,0.16)]">
         {options.map((option, index) => {
           const optionValue = option.props.value ?? "";
           return (
@@ -61,7 +61,7 @@ export function AppSelect({
               key={`${optionValue}-${index}`}
               value={optionValue === "" ? EMPTY_VALUE : optionValue}
               disabled={option.props.disabled}
-              className="min-h-10 cursor-pointer rounded-lg px-3 text-sm text-[#31475d] focus:bg-[#eaf4ff] focus:text-[#287fe2]"
+              className="min-h-10 cursor-pointer rounded-lg px-3 text-sm text-foreground focus:bg-[var(--mc-tint-blue)] focus:text-primary"
             >
               {option.props.children}
             </SelectItem>

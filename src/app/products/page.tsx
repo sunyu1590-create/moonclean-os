@@ -118,7 +118,7 @@ export default function Products() {
         }
       />
       <AiInsightPanel feature="products" context={{ productCount: data.products.length, skuCount: data.products.reduce((sum, product) => sum + product.skus.length, 0), incompleteSkuCosts: data.products.flatMap(product => product.skus).filter(sku => sku.costComplete === false).length }} />
-      <div className="mb-5 flex items-center gap-2 text-xs text-[#8fa3b6]">
+      <div className="mb-5 flex items-center gap-2 text-xs text-muted-foreground">
         <Package size={15} />
         已收录 {data.products.length} 个商品 ·{" "}
         {data.products.reduce((n, p) => n + p.skus.length, 0)} 个 SKU ·
@@ -154,7 +154,7 @@ export default function Products() {
             }
           >
             <div className="mb-4 flex items-center gap-2">
-              <span className="rounded-full bg-[#eaf5ff] px-2.5 py-1 text-[11px] text-[#3b91eb]">
+              <span className="rounded-full bg-[var(--mc-tint-blue)] px-2.5 py-1 text-[11px] text-primary">
                 {product.isDemo ? "模拟数据" : "自定义商品"}
               </span>
             </div>
@@ -162,27 +162,27 @@ export default function Products() {
               {product.skus.map((sku) => (
                 <div
                   key={sku.id}
-                  className="rounded-xl border border-[#eaf0f6] bg-[#fbfdff] p-4"
+                  className="rounded-xl border border-border bg-[var(--mc-tint-blue)] p-4"
                 >
                   <div className="mb-3 flex items-center gap-2">
-                    <Boxes size={16} className="text-[#3b91eb]" />
-                    <span className="text-sm font-semibold">{sku.name}</span>{sku.code && <span className="text-xs text-[#9aabba]">{sku.code}</span>}
+                    <Boxes size={16} className="text-primary" />
+                    <span className="text-sm font-semibold">{sku.name}</span>{sku.code && <span className="text-xs text-muted-foreground">{sku.code}</span>}
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <p className="text-[#9aabba]">售价</p>
+                      <p className="text-muted-foreground">售价</p>
                       <p className="number mt-1 text-sm font-semibold">
                         {formatMoney(sku.price)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[#9aabba]">成本合计</p>
+                      <p className="text-muted-foreground">成本合计</p>
                       <p className="number mt-1 text-sm font-semibold">
                         {sku.costComplete === false ? "数据不完整" : formatMoney(addMoney(Object.values(sku.cost)))}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[#9aabba]">单件贡献利润</p>
+                      <p className="text-muted-foreground">单件贡献利润</p>
                       <p
                         className={`number mt-1 text-sm font-bold ${Number(skuContribution(sku)) >= 0 ? "positive" : "negative"}`}
                       >
@@ -190,7 +190,7 @@ export default function Products() {
                       </p>
                     </div>
                   </div>
-                  {sku.costHistory && sku.costHistory.length > 0 && <details className="mt-3 border-t border-[#eaf0f6] pt-3 text-xs text-[#70879b]"><summary className="cursor-pointer">查看历史成本版本（{sku.costHistory.length}）</summary><div className="mt-2 space-y-1">{sku.costHistory.map((entry,index) => <p key={`${entry.effectiveFrom}-${index}`}>{entry.effectiveFrom} 起 · 合计 {formatMoney(addMoney(Object.values(entry.cost)))}</p>)}</div></details>}
+                  {sku.costHistory && sku.costHistory.length > 0 && <details className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground"><summary className="cursor-pointer">查看历史成本版本（{sku.costHistory.length}）</summary><div className="mt-2 space-y-1">{sku.costHistory.map((entry,index) => <p key={`${entry.effectiveFrom}-${index}`}>{entry.effectiveFrom} 起 · 合计 {formatMoney(addMoney(Object.values(entry.cost)))}</p>)}</div></details>}
                 </div>
               ))}
             </div>
@@ -198,11 +198,11 @@ export default function Products() {
         ))}
       </div>
       {mode === "cloud" && (data.externalCatalog?.length || 0) > 0 && (
-        <SectionCard title="拼多多同步商品（模拟）" sub="平台目录仅供核对；关联店内 SKU 后才可匹配成本版本。" action={<Link className="text-sm text-[#3b91eb]" href="/integrations">管理 SKU 关联 →</Link>}>
+        <SectionCard title="拼多多同步商品（模拟）" sub="平台目录仅供核对；关联店内 SKU 后才可匹配成本版本。" action={<Link className="text-sm text-primary" href="/integrations">管理 SKU 关联 →</Link>}>
           <div className="grid gap-3 sm:grid-cols-2">
-            {data.externalCatalog?.map(product => <div key={product.id} className="rounded-xl border border-[#eaf0f6] bg-[#fbfdff] p-4">
-              <p className="font-semibold">{product.name} <span className="text-xs font-normal text-[#3b91eb]">模拟数据</span></p>
-              {product.skus.map(sku => <p key={sku.id} className="mt-2 text-xs text-[#70879b]">{sku.name} · {formatMoney(sku.price)} · {sku.mappedSkuId ? "已关联店内 SKU" : "未关联，成本数据不完整"}</p>)}
+            {data.externalCatalog?.map(product => <div key={product.id} className="rounded-xl border border-border bg-[var(--mc-tint-blue)] p-4">
+              <p className="font-semibold">{product.name} <span className="text-xs font-normal text-primary">模拟数据</span></p>
+              {product.skus.map(sku => <p key={sku.id} className="mt-2 text-xs text-muted-foreground">{sku.name} · {formatMoney(sku.price)} · {sku.mappedSkuId ? "已关联店内 SKU" : "未关联，成本数据不完整"}</p>)}
             </div>)}
           </div>
         </SectionCard>
@@ -246,7 +246,7 @@ export default function Products() {
                 {draft.skus.map((sku, index) => (
                   <div
                     key={sku.id}
-                    className="rounded-2xl border border-[#e5edf5] bg-[#fafdff] p-4"
+                    className="rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4"
                   >
                     <div className="mb-4 flex items-center justify-between">
                       <strong className="text-sm">规格 {index + 1}</strong>
@@ -316,7 +316,7 @@ export default function Products() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-4 rounded-xl bg-[#eaf7f2] px-4 py-3 text-sm font-semibold text-[#16a085]">
+                    <div className="mt-4 rounded-xl bg-[var(--mc-tint-green)] px-4 py-3 text-sm font-semibold text-[var(--mc-color-success)]">
                       单件贡献利润：{formatMoney(skuContribution(sku))}
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function Products() {
                 <Plus size={16} />
                 添加规格
               </Button>
-              {error && <p className="text-sm text-[#e85d65]">{error}</p>}
+              {error && <p className="text-sm text-[var(--mc-color-danger)]">{error}</p>}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   取消

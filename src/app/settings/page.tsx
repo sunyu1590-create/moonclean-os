@@ -237,68 +237,68 @@ export default function SettingsPage() {
       />
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-5">
-          <SectionCard title="全站动效风格" sub="选择后会立即应用到当前设备；偏好保存在浏览器，不同步店铺数据。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
+          <SectionCard title="全站动效风格" sub="选择后会立即应用到当前设备；偏好保存在浏览器，不同步店铺数据。" action={<Sparkles size={19} className="text-primary" />}>
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
               {MOTION_LEVELS.map((option) => {
                 const selected = motionLevel === option.id;
                 const Icon = option.id === "refined" ? Sparkles : option.id === "standard" ? Zap : CircleOff;
-                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[124px] rounded-xl border p-2 text-left sm:min-h-[150px] sm:rounded-2xl sm:p-4 ${selected ? "motion-choice-selected border-[#7eb9ed] bg-[#f0f8ff] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-[#e7edf3] bg-white hover:border-[#cbdced]"}`}>
-                  {selected && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-[#378de0] text-white sm:right-3 sm:top-3 sm:size-5"><CheckIcon size={10}/></span>}
-                  <span className={`mb-2 grid size-7 place-items-center rounded-[10px] sm:mb-3 sm:size-10 sm:rounded-[14px] ${selected ? "bg-white text-[#3287d5]" : "bg-[#f4f7fa] text-[#8496a8]"}`}><Icon size={15} className="sm:size-[19px]"/></span>
-                  <strong className="block text-[11px] font-semibold text-[#263d54] sm:text-sm">{option.label}<span className="mt-0.5 block text-[9px] font-medium text-[#94a2af] sm:ml-1.5 sm:inline sm:text-[10px]">{option.short}</span></strong>
-                  <span className="mt-1 hidden text-[10px] font-medium text-[#5f89ae] sm:block">{option.experience}</span>
-                  <span className="mt-1 line-clamp-3 block text-[9px] leading-[1.4] text-[#8797a6] sm:mt-2 sm:text-[11px] sm:leading-[1.55]">{option.detail}</span>
+                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[124px] rounded-xl border p-2 text-left sm:min-h-[150px] sm:rounded-2xl sm:p-4 ${selected ? "motion-choice-selected border-border bg-[var(--mc-tint-blue)] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-border bg-card hover:border-border"}`}>
+                  {selected && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-primary text-primary-foreground sm:right-3 sm:top-3 sm:size-5"><CheckIcon size={10}/></span>}
+                  <span className={`mb-2 grid size-7 place-items-center rounded-[10px] sm:mb-3 sm:size-10 sm:rounded-[14px] ${selected ? "bg-card text-primary" : "bg-[var(--mc-tint-blue)] text-muted-foreground"}`}><Icon size={15} className="sm:size-[19px]"/></span>
+                  <strong className="block text-[11px] font-semibold text-foreground sm:text-sm">{option.label}<span className="mt-0.5 block text-[9px] font-medium text-muted-foreground sm:ml-1.5 sm:inline sm:text-[10px]">{option.short}</span></strong>
+                  <span className="mt-1 hidden text-[10px] font-medium text-primary sm:block">{option.experience}</span>
+                  <span className="mt-1 line-clamp-3 block text-[9px] leading-[1.4] text-muted-foreground sm:mt-2 sm:text-[11px] sm:leading-[1.55]">{option.detail}</span>
                 </button>;
               })}
             </div>
-            <div className="mt-4 border-t border-[#edf1f5] pt-3">
-              <p className="mb-2 text-xs font-semibold text-[#526a80]">底栏页面切换</p>
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground">底栏页面切换</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { id: "blur-fade", label: "模糊渐显", description: "只淡入并清晰，不缩放展开", Icon: Sparkles },
                   { id: "blur-lift", label: "模糊上浮", description: "轻微虚化并向上浮现", Icon: MoveUpRight },
                 ] as const).map(({ id, label, description, Icon }) => {
                   const selected = pageTransitionStyle === id;
-                  return <button key={id} type="button" aria-pressed={selected} onClick={() => setPageTransitionStyle(id as PageTransitionStyle)} className={cn("flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors sm:gap-3 sm:p-3", selected ? "border-[#9cc8ee] bg-[#f0f8ff] text-[#287fe2]" : "border-[#e7edf3] bg-white text-[#718296] hover:border-[#cbdced]")}>
+                  return <button key={id} type="button" aria-pressed={selected} onClick={() => setPageTransitionStyle(id as PageTransitionStyle)} className={cn("flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors sm:gap-3 sm:p-3", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground hover:border-border")}>
                     <Icon size={17} className="shrink-0"/>
-                    <span className="min-w-0 flex-1"><strong className="block text-[11px] sm:text-xs">{label}</strong><span className="mt-0.5 block truncate text-[9px] text-[#8999a8] sm:text-[10px]">{description}</span></span>
+                    <span className="min-w-0 flex-1"><strong className="block text-[11px] sm:text-xs">{label}</strong><span className="mt-0.5 block truncate text-[9px] text-muted-foreground sm:text-[10px]">{description}</span></span>
                     {selected && <CheckIcon size={14} className="shrink-0"/>}
                   </button>;
                 })}
               </div>
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-[#93a1af] sm:mt-3 sm:text-[11px] sm:leading-5">动效偏好只保存在当前设备。简单档或系统开启“减少动态效果”时，页面切换会静态呈现。</p>
+            <p className="mt-2 text-[10px] leading-4 text-muted-foreground sm:mt-3 sm:text-[11px] sm:leading-5">动效偏好只保存在当前设备。简单档或系统开启“减少动态效果”时，页面切换会静态呈现。</p>
           </SectionCard>
-          <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-[#3b91eb]" />}>
-            <div className="flex items-center justify-between gap-4 rounded-2xl border border-[#e8eef4] bg-[#fbfdff] p-3 sm:p-4">
-              <div className="min-w-0"><strong className="block text-sm text-[#263d54]">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-[#899aaa] sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
-              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !readPerformanceDebugEnabled(); setPerformanceDebugEnabled(next); notifyFeedback({ kind: "success", title: next ? "性能调试已开启" : "性能调试已关闭", description: next ? "悬浮胶囊已显示，面板默认收起。" : "当前设备的调试浮窗已隐藏。" }); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-[#3b91eb]" : "bg-[#cbd5df]"}`}><span className={`absolute top-1 size-5 rounded-full bg-white shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
+          <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-primary" />}>
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3 sm:p-4">
+              <div className="min-w-0"><strong className="block text-sm text-foreground">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-muted-foreground sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
+              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !readPerformanceDebugEnabled(); setPerformanceDebugEnabled(next); notifyFeedback({ kind: "success", title: next ? "性能调试已开启" : "性能调试已关闭", description: next ? "悬浮胶囊已显示，面板默认收起。" : "当前设备的调试浮窗已隐藏。" }); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
             </div>
-            <button type="button" aria-expanded={debugOptionsOpen} onClick={() => setDebugOptionsOpen((open) => !open)} className="mt-3 flex min-h-10 w-full items-center justify-between rounded-xl border border-[#e8eef4] bg-white px-3 text-left text-xs font-medium text-[#5d748b] hover:bg-[#f8fbfe]">
+            <button type="button" aria-expanded={debugOptionsOpen} onClick={() => setDebugOptionsOpen((open) => !open)} className="mt-3 flex min-h-10 w-full items-center justify-between rounded-xl border border-border bg-card px-3 text-left text-xs font-medium text-muted-foreground hover:bg-[var(--mc-tint-blue)]">
               <span>{debugOptionsOpen ? "收起调试选项" : "调试选项（自定义显示内容）"}</span>
               <ChevronDown size={16} className={`transition-transform ${debugOptionsOpen ? "rotate-180" : ""}`} />
             </button>
-            {debugOptionsOpen && <div className="mt-2 rounded-xl bg-[#f8fbfe] p-2.5">
+            {debugOptionsOpen && <div className="mt-2 rounded-xl bg-[var(--mc-tint-blue)] p-2.5">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {DEBUG_METRICS.map(({ id, label }) => <label key={id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-[#e8eef4] bg-white px-2.5 text-[10px] text-[#667b8f] sm:text-xs"><input type="checkbox" checked={debugMetrics.includes(id)} onChange={(event) => { const next = event.target.checked ? [...debugMetrics, id] : debugMetrics.filter((item) => item !== id); setDebugMetrics(next); setPerformanceDebugMetrics(next); }} className="size-3.5 accent-[#3b91eb]"/>{label}</label>)}
+                {DEBUG_METRICS.map(({ id, label }) => <label key={id} className="flex min-h-9 cursor-pointer items-center gap-2 rounded-xl border border-border bg-card px-2.5 text-[10px] text-muted-foreground sm:text-xs"><input type="checkbox" checked={debugMetrics.includes(id)} onChange={(event) => { const next = event.target.checked ? [...debugMetrics, id] : debugMetrics.filter((item) => item !== id); setDebugMetrics(next); setPerformanceDebugMetrics(next); }} className="size-3.5 accent-[#3b91eb]"/>{label}</label>)}
               </div>
-              <p className="mt-2 text-[10px] leading-4 text-[#96a4b2]">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
+              <p className="mt-2 text-[10px] leading-4 text-muted-foreground">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
             </div>}
           </SectionCard>
-          <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端，验证后加密保存，不会回传给浏览器。" action={<Sparkles size={19} className="text-[#3b91eb]" />}>
-            {mode !== "cloud" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[#f2f8fd] p-3 text-sm leading-6 text-[#70869b]">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[#f4f8fb] p-3"><span className={`size-2 rounded-full ${deepSeekState?.configured ? "bg-[#16a085]" : "bg-[#b7c3ce]"}`}/><span className="text-sm font-medium text-[#425b72]">{deepSeekState?.configured ? deepSeekState.source === "environment" ? "已从服务器环境变量接入" : "当前店铺已配置" : "尚未配置"}</span>{deepSeekState?.updatedAt && <span className="text-xs text-[#8b9aaa]">更新于 {new Date(deepSeekState.updatedAt).toLocaleString("zh-CN")}</span>}</div>
+          <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端，验证后加密保存，不会回传给浏览器。" action={<Sparkles size={19} className="text-primary" />}>
+            {mode !== "cloud" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--mc-tint-blue)] p-3"><span className={`size-2 rounded-full ${deepSeekState?.configured ? "bg-[var(--mc-color-success)]" : "bg-[var(--mc-tint-blue)]"}`}/><span className="text-sm font-medium text-muted-foreground">{deepSeekState?.configured ? deepSeekState.source === "environment" ? "已从服务器环境变量接入" : "当前店铺已配置" : "尚未配置"}</span>{deepSeekState?.updatedAt && <span className="text-xs text-muted-foreground">更新于 {new Date(deepSeekState.updatedAt).toLocaleString("zh-CN")}</span>}</div>
               <div><Label htmlFor="deepseek-api-key">DeepSeek API Key</Label><Input id="deepseek-api-key" type="password" autoComplete="new-password" value={deepSeekKey} onChange={(event) => setDeepSeekKey(event.target.value)} disabled={!deepSeekState?.canSave || deepSeekBusy} placeholder={deepSeekState?.configured ? "已安全保存；输入新 Key 可替换" : "粘贴 DeepSeek API Key"} className="mt-1.5"/></div>
-              <div className="flex flex-wrap items-center gap-2"><Button type="button" loading={deepSeekBusy} onClick={() => void saveDeepSeekKey()} disabled={!deepSeekState?.canSave || deepSeekBusy || !deepSeekKey.trim()}>{deepSeekBusy ? "正在验证…" : "验证并保存"}</Button>{deepSeekState?.source === "store" && <Button type="button" variant="outline" disabled={deepSeekBusy} onClick={() => void deleteDeepSeekKey()}>删除已保存密钥</Button>}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="text-xs font-medium text-[#347fc1] underline underline-offset-2">前往 DeepSeek 创建 API Key</a></div>
-              {deepSeekState?.error && <p role="alert" className="rounded-xl bg-[#fff8e9] p-3 text-xs leading-5 text-[#8d7146]">{deepSeekState.error}</p>}
-              {deepSeekMessage && <p role={deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "status" : "alert"} className={`rounded-xl p-3 text-xs leading-5 ${deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "bg-[#eaf8f4] text-[#168b72]" : "bg-[#fff0f1] text-[#c45761]"}`}>{deepSeekMessage}</p>}
-              <p className="text-[10px] leading-5 text-[#8b9aaa]">首次使用需在 Vercel 配置服务端 <code>SUPABASE_SECRET_KEY</code> 并应用仓库的 DeepSeek 密钥表迁移。服务器使用该密钥加密店铺 Key；不要把服务端密钥添加为 NEXT_PUBLIC 变量。</p>
+              <div className="flex flex-wrap items-center gap-2"><Button type="button" loading={deepSeekBusy} onClick={() => void saveDeepSeekKey()} disabled={!deepSeekState?.canSave || deepSeekBusy || !deepSeekKey.trim()}>{deepSeekBusy ? "正在验证…" : "验证并保存"}</Button>{deepSeekState?.source === "store" && <Button type="button" variant="outline" disabled={deepSeekBusy} onClick={() => void deleteDeepSeekKey()}>删除已保存密钥</Button>}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="text-xs font-medium text-primary underline underline-offset-2">前往 DeepSeek 创建 API Key</a></div>
+              {deepSeekState?.error && <p role="alert" className="rounded-xl bg-[var(--mc-tint-orange)] p-3 text-xs leading-5 text-[var(--mc-color-warning)]">{deepSeekState.error}</p>}
+              {deepSeekMessage && <p role={deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "status" : "alert"} className={`rounded-xl p-3 text-xs leading-5 ${deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]"}`}>{deepSeekMessage}</p>}
+              <p className="text-[10px] leading-5 text-muted-foreground">首次使用需在 Vercel 配置服务端 <code>SUPABASE_SECRET_KEY</code> 并应用仓库的 DeepSeek 密钥表迁移。服务器使用该密钥加密店铺 Key；不要把服务端密钥添加为 NEXT_PUBLIC 变量。</p>
             </div>}
           </SectionCard>
           <SectionCard
             title="店铺信息"
             sub="店铺时区决定经营日期与成本生效日期"
-            action={<Store size={19} className="text-[#3b91eb]" />}
+            action={<Store size={19} className="text-primary" />}
           >
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
@@ -320,7 +320,7 @@ export default function SettingsPage() {
                 <Label>经营平台</Label>
                 <AppSelect
                   disabled={!canManage}
-                  className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
+                  className="mt-2 flex h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
                   value={draft.store.platform}
                   onChange={(e) =>
                     setDraft({
@@ -341,7 +341,7 @@ export default function SettingsPage() {
                 <Label>货币单位</Label>
                 <AppSelect
                   disabled={!canManage}
-                  className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
+                  className="mt-2 flex h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
                   value={draft.store.currency}
                   onChange={(e) =>
                     setDraft({
@@ -356,7 +356,7 @@ export default function SettingsPage() {
                   <option value="CNY">人民币（CNY / ¥）</option>
                   <option value="USD">美元（USD / $）</option>
                 </AppSelect>
-                <p className="mt-1 text-xs text-[#9aabba]">
+                <p className="mt-1 text-xs text-muted-foreground">
                   只改变显示符号，不进行汇率换算。
                 </p>
               </div>
@@ -364,7 +364,7 @@ export default function SettingsPage() {
                 <Label>店铺时区</Label>
                 <AppSelect
                   disabled={!canManage}
-                  className="mt-2 flex h-9 w-full rounded-md border border-[#dfeaf4] bg-white px-3 text-sm"
+                  className="mt-2 flex h-9 w-full rounded-md border border-border bg-card px-3 text-sm"
                   value={draft.store.timezone || "Asia/Shanghai"}
                   onChange={(e) =>
                     setDraft({
@@ -385,7 +385,7 @@ export default function SettingsPage() {
           <SectionCard
             title="经营目标与预警"
             sub="总览会展示目标进度与低利润提醒"
-            action={<Target size={19} className="text-[#3b91eb]" />}
+            action={<Target size={19} className="text-primary" />}
           >
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
@@ -400,8 +400,8 @@ export default function SettingsPage() {
                   value={draft.salesTarget}
                   onChange={(e) => { setDraft({ ...draft, salesTarget: e.target.value }); setError(""); setSaved(false); }}
                 />
-                <p className="mt-1.5 text-xs text-[#91a0af]">按每月填写，支持千位逗号，例如 100,000；保存后自动规范为纯数字。</p>
-                {!canManage && <p className="mt-1 text-xs text-[#bc7657]">当前角色没有修改经营目标的权限，请联系店主或管理员。</p>}
+                <p className="mt-1.5 text-xs text-muted-foreground">按每月填写，支持千位逗号，例如 100,000；保存后自动规范为纯数字。</p>
+                {!canManage && <p className="mt-1 text-xs text-[var(--mc-color-warning)]">当前角色没有修改经营目标的权限，请联系店主或管理员。</p>}
               </div>
               <div>
                 <Label>利润率预警阈值（%）</Label>
@@ -421,7 +421,7 @@ export default function SettingsPage() {
             </div>
           </SectionCard>
           {error && (
-            <p role="alert" className="text-sm text-[#e85d65]">
+            <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
               {error}
             </p>
           )}
@@ -441,7 +441,7 @@ export default function SettingsPage() {
                 ? "备份全部自有店铺的云端业务数据，便于迁移和留档"
                 : "数据保存在当前浏览器"
             }
-            action={<ShieldCheck size={19} className="text-[#3b91eb]" />}
+            action={<ShieldCheck size={19} className="text-primary" />}
           >
             <div className="space-y-3">
               {mode === "local" && <input ref={(node) => { localFileRef.current = node; }} type="file" accept=".json,application/json" className="hidden" onChange={(event) => { void inspectLocalBackup(event.target.files?.[0]); event.target.value = ""; }} />}
@@ -460,7 +460,7 @@ export default function SettingsPage() {
                 {mode === "local" ? "导出本地全量备份" : "导出当前店铺轻量 JSON"}
               </Button>
               {mode === "local" && <Button className="w-full justify-start" variant="outline" onClick={() => localFileRef.current?.click()}><DatabaseZap size={16} />导入本地全量备份</Button>}
-              {localImportError && <p role="alert" className="text-xs leading-5 text-[#e85d65]">{localImportError}</p>}
+              {localImportError && <p role="alert" className="text-xs leading-5 text-[var(--mc-color-danger)]">{localImportError}</p>}
               {mode === "cloud" && role === "owner" && (
                 <Button
                   className="w-full justify-start"
@@ -473,32 +473,32 @@ export default function SettingsPage() {
                 </Button>
               )}
               {mode === "cloud" && role === "owner" && (
-                <div className="rounded-xl border border-[#e8eef4] bg-white p-3">
-                  <p className="mb-2 text-xs font-semibold text-[#324b63]">售后附件迁移</p>
+                <div className="rounded-xl border border-border bg-card p-3">
+                  <p className="mb-2 text-xs font-semibold text-foreground">售后附件迁移</p>
                   <AttachmentBackup />
                 </div>
               )}
               {backupMessage && (
-                <p role="status" className="text-xs text-[#168a70]">
+                <p role="status" className="text-xs text-[var(--mc-color-success)]">
                   {backupMessage}
                 </p>
               )}
               {backupError && (
-                <p role="alert" className="text-xs text-[#e85d65]">
+                <p role="alert" className="text-xs text-[var(--mc-color-danger)]">
                   {backupError}
                 </p>
               )}
               {mode === "cloud" ? (
                 <Link
                   href="/migrate"
-                  className="flex h-9 items-center gap-2 rounded-md border border-[#dfeaf4] px-3 text-sm hover:bg-[#f2f8ff]"
+                  className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm hover:bg-[var(--mc-tint-blue)]"
                 >
                   <DatabaseZap size={16} />
                   迁移第一阶段本地数据
                 </Link>
               ) : (
                 <Button
-                  className="w-full justify-start text-[#d15a62]"
+                  className="w-full justify-start text-[var(--mc-color-danger)]"
                   variant="outline"
                   onClick={() => setConfirm(true)}
                 >
@@ -507,7 +507,7 @@ export default function SettingsPage() {
                 </Button>
               )}
             </div>
-            <p className="mt-4 text-xs leading-5 text-[#9aabba]">
+            <p className="mt-4 text-xs leading-5 text-muted-foreground">
               {mode === "cloud"
                 ? "完整 JSON 备份包括业务记录和售后附件路径；附件文件可用下方单独 ZIP 导出与恢复。登录密码和平台访问令牌不导出，迁移后需重新邀请成员并配置平台连接。"
                 : "本地全量备份包含商品及 SKU 成本、经营日报、推广、待办、库存、设置和其他本地工作区数据。导入会替换当前本地工作区，并在替换前自动下载现有备份。云端订单、售后和平台连接数据不属于本地工作区。"}
@@ -516,13 +516,13 @@ export default function SettingsPage() {
           <SectionCard
             title="账号与权限"
             sub="身份由 Supabase Authentication 管理"
-            action={<UserRound size={19} className="text-[#3b91eb]" />}
+            action={<UserRound size={19} className="text-primary" />}
           >
-            <p className="text-sm text-[#748a9e]">当前角色：{role || "店主"}</p>
+            <p className="text-sm text-muted-foreground">当前角色：{role || "店主"}</p>
             {mode === "cloud" && (
               <Link
                 href="/account"
-                className="mt-3 inline-block text-sm font-semibold text-[#3b91eb]"
+                className="mt-3 inline-block text-sm font-semibold text-primary"
               >
                 管理当前账号 →
               </Link>
@@ -566,12 +566,12 @@ export default function SettingsPage() {
             <AlertDialogTitle>确认导入本地全量备份？</AlertDialogTitle>
             <AlertDialogDescription>文件已通过格式、版本和重复日期校验。导入会替换当前浏览器的本地工作区；开始替换前，系统会先下载当前数据备份。</AlertDialogDescription>
           </AlertDialogHeader>
-          {localImportPreview && <div className="rounded-xl bg-[#f4f9fe] p-3 text-sm leading-6 text-[#526a80]">
-            <p className="font-semibold text-[#172b45]">{localImportPreview.settings.store.name} · {localImportPreview.settings.store.platform === "pinduoduo" ? "拼多多" : localImportPreview.settings.store.platform === "douyin" ? "抖音电商" : "其他平台"}</p>
+          {localImportPreview && <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">
+            <p className="font-semibold text-foreground">{localImportPreview.settings.store.name} · {localImportPreview.settings.store.platform === "pinduoduo" ? "拼多多" : localImportPreview.settings.store.platform === "douyin" ? "抖音电商" : "其他平台"}</p>
             <p>商品 {localImportPreview.products.length} 个，经营日报 {localImportPreview.daily.length} 条，推广记录 {localImportPreview.advertising.length} 条</p>
             <p>待办 {localImportPreview.tasks?.length || 0} 条，库存 SKU {localImportPreview.inventory?.length || 0} 个</p>
           </div>}
-          {localImportError && <p role="alert" className="text-sm text-[#e85d65]">{localImportError}</p>}
+          {localImportError && <p role="alert" className="text-sm text-[var(--mc-color-danger)]">{localImportError}</p>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={localImportBusy}>取消</AlertDialogCancel>
             <AlertDialogAction disabled={localImportBusy || !localImportPreview} onClick={(event) => { event.preventDefault(); void restoreLocalBackup(); }}>

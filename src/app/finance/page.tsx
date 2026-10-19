@@ -28,12 +28,12 @@ export default function Finance() {
     ),
     s = financialSummary(daily, ads);
   const cost = [
-    { name: "商品成本", value: Number(s.productCost), color: "#3b91eb" },
-    { name: "包装费用", value: Number(s.packagingCost), color: "#89c5f6" },
-    { name: "物流费用", value: Number(s.logisticsCost), color: "#16a085" },
-    { name: "平台费用", value: Number(s.platformFees), color: "#a8a2f2" },
-    { name: "广告费用", value: Number(s.adSpend), color: "#f0b671" },
-    { name: "其他经营费用", value: Number(s.otherExpenses), color: "#e68693" },
+    { name: "商品成本", value: Number(s.productCost), color: "var(--chart-1)" },
+    { name: "包装费用", value: Number(s.packagingCost), color: "var(--chart-3)" },
+    { name: "物流费用", value: Number(s.logisticsCost), color: "var(--chart-2)" },
+    { name: "平台费用", value: Number(s.platformFees), color: "var(--chart-6)" },
+    { name: "广告费用", value: Number(s.adSpend), color: "var(--chart-4)" },
+    { name: "其他经营费用", value: Number(s.otherExpenses), color: "var(--chart-5)" },
   ];
   const detail = [
     ["销售额", s.grossSales],
@@ -69,8 +69,8 @@ export default function Finance() {
         }
       />
       <AiInsightPanel feature="finance" context={{ periodDays: days, grossSales: Number(s.grossSales), refunds: Number(s.refunds), netSales: Number(s.netSales), productCost: Number(s.productCost), packagingCost: Number(s.packagingCost), logisticsCost: Number(s.logisticsCost), platformFees: Number(s.platformFees), adSpend: Number(s.adSpend), otherExpenses: Number(s.otherExpenses), estimatedProfit: Number(s.profit), profitMargin: s.margin ?? "数据不足", costIncompleteDays: daily.filter(row => row.costComplete === false).length }} />
-      {daily.some(row => row.source === "mock_pinduoduo") && <div role="status" className="mb-5 rounded-2xl border border-[#cfe5f8] bg-[#e8f5ff] p-4 text-sm text-[#476d91]">所选日期包含拼多多模拟同步订单。演示销售额和利润不代表真实店铺业绩。</div>}
-      {daily.some(row => row.costComplete === false) && <div role="status" className="mb-5 rounded-2xl border border-[#f3dfc8] bg-[#fff9f1] p-4 text-sm text-[#a77743]">部分日期缺少可靠成本版本，以下利润为不完整估算；盈亏平衡 ROAS 暂不显示。</div>}
+      {daily.some(row => row.source === "mock_pinduoduo") && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm text-primary">所选日期包含拼多多模拟同步订单。演示销售额和利润不代表真实店铺业绩。</div>}
+      {daily.some(row => row.costComplete === false) && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-orange)] p-4 text-sm text-[var(--mc-color-warning)]">部分日期缺少可靠成本版本，以下利润为不完整估算；盈亏平衡 ROAS 暂不显示。</div>}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="净销售额"
@@ -113,7 +113,7 @@ export default function Finance() {
                   key={item.name}
                   className="flex items-center justify-between text-xs"
                 >
-                  <span className="flex items-center gap-2 text-[#738aa0]">
+                  <span className="flex items-center gap-2 text-muted-foreground">
                     <i
                       className="size-2 rounded-full"
                       style={{ background: item.color }}
@@ -141,7 +141,7 @@ export default function Finance() {
           {detail.map(([label, value], index) => (
             <div
               key={label}
-              className={`flex justify-between border-b border-[#ecf1f6] py-3 text-sm ${index === 9 ? "font-bold text-[#16a085]" : ""}`}
+              className={`flex justify-between border-b border-border py-3 text-sm ${index === 9 ? "font-bold text-[var(--mc-color-success)]" : ""}`}
             >
               <span>{label}</span>
               <span className="number">
@@ -152,7 +152,7 @@ export default function Finance() {
             </div>
           ))}
         </div>
-        <p className="mt-4 text-xs leading-5 text-[#9aabba]">
+        <p className="mt-4 text-xs leading-5 text-muted-foreground">
           以上为基于录入数据的经营估算，未计入税费、资金结算时间差等未录入项目。
         </p>
       </SectionCard>

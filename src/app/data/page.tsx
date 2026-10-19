@@ -235,7 +235,7 @@ export default function DataPage() {
       <div className="mb-5">
         <ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/>
       </div>
-      <div className="mb-5 rounded-2xl border border-[#dcebf8] bg-[#eef7ff] p-4 text-sm text-[#557692]">
+      <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm text-muted-foreground">
         CSV 字段：date, sales, refunds, orders, productCost, packagingCost,
         logisticsCost, platformFees, otherExpenses,
         productSales。建议先导出样例，再按相同格式填写；productSales 是商品 ID
@@ -248,7 +248,7 @@ export default function DataPage() {
         action={
           <div className="relative">
             <Search
-              className="absolute left-3 top-2.5 text-[#9aabba]"
+              className="absolute left-3 top-2.5 text-muted-foreground"
               size={15}
             />
             <Input
@@ -262,7 +262,7 @@ export default function DataPage() {
       >
         <div className="overflow-x-auto">
           <table className="w-full min-w-[840px] text-left text-sm">
-            <thead className="border-b text-xs text-[#8ca0b3]">
+            <thead className="border-b text-xs text-muted-foreground">
               <tr>
                 <th className="py-3">日期</th>
                 <th>销售额</th>
@@ -280,7 +280,7 @@ export default function DataPage() {
               {filtered.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-[#edf2f7] last:border-0"
+                  className="border-b border-border last:border-0"
                 >
                   <td className="py-3 font-semibold">{row.date}</td>
                   <td>{formatMoney(row.sales)}</td>
@@ -288,11 +288,11 @@ export default function DataPage() {
                   <td>{row.orders}</td>
                   <td>{formatMoney(row.productCost)}</td>
                   <td>{formatMoney(row.logisticsCost)}</td>
-                  <td className="text-xs text-[#718096]">
-                    {row.reportDetails ? <details className="cursor-pointer"><summary>查看指标</summary><div className="mt-2 min-w-40 space-y-1 rounded-lg bg-[#f6faff] p-2"><p>买家 {row.reportDetails.buyers ?? "—"} · 访客 {row.reportDetails.visitors ?? "—"}</p><p>客单价 {row.reportDetails.averageOrderValue ? formatMoney(row.reportDetails.averageOrderValue) : "—"}</p><p>转化率 {row.reportDetails.conversionRate ? `${row.reportDetails.conversionRate}%` : "—"}</p><p>退款单 {row.reportDetails.refundOrders ?? "—"} · 访客价值 {row.reportDetails.visitorValue ? formatMoney(row.reportDetails.visitorValue) : "—"}</p></div></details> : "—"}
+                  <td className="text-xs text-muted-foreground">
+                    {row.reportDetails ? <details className="cursor-pointer"><summary>查看指标</summary><div className="mt-2 min-w-40 space-y-1 rounded-lg bg-[var(--mc-tint-blue)] p-2"><p>买家 {row.reportDetails.buyers ?? "—"} · 访客 {row.reportDetails.visitors ?? "—"}</p><p>客单价 {row.reportDetails.averageOrderValue ? formatMoney(row.reportDetails.averageOrderValue) : "—"}</p><p>转化率 {row.reportDetails.conversionRate ? `${row.reportDetails.conversionRate}%` : "—"}</p><p>退款单 {row.reportDetails.refundOrders ?? "—"} · 访客价值 {row.reportDetails.visitorValue ? formatMoney(row.reportDetails.visitorValue) : "—"}</p></div></details> : "—"}
                   </td>
                   <td>{formatMoney(row.otherExpenses)}</td>
-                  <td className="text-xs text-[#92a4b5]">
+                  <td className="text-xs text-muted-foreground">
                     {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "image_import" ? "截图识别" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
                   </td>
                   <td className="text-right">
@@ -311,7 +311,7 @@ export default function DataPage() {
             </tbody>
           </table>
           {!filtered.length && (
-            <p className="py-10 text-center text-sm text-[#9aabba]">
+            <p className="py-10 text-center text-sm text-muted-foreground">
               没有匹配的记录
             </p>
           )}
@@ -325,7 +325,7 @@ export default function DataPage() {
           </DialogHeader>
           {draft && (
             <div className="space-y-5 pt-2">
-              {draft.costSource === "sku" && <p className="rounded-xl bg-[#fff8ed] p-3 text-xs text-[#a77743]">此日期使用 SKU 历史成本自动核算。下方商品、包装、物流和平台汇总成本仅供查看，编辑销售数据不会覆盖成本版本。</p>}
+              {draft.costSource === "sku" && <p className="rounded-xl bg-[var(--mc-tint-orange)] p-3 text-xs text-[var(--mc-color-warning)]">此日期使用 SKU 历史成本自动核算。下方商品、包装、物流和平台汇总成本仅供查看，编辑销售数据不会覆盖成本版本。</p>}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>日期</Label>
@@ -371,7 +371,7 @@ export default function DataPage() {
               </div>
               <div className="border-t pt-4">
                 <h3 className="mb-1 text-sm font-semibold">商品销售额分配</h3>
-                <p className="mb-3 text-xs text-[#92a4b5]">
+                <p className="mb-3 text-xs text-muted-foreground">
                   用于商品排行，可留空；不会重复计入总销售额。
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -398,7 +398,7 @@ export default function DataPage() {
                   ))}
                 </div>
               </div>
-              {error && <p className="text-sm text-[#e85d65]">{error}</p>}
+              {error && <p className="text-sm text-[var(--mc-color-danger)]">{error}</p>}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   取消
@@ -418,14 +418,14 @@ export default function DataPage() {
           </DialogHeader>
           {preview && (
             <div className="space-y-4">
-              {error && <p role="alert" className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{error}</p>}
-              <div className="rounded-xl bg-[#f2f8ff] p-4 text-sm">
+              {error && <p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]">{error}</p>}
+              <div className="rounded-xl bg-[var(--mc-tint-blue)] p-4 text-sm">
                 识别 {preview.rows.length} 条有效记录，
                 {preview.duplicates.length} 条日期与现有数据重复，
                 {preview.errors.length} 个错误。
               </div>
               {preview.errors.length > 0 && (
-                <div className="max-h-36 overflow-auto rounded-xl bg-[#fff4f4] p-3 text-xs text-[#cf5960]">
+                <div className="max-h-36 overflow-auto rounded-xl bg-[var(--mc-tint-red)] p-3 text-xs text-[var(--mc-color-danger)]">
                   {preview.errors.map((e, i) => (
                     <p key={i} className="mb-1 flex gap-2">
                       <AlertCircle size={14} />
@@ -435,7 +435,7 @@ export default function DataPage() {
                 </div>
               )}
               {preview.duplicates.length > 0 && (
-                <label className="flex items-start gap-2 rounded-xl border border-[#f5e5d6] bg-[#fffbf6] p-3 text-sm">
+                <label className="flex items-start gap-2 rounded-xl border border-border bg-[var(--mc-tint-orange)] p-3 text-sm">
                   <input
                     type="checkbox"
                     checked={overwrite}
@@ -449,7 +449,7 @@ export default function DataPage() {
               )}
               <div className="max-h-48 overflow-auto rounded-xl border">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-[#f7fbff]">
+                  <thead className="bg-[var(--mc-tint-blue)]">
                     <tr>
                       <th className="p-2">日期</th>
                       <th>销售额</th>

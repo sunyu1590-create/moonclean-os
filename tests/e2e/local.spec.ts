@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { demoData } from "../../src/lib/seed";
+import { APP_VERSION } from "../../src/lib/release-notes";
 test("第一阶段本地模式保留商品与经营数据编辑", async ({ page }) => {
   test.skip(
     process.env.NEXT_PUBLIC_DATA_MODE !== "local",
@@ -133,11 +134,11 @@ test("动效切换展示版本与效果，调试浮窗可启停", async ({ page 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
   await page.goto("/settings");
-  await page.getByRole("button", { name: /精致/ }).click();
-  const transition = page.getByRole("status", { name: "正在切换到精致动效" });
-  await expect(transition).toContainText("切换到精致模式");
-  await expect(transition).toContainText("流光、柔和模糊与弹性反馈");
-  await expect(transition).toContainText("v0.9.0");
+  await page.getByRole("button", { name: /Max 丰富动效/ }).click();
+  const transition = page.getByRole("status", { name: "正在切换到Max动效" });
+  await expect(transition).toContainText("切换到Max模式");
+  await expect(transition).toContainText("舒展的页面过渡、流动柔光与细腻交互反馈。");
+  await expect(transition).toContainText(`v${APP_VERSION}`);
   await expect(transition.locator(".motion-switch-progress")).toBeVisible();
   await expect(transition).toHaveCount(0, { timeout: 8000 });
   const debugOptions = page.getByRole("button", { name: "调试选项（自定义显示内容）" });
@@ -196,44 +197,48 @@ test("精致与简单动效快速切换并在刷新后保留", async ({ page }) 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
   await page.goto("/settings");
-  await page.getByRole("button", { name: /精致/ }).click();
-  const refinedTransition = page.getByRole("status", { name: "正在切换到精致动效" });
+  await page.getByRole("button", { name: /Max 丰富动效/ }).click();
+  const refinedTransition = page.getByRole("status", { name: "正在切换到Max动效" });
   await expect(refinedTransition).toBeVisible();
   await expect.poll(() => refinedTransition.evaluate(element => { const rect = element.getBoundingClientRect(); return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)]; })).toEqual([0, 0, 390, 844]);
-  await expect(refinedTransition).toContainText("流光、柔和模糊与弹性反馈");
+  await expect(refinedTransition).toContainText("舒展的页面过渡、流动柔光与细腻交互反馈。");
   await expect(refinedTransition).toHaveCount(0, { timeout: 6000 });
   expect(await page.locator("html").getAttribute("data-motion")).toBe("refined");
   expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toContain("blur(18px)");
 
-  await page.getByRole("button", { name: /简单/ }).click();
-  const simpleTransition = page.getByRole("status", { name: "正在切换到简单动效" });
-  await expect(simpleTransition).toBeVisible();
-  await expect(simpleTransition).toContainText("直接切换，减少视觉效果。");
-  await expect(simpleTransition).toHaveCount(0, { timeout: 3000 });
+  await page.getByRole("button", { name: /Low 关闭动效/ }).click();
+  await expect(page.getByRole("status", { name: "正在切换到Low动效" })).toHaveCount(0);
   expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
   await page.reload();
-  await expect(page.getByRole("button", { name: /简单/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /Low 关闭动效/ })).toHaveAttribute("aria-pressed", "true");
   expect(await page.locator("html").getAttribute("data-motion")).toBe("simple");
   expect(await page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element).backdropFilter)).toBe("none");
 });
 
-test("更多面板夜间模式开关生效并在刷新后保留", async ({ page }) => {
+test("更多面板外观选择支持系统与手动模式并在刷新后保留", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.context().addCookies([{ name: "moonclean-data-mode", value: "local", domain: "localhost", path: "/" }]);
   await page.goto("/dashboard");
-  await expect(page.getByRole("button", { name: "切换夜间模式" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "切换外观" })).toHaveCount(0);
   await page.getByRole("button", { name: "更多功能" }).click();
-  await page.getByRole("button", { name: "切换夜间模式" }).click();
+  await expect(page.getByRole("button", { name: "切换外观" })).toContainText("跟随系统");
+  await page.getByRole("button", { name: "切换外观" }).click();
+  await expect(page.getByRole("button", { name: "切换外观" })).toContainText("浅色");
+  await page.getByRole("button", { name: "切换外观" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
-  await expect(page.getByRole("button", { name: "切换日间模式" })).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(() => page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(23, 33, 46)");
-  await expect.poll(() => page.locator(".glass-card").first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(32, 45, 60)");
+  await expect(page.getByRole("button", { name: "切换外观" })).toContainText("深色");
+  await expect.poll(() => page.locator("body").evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(11, 11, 15)");
+  await expect.poll(() => page.locator(".glass-card").first().evaluate(element => getComputedStyle(element).backgroundColor)).toBe("rgb(28, 28, 30)");
   await expect.poll(() => page.locator('nav[aria-label="主导航"]').evaluate(element => getComputedStyle(element, "::before").content)).toBe("none");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
   await page.getByRole("button", { name: "更多功能" }).click();
-  await page.getByRole("button", { name: "切换日间模式" }).click();
+  await expect(page.getByRole("button", { name: "切换外观" })).toContainText("深色");
+  await page.getByRole("button", { name: "切换外观" }).click();
+  await expect(page.getByRole("button", { name: "切换外观" })).toContainText("跟随系统");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
+  await page.getByRole("button", { name: "切换外观" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
 });
 

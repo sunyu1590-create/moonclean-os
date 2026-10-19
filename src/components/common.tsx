@@ -17,11 +17,11 @@ export function PageHead({
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:mb-8 md:gap-5">
       <div>
-        <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold tracking-[.18em] text-[#287fe2] before:h-px before:w-5 before:bg-[#287fe2] md:mb-3 md:text-[11px]">
+        <p className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold tracking-[.15em] text-primary before:h-px before:w-5 before:bg-primary md:mb-3 md:text-xs">
           {eyebrow}
         </p>
         <h1 className="page-title">{title}</h1>
-        <p className="mt-1.5 text-xs leading-5 text-[#68798b] md:mt-3 md:text-sm md:leading-6">{description}</p>
+        <p className="mt-1.5 text-sm leading-6 text-muted-foreground md:mt-3">{description}</p>
       </div>
       {action}
     </div>
@@ -41,15 +41,15 @@ export function MetricCard({
   icon?: React.ReactNode;
 }) {
   const colors = {
-    blue: "bg-[#eaf2fd] text-[#287fe2]",
-    green: "bg-[#e8f7f2] text-[#16a085]",
-    red: "bg-[#ffedf0] text-[#e85d65]",
-    neutral: "bg-[#f0f2f5] text-[#6a7887]",
+    blue: "bg-[var(--mc-tint-blue)] text-primary",
+    green: "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]",
+    red: "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]",
+    neutral: "bg-[var(--mc-tint-blue)] text-muted-foreground",
   };
   return (
-    <div className="glass-card min-w-0 rounded-[18px] p-3 md:rounded-[24px] md:p-6">
+    <div className="glass-card min-w-0 p-4 md:p-6">
       <div className="mb-3 flex items-start justify-between gap-1.5 md:mb-6 md:gap-2">
-        <span className="text-[11px] font-medium leading-4 text-[#677789] md:text-[13px]">{label}</span>
+        <span className="text-xs font-medium leading-5 text-muted-foreground md:text-[13px]">{label}</span>
         {icon && (
           <span
             className={`grid size-8 place-items-center rounded-xl ${colors[tone]} md:size-10 md:rounded-[14px]`}
@@ -58,10 +58,10 @@ export function MetricCard({
           </span>
         )}
       </div>
-      <div className="number break-all text-[20px] font-bold tracking-[-.045em] text-[#202936] sm:text-[22px] md:text-[31px]">
+      <div className="number break-words text-[26px] font-semibold tracking-[-.045em] text-foreground sm:text-[29px] md:text-[34px]">
         {value}
       </div>
-      <p className="mt-1 min-h-3 text-[10px] leading-4 text-[#79899a] md:mt-2 md:min-h-4 md:text-xs">
+      <p className="mt-1 min-h-3 text-xs leading-5 text-muted-foreground md:mt-2 md:min-h-4">
         {sub || "基于当前筛选周期"}
       </p>
     </div>
@@ -81,11 +81,11 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`glass-card min-w-0 rounded-[20px] p-4 md:rounded-[24px] md:p-6 ${className}`}>
-      <div className="mb-3 flex items-start justify-between gap-2 border-b border-[#eef1f4] pb-3 md:mb-5 md:gap-3 md:pb-4">
+    <section className={`glass-card min-w-0 p-4 md:p-6 ${className}`}>
+      <div className="mb-3 flex items-start justify-between gap-2 border-b border-border pb-3 md:mb-5 md:gap-3 md:pb-4">
         <div>
           <h2 className="section-title">{title}</h2>
-          {sub && <p className="mt-1.5 text-xs leading-5 text-[#758597]">{sub}</p>}
+          {sub && <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{sub}</p>}
         </div>
         {action}
       </div>
@@ -95,7 +95,7 @@ export function SectionCard({
 }
 export function DemoNote({ hasDemo = true }: { hasDemo?: boolean }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-[#8fa3b6]">
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
       <Info size={14} />
       {hasDemo ? "当前包含模拟数据；平台模拟订单需在连接中心管理" : "当前无模拟经营数据"}
     </div>

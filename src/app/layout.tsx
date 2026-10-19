@@ -13,7 +13,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{var theme=localStorage.getItem("moonclean-theme-v1");document.documentElement.dataset.theme=theme==="night"||theme!=="day"&&matchMedia("(prefers-color-scheme: dark)").matches?"night":"day"}catch{document.documentElement.dataset.theme=matchMedia("(prefers-color-scheme: dark)").matches?"night":"day"}` }} />
+      </head>
       <body>
         <AppProvider>
           <MotionPreferencesProvider>

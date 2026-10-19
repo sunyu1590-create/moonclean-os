@@ -97,31 +97,31 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }
   return (
-    <div className="min-h-screen bg-[#f6f7f9] p-4 sm:p-8 lg:p-10">
-      <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-[1240px] overflow-hidden rounded-[30px] border border-[#e9edf2] bg-white shadow-[0_24px_70px_rgba(29,43,62,.08)] lg:grid-cols-[1.05fr_.95fr]">
-        <aside className="relative hidden overflow-hidden bg-[#202936] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+    <div className="min-h-screen bg-[var(--mc-tint-blue)] p-4 sm:p-8 lg:p-10">
+      <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-[1240px] overflow-hidden rounded-[30px] border border-border bg-card shadow-[0_24px_70px_rgba(29,43,62,.08)] lg:grid-cols-[1.05fr_.95fr]">
+        <aside className="relative hidden overflow-hidden bg-[var(--mc-color-brand-strong)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="pointer-events-none absolute -right-44 -top-44 size-[520px] rounded-full border border-white/10" />
           <div className="pointer-events-none absolute -right-24 -top-20 size-[360px] rounded-full border border-white/10" />
-          <div className="relative flex items-center gap-3"><span className="grid size-11 place-items-center rounded-[15px] bg-white text-[#202936]"><Moon size={23} fill="#202936"/></span><span className="text-xl font-bold tracking-[-.04em]">MoonClean <span className="text-[#9bcfff]">OS</span></span></div>
-          <div className="relative max-w-lg pb-8"><p className="mb-5 text-xs font-semibold tracking-[.24em] text-[#9fc8ed]">月明净 · 智能经营工作台</p><h2 className="text-[48px] font-semibold leading-[1.17] tracking-[-.055em]">让每一笔生意，<br/>都看得更清楚。</h2><p className="mt-6 max-w-md text-[15px] leading-8 text-[#afbed0]">从销售趋势到利润结构，把日常经营里的复杂问题，整理成清晰、可靠的判断。</p></div>
-          <div className="relative flex flex-wrap gap-2 text-xs text-[#d7e5f4]"><span className="rounded-full border border-white/15 px-4 py-2">经营总览</span><span className="rounded-full border border-white/15 px-4 py-2">利润分析</span><span className="rounded-full border border-white/15 px-4 py-2">云端同步</span></div>
+          <div className="relative flex items-center gap-3"><span className="grid size-11 place-items-center rounded-[15px] bg-card text-foreground"><Moon size={23} fill="#202936"/></span><span className="text-xl font-bold tracking-[-.04em]">MoonClean <span className="text-primary">OS</span></span></div>
+          <div className="relative max-w-lg pb-8"><p className="mb-5 text-xs font-semibold tracking-[.24em] text-primary">月明净 · 智能经营工作台</p><h2 className="text-[48px] font-semibold leading-[1.17] tracking-[-.055em]">让每一笔生意，<br/>都看得更清楚。</h2><p className="mt-6 max-w-md text-[15px] leading-8 text-muted-foreground">从销售趋势到利润结构，把日常经营里的复杂问题，整理成清晰、可靠的判断。</p></div>
+          <div className="relative flex flex-wrap gap-2 text-xs text-primary"><span className="rounded-full border border-white/15 px-4 py-2">经营总览</span><span className="rounded-full border border-white/15 px-4 py-2">利润分析</span><span className="rounded-full border border-white/15 px-4 py-2">云端同步</span></div>
         </aside>
         <div className="flex items-center justify-center px-5 py-10 sm:px-10 lg:px-14">
         <div className="w-full max-w-[430px]">
         <div className="mb-9 flex items-center justify-center gap-3 lg:hidden">
-          <span className="grid size-12 place-items-center rounded-2xl bg-[#202936] text-white">
+          <span className="grid size-12 place-items-center rounded-2xl bg-primary text-white">
             <Moon size={24} fill="white" />
           </span>
           <span className="text-xl font-bold">
-            MoonClean <span className="text-[#287fe2]">OS</span>
+            MoonClean <span className="text-primary">OS</span>
           </span>
         </div>
         <div className="p-2 sm:p-4">
-          <p className="mb-3 text-xs font-bold tracking-[.18em] text-[#287fe2]">
+          <p className="mb-3 text-xs font-bold tracking-[.18em] text-primary">
             MOONCLEAN OS
           </p>
-          <h1 className="text-[32px] font-bold tracking-[-.04em] text-[#202936]">{copy[mode][0]}</h1>
-          <p className="mt-2 mb-8 text-sm text-[#8391a0]">{copy[mode][1]}</p>
+          <h1 className="text-[32px] font-bold tracking-[-.04em] text-foreground">{copy[mode][0]}</h1>
+          <p className="mt-2 mb-8 text-sm text-muted-foreground">{copy[mode][1]}</p>
           <form onSubmit={submit} className="space-y-5">
             {mode === "signup" && (
               <div>
@@ -142,7 +142,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 <div className="relative mt-2">
                   <Mail
                     size={16}
-                    className="absolute left-3 top-2.5 text-[#99aabd]"
+                    className="absolute left-3 top-2.5 text-muted-foreground"
                   />
                   <Input
                     id="email"
@@ -165,7 +165,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                   {mode === "login" && (
                     <Link
                       href="/forgot-password"
-                      className="text-xs text-[#3b91eb] hover:underline"
+                      className="text-xs text-primary hover:underline"
                     >
                       忘记密码？
                     </Link>
@@ -174,7 +174,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 <div className="relative mt-2">
                   <LockKeyhole
                     size={16}
-                    className="absolute left-3 top-2.5 text-[#99aabd]"
+                    className="absolute left-3 top-2.5 text-muted-foreground"
                   />
                   <Input
                     id="password"
@@ -193,7 +193,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             {error && (
               <p
                 role="alert"
-                className="rounded-xl bg-[#fff0f1] p-3 text-sm text-[#cf5960]"
+                className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]"
               >
                 {error}
               </p>
@@ -201,7 +201,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             {message && (
               <p
                 role="status"
-                className="rounded-xl bg-[#eaf7f2] p-3 text-sm text-[#15836f]"
+                className="rounded-xl bg-[var(--mc-tint-green)] p-3 text-sm text-[var(--mc-color-success)]"
               >
                 {message}
               </p>
@@ -215,27 +215,27 @@ export function AuthForm({ mode }: { mode: Mode }) {
               <ArrowRight size={16} />
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-[#8296a9]">
+          <div className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>
                 还没有账号？{" "}
-                <Link href="/signup" className="font-semibold text-[#3b91eb]">
+                <Link href="/signup" className="font-semibold text-primary">
                   立即注册
                 </Link>
               </>
             ) : mode === "reset" ? (
-              <Link href="/dashboard" className="font-semibold text-[#3b91eb]">
+              <Link href="/dashboard" className="font-semibold text-primary">
                 返回经营总览
               </Link>
             ) : (
-              <Link href="/login" className="font-semibold text-[#3b91eb]">
+              <Link href="/login" className="font-semibold text-primary">
                 返回登录
               </Link>
             )}
           </div>
         </div>
         {!configured && (
-          <p className="mt-5 text-center text-xs text-[#e85d65]">
+          <p className="mt-5 text-center text-xs text-[var(--mc-color-danger)]">
             当前环境尚未配置 Supabase，参照 .env.example
             配置后即可使用云端登录。
           </p>

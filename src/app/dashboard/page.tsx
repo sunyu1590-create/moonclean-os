@@ -75,7 +75,7 @@ export default function Dashboard() {
         title="早上好，今天的生意一目了然"
         description="从销售、推广到利润，掌握店铺经营节奏。"
         action={
-          <div className="flex items-center gap-2 rounded-xl border border-[#e4edf5] bg-white p-1">
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
             {([7, 30] as const).map((v) => (
               <Button
                 key={v}
@@ -89,21 +89,21 @@ export default function Dashboard() {
           </div>
         }
       />
-      <section className="mb-5 overflow-hidden rounded-[22px] border border-[#e2ebf4] bg-white shadow-[0_10px_34px_rgba(41,76,108,0.065)]">
+      <section className="material-hero mb-5 overflow-hidden rounded-[22px]">
         <div className="grid gap-5 p-5 md:grid-cols-[1.45fr_1fr] md:items-center md:px-6 md:py-5">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#eff7ff] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-[#5286b5]"><span className="size-1.5 rounded-full bg-[#3b91eb]" />近 {days} 天经营快照</span>
-            <h2 className="mt-2.5 text-[20px] font-semibold tracking-[-.035em] text-[#1e344a] md:text-[23px]">经营表现，清晰可见。</h2>
-            <p className="mt-1 text-xs leading-5 text-[#8798a9]">销售、利润与经营目标集中呈现，数据更新后自动同步。</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--mc-tint-blue)] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-primary"><span className="size-1.5 rounded-full bg-primary" />近 {days} 天经营快照</span>
+            <h2 className="mt-2.5 text-[20px] font-semibold tracking-[-.035em] text-foreground md:text-[23px]">经营表现，清晰可见。</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">销售、利润与经营目标集中呈现，数据更新后自动同步。</p>
             <div className="mt-4 grid max-w-[500px] grid-cols-2 gap-4">
-              <div className="border-r border-[#eaf0f5] pr-3"><p className="text-[11px] text-[#8898a8]">期间净销售额</p><p className="number mt-1 text-[25px] font-semibold tracking-[-.04em] text-[#223c56] md:text-[29px]">{formatMoney(summary.netSales)}</p></div>
-              <div><p className="text-[11px] text-[#8898a8]">估算经营利润</p><p className={`number mt-1 text-[23px] font-semibold tracking-[-.04em] md:text-[27px] ${Number(summary.profit)<0?"text-[#e85d65]":"text-[#168c76]"}`}>{formatMoney(summary.profit)}</p></div>
+              <div className="border-r border-border pr-3"><p className="text-[11px] text-muted-foreground">期间净销售额</p><p className="number mt-1 text-[25px] font-semibold tracking-[-.04em] text-foreground md:text-[29px]">{formatMoney(summary.netSales)}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">估算经营利润</p><p className={`number mt-1 text-[23px] font-semibold tracking-[-.04em] md:text-[27px] ${Number(summary.profit)<0?"text-[var(--mc-color-danger)]":"text-[var(--mc-color-success)]"}`}>{formatMoney(summary.profit)}</p></div>
             </div>
           </div>
-          <div className="rounded-[17px] border border-[#e5eff8] bg-[linear-gradient(130deg,#f5faff_0%,#eef7ff_100%)] p-4 md:p-5">
-            <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-medium text-[#71889e]">本月销售目标</p><p className="number mt-1 text-[22px] font-semibold tracking-tight text-[#223c56]">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="grid size-9 place-items-center rounded-xl bg-white text-[#438ed2] shadow-sm"><Target size={17}/></span></div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#dcebf8]"><div className="h-full rounded-full bg-[#3b91eb] transition-[width] duration-500 motion-reduce:transition-none" style={{width:`${targetProgress}%`}}/></div>
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#758ba0]"><span>已完成 {formatMoney(monthSales)} / {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-[#3189e8]">经营数据 <ArrowRight size={12}/></Link></div>
+          <div className="rounded-[17px] border border-border bg-[linear-gradient(130deg,var(--card)_0%,var(--mc-tint-blue)_100%)] p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-medium text-muted-foreground">本月销售目标</p><p className="number mt-1 text-[22px] font-semibold tracking-tight text-foreground">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="grid size-9 place-items-center rounded-xl bg-card text-primary shadow-sm"><Target size={17}/></span></div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--mc-tint-blue)]"><div className="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none" style={{width:`${targetProgress}%`}}/></div>
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground"><span>已完成 {formatMoney(monthSales)} / {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-primary">经营数据 <ArrowRight size={12}/></Link></div>
           </div>
         </div>
       </section>
@@ -161,7 +161,7 @@ export default function Dashboard() {
           <div className="space-y-5 pt-1">
             {ranking.map((row, index) => (
               <div key={row.product.id} className="flex items-center gap-3">
-                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#eef6fe] text-xs font-bold text-[#3b91eb]">
+                <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[var(--mc-tint-blue)] text-xs font-bold text-primary">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -173,9 +173,9 @@ export default function Dashboard() {
                       {formatMoney(row.value)}
                     </span>
                   </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#ecf4fb]">
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--mc-tint-blue)]">
                     <div
-                      className="h-full rounded-full bg-[#3b91eb]"
+                      className="h-full rounded-full bg-primary"
                       style={{
                         width: `${Number(ranking[0]?.value) > 0 ? (Number(row.value) / Number(ranking[0].value)) * 100 : 0}%`,
                       }}
@@ -196,7 +196,7 @@ export default function Dashboard() {
           {alerts.map((alert, index) => (
             <div
               key={alert}
-              className={`flex items-center gap-3 rounded-xl border p-4 text-sm ${alerts.length === 1 && index === 0 && alert.startsWith("当前") ? "border-[#d6efe7] bg-[#f3fbf8] text-[#16a085]" : "border-[#f8e4dc] bg-[#fff8f5] text-[#bc7657]"}`}
+              className={`flex items-center gap-3 rounded-xl border p-4 text-sm ${alerts.length === 1 && index === 0 && alert.startsWith("当前") ? "border-border bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "border-border bg-[var(--mc-tint-orange)] text-[var(--mc-color-warning)]"}`}
             >
               <AlertCircle size={18} />
               {alert}

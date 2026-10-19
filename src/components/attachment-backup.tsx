@@ -209,12 +209,12 @@ export function AttachmentBackup() {
       <Button className="w-full justify-start" variant="outline" disabled={busy} onClick={() => fileRef.current?.click()}><Upload size={16}/>导入附件归档</Button>
     </div>
     <input ref={fileRef} type="file" accept=".zip,application/zip" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; archiveSource.current = file || null; void inspectArchive(file); }}/>
-    {progress && <p role="status" className="flex items-center gap-2 text-xs text-[#58728b]"><LoaderCircle size={14} className="animate-spin"/>{progress}</p>}
-    {message && <p role="status" className="text-xs leading-5 text-[#168a70]">{message}</p>}
-    {error && <p role="alert" className="text-xs leading-5 text-[#e85d65]">{error}</p>}
-    {archive && <div className="space-y-3 rounded-xl border border-[#e3edf6] bg-[#f8fbfe] p-3">
-      <div className="flex items-start gap-2"><Archive size={16} className="mt-0.5 text-[#3b91eb]"/><div className="text-xs leading-5 text-[#536b80]"><p className="font-semibold text-[#203a54]">已读取 {archive.files.length} 个附件</p><p>选择目标店铺；工单 ID 需与导入的业务数据一致。已有同路径文件不会被覆盖。</p></div></div>
-      {archive.stores.map((store) => <label key={store.id} className="grid gap-1 text-xs text-[#60768b] sm:grid-cols-[1fr_1fr] sm:items-center"><span>{store.name}（源店铺）</span><select value={mapping[store.id] || ""} onChange={(event) => setMapping((current) => ({ ...current, [store.id]: event.target.value }))} className="h-9 rounded-lg border border-[#dce7f0] bg-white px-2 text-sm text-[#263e55]"><option value="">选择目标店铺</option>{targetStores.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>)}
+    {progress && <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><LoaderCircle size={14} className="animate-spin"/>{progress}</p>}
+    {message && <p role="status" className="text-xs leading-5 text-[var(--mc-color-success)]">{message}</p>}
+    {error && <p role="alert" className="text-xs leading-5 text-[var(--mc-color-danger)]">{error}</p>}
+    {archive && <div className="space-y-3 rounded-xl border border-border bg-[var(--mc-tint-blue)] p-3">
+      <div className="flex items-start gap-2"><Archive size={16} className="mt-0.5 text-primary"/><div className="text-xs leading-5 text-muted-foreground"><p className="font-semibold text-foreground">已读取 {archive.files.length} 个附件</p><p>选择目标店铺；工单 ID 需与导入的业务数据一致。已有同路径文件不会被覆盖。</p></div></div>
+      {archive.stores.map((store) => <label key={store.id} className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-[1fr_1fr] sm:items-center"><span>{store.name}（源店铺）</span><select value={mapping[store.id] || ""} onChange={(event) => setMapping((current) => ({ ...current, [store.id]: event.target.value }))} className="h-9 rounded-lg border border-border bg-card px-2 text-sm text-foreground"><option value="">选择目标店铺</option>{targetStores.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}</select></label>)}
       <Button disabled={busy} onClick={() => void importAttachments()}>{busy ? "正在恢复…" : "确认恢复附件"}</Button>
     </div>}
   </div>;

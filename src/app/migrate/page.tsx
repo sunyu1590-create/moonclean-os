@@ -120,10 +120,10 @@ export default function MigratePage() {
         <SectionCard
           title="迁移预览"
           sub="先检测当前浏览器中的第一阶段记录"
-          action={<DatabaseZap size={19} className="text-[#3b91eb]" />}
+          action={<DatabaseZap size={19} className="text-primary" />}
         >
           {!local ? (
-            <p className="text-sm text-[#8296a9]">
+            <p className="text-sm text-muted-foreground">
               {error || "未检测到第一阶段本地数据。"}
             </p>
           ) : (
@@ -134,8 +134,8 @@ export default function MigratePage() {
                   ["经营日", local.daily.length],
                   ["推广日", local.advertising.length],
                 ].map(([label, count]) => (
-                  <div key={label} className="rounded-xl bg-[#f2f8ff] p-4">
-                    <p className="text-xs text-[#8399ae]">{label}</p>
+                  <div key={label} className="rounded-xl bg-[var(--mc-tint-blue)] p-4">
+                    <p className="text-xs text-muted-foreground">{label}</p>
                     <p className="mt-2 text-xl font-bold number">{count}</p>
                   </div>
                 ))}
@@ -146,7 +146,7 @@ export default function MigratePage() {
                 </label>
                 <AppSelect
                   id="target-store"
-                  className="mt-2 h-10 w-full rounded-lg border border-[#dce9f5] bg-white px-3 text-sm"
+                  className="mt-2 h-10 w-full rounded-lg border border-border bg-card px-3 text-sm"
                   value={target}
                   onChange={(e) => {
                     setTarget(e.target.value);
@@ -162,12 +162,12 @@ export default function MigratePage() {
               </div>
               {preview && (
                 <>
-                  <p className="text-sm text-[#71889d]">
+                  <p className="text-sm text-muted-foreground">
                     此前已导入 {preview.alreadyImported}{" "}
                     条；再次提交会自动跳过。
                   </p>
                   {preview.duplicateDates.length > 0 && (
-                    <p className="rounded-xl bg-[#fff7f2] p-3 text-sm text-[#b57655]">
+                    <p className="rounded-xl bg-[var(--mc-tint-orange)] p-3 text-sm text-[var(--mc-color-warning)]">
                       目标店铺已有相同日期：
                       {preview.duplicateDates.slice(0, 8).join("、")}
                       {preview.duplicateDates.length > 8 ? "等" : ""}
@@ -175,7 +175,7 @@ export default function MigratePage() {
                     </p>
                   )}
                   {preview.duplicateProducts.length > 0 && (
-                    <p className="rounded-xl bg-[#fff7f2] p-3 text-sm text-[#b57655]">
+                    <p className="rounded-xl bg-[var(--mc-tint-orange)] p-3 text-sm text-[var(--mc-color-warning)]">
                       目标店铺存在同名同类商品：
                       {preview.duplicateProducts.join("、")}
                       。请先核对，系统不会自动合并。
@@ -185,7 +185,7 @@ export default function MigratePage() {
                     <p
                       key={item}
                       role="alert"
-                      className="text-sm text-[#e85d65]"
+                      className="text-sm text-[var(--mc-color-danger)]"
                     >
                       {item}
                     </p>
@@ -193,7 +193,7 @@ export default function MigratePage() {
                 </>
               )}
               {error && (
-                <p role="alert" className="text-sm text-[#e85d65]">
+                <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
                   {error}
                 </p>
               )}
@@ -210,7 +210,7 @@ export default function MigratePage() {
                 <FileDown size={16} />
                 {busy ? "正在逐条导入…" : "下载备份并确认导入"}
               </Button>
-              <p className="text-xs leading-5 text-[#9aabba]">
+              <p className="text-xs leading-5 text-muted-foreground">
                 导入按商品、经营日、推广日顺序执行；每条记录使用稳定来源 ID
                 防重复。成功与失败会分别列出。
               </p>
@@ -219,17 +219,17 @@ export default function MigratePage() {
         </SectionCard>
         <div className="space-y-5">
           <SectionCard title="数据保护" sub="导入前和导入后">
-            <div className="space-y-3 text-sm text-[#70879b]">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <p className="flex gap-2">
-                <ShieldCheck size={17} className="shrink-0 text-[#16a085]" />
+                <ShieldCheck size={17} className="shrink-0 text-[var(--mc-color-success)]" />
                 先下载完整本地 JSON 备份
               </p>
               <p className="flex gap-2">
-                <ShieldCheck size={17} className="shrink-0 text-[#16a085]" />
+                <ShieldCheck size={17} className="shrink-0 text-[var(--mc-color-success)]" />
                 本地记录始终保留，不自动清除
               </p>
               <p className="flex gap-2">
-                <ShieldCheck size={17} className="shrink-0 text-[#16a085]" />
+                <ShieldCheck size={17} className="shrink-0 text-[var(--mc-color-success)]" />
                 重复提交按来源 ID 跳过
               </p>
             </div>
@@ -251,17 +251,17 @@ export default function MigratePage() {
                 {results.map((r, index) => (
                   <div
                     key={`${r.kind}-${r.sourceId}-${index}`}
-                    className="flex items-start gap-2 border-b border-[#edf2f7] pb-2 text-xs"
+                    className="flex items-start gap-2 border-b border-border pb-2 text-xs"
                   >
                     {r.status === "failed" ? (
                       <AlertCircle
                         size={14}
-                        className="shrink-0 text-[#e85d65]"
+                        className="shrink-0 text-[var(--mc-color-danger)]"
                       />
                     ) : (
                       <CheckCircle2
                         size={14}
-                        className="shrink-0 text-[#16a085]"
+                        className="shrink-0 text-[var(--mc-color-success)]"
                       />
                     )}
                     <span className="break-all">
@@ -273,7 +273,7 @@ export default function MigratePage() {
               </div>
             </SectionCard>
           )}
-          <Link href="/data" className="text-sm font-semibold text-[#3b91eb]">
+          <Link href="/data" className="text-sm font-semibold text-primary">
             前往数据中心 →
           </Link>
         </div>

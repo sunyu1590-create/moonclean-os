@@ -86,7 +86,7 @@ export default function AccountPage() {
         <SectionCard
           title="个人资料"
           sub={email}
-          action={<UserRound size={19} className="text-[#3b91eb]" />}
+          action={<UserRound size={19} className="text-primary" />}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -115,7 +115,7 @@ export default function AccountPage() {
         <SectionCard
           title="账号安全"
           sub="通过已验证邮箱重置密码"
-          action={<LockKeyhole size={19} className="text-[#3b91eb]" />}
+          action={<LockKeyhole size={19} className="text-primary" />}
         >
           <Button
             variant="outline"
@@ -126,12 +126,12 @@ export default function AccountPage() {
           </Button>
         </SectionCard>
         {error && (
-          <p role="alert" className="text-sm text-[#e85d65]">
+          <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
             {error}
           </p>
         )}
         {message && (
-          <p role="status" className="text-sm text-[#16a085]">
+          <p role="status" className="text-sm text-[var(--mc-color-success)]">
             {message}
           </p>
         )}

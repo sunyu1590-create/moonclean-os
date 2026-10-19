@@ -98,7 +98,7 @@ export function TeamPanel() {
       <SectionCard
         title="团队成员"
         sub="成员可加入多个店铺，权限仅作用于当前店铺"
-        action={<Users size={19} className="text-[#3b91eb]" />}
+        action={<Users size={19} className="text-primary" />}
       >
         <div className="mb-5 grid gap-2 sm:grid-cols-[1fr_130px_auto]">
           <Input
@@ -109,7 +109,7 @@ export function TeamPanel() {
           />
           <AppSelect
             aria-label="成员角色"
-            className="h-9 rounded-md border border-[#dfeaf4] bg-white px-2 text-sm"
+            className="h-9 rounded-md border border-border bg-card px-2 text-sm"
             value={newRole}
             onChange={(e) => setNewRole(e.target.value as typeof newRole)}
           >
@@ -125,21 +125,21 @@ export function TeamPanel() {
             添加或更新
           </Button>
         </div>
-        <p className="mb-4 text-xs text-[#9aabba]">
+        <p className="mb-4 text-xs text-muted-foreground">
           成员需先注册并验证邮箱。管理员仅能管理编辑者和查看者。
         </p>
         <div className="space-y-2">
           {members.map((member) => (
             <div
               key={member.user_id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ebf1f6] px-4 py-3 text-sm"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-4 py-3 text-sm"
             >
               <div>
                 <strong>{member.display_name || member.email}</strong>
-                <p className="mt-0.5 text-xs text-[#9aabba]">{member.email}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{member.email}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-[#eef6fe] px-2.5 py-1 text-xs text-[#3b91eb]">
+                <span className="rounded-full bg-[var(--mc-tint-blue)] px-2.5 py-1 text-xs text-primary">
                   {member.role}
                 </span>
                 {member.role !== "owner" &&
@@ -168,12 +168,12 @@ export function TeamPanel() {
           ))}
         </div>
         {error && (
-          <p role="alert" className="mt-4 text-sm text-[#e85d65]">
+          <p role="alert" className="mt-4 text-sm text-[var(--mc-color-danger)]">
             {error}
           </p>
         )}
         {message && (
-          <p role="status" className="mt-4 text-sm text-[#16a085]">
+          <p role="status" className="mt-4 text-sm text-[var(--mc-color-success)]">
             {message}
           </p>
         )}

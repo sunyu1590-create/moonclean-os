@@ -65,8 +65,8 @@ export default function InventoryPage(){
   const canEdit=mode==="local"||role!=="viewer";
   return <>
     <PageHead eyebrow="INVENTORY / 库存管理" title="每个规格的库存，心中有数" description={mode==="local"?"库存和调整流水保存在当前设备，并包含在本地数据备份中。":"手工维护库存数量与预警线，所有调整保留历史。模拟订单不会自动扣减库存。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
-    {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}
-    {notice&&<p role="status" className="mb-5 rounded-xl bg-[#e7f8f4] p-4 text-sm text-[#167c68]">{notice}</p>}
+    {error&&<p role="alert" className="mb-5 rounded-xl bg-[var(--mc-tint-red)] p-4 text-sm text-[var(--mc-color-danger)]">{error}</p>}
+    {notice&&<p role="status" className="mb-5 rounded-xl bg-[var(--mc-tint-green)] p-4 text-sm text-[var(--mc-color-success)]">{notice}</p>}
     <div className="mb-5 grid gap-4 sm:grid-cols-3">
       <MetricCard label="在售 SKU" value={String(skus.length)} icon={<Boxes size={19}/>}/>
       <MetricCard label="已设库存" value={String(balances.length)} icon={<ClipboardList size={19}/>}/>
@@ -75,16 +75,16 @@ export default function InventoryPage(){
     <AiInsightPanel feature="inventory" context={{ skuCount: skus.length, trackedSkuCount: balances.length, lowStockCount: low.length, untrackedSkuCount: Math.max(0, skus.length - balances.length) }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
       <SectionCard title="SKU 库存" sub="未设置库存的规格显示为“未录入”，不视为零库存">
-        {loading?<p className="text-sm text-[#8194a8]">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-[#8194a8]">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">
-          {skus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <button key={sku.id} type="button" onClick={()=>choose(sku.id)} className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${selected===sku.id?"border-[#8dc2fa] bg-[#f0f7ff]":"border-[#e9eef3] hover:bg-[#f8fafc]"}`}>
-            <span className="min-w-0 truncate text-sm font-medium text-[#26374c]">{sku.label}</span>
-            <span className={`shrink-0 text-sm font-semibold ${isLow?"text-[#e85d65]":"text-[#4e6b85]"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span>
+        {loading?<p className="text-sm text-muted-foreground">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-muted-foreground">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">
+          {skus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <button key={sku.id} type="button" onClick={()=>choose(sku.id)} className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${selected===sku.id?"border-border bg-[var(--mc-tint-blue)]":"border-border hover:bg-[var(--mc-tint-blue)]"}`}>
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">{sku.label}</span>
+            <span className={`shrink-0 text-sm font-semibold ${isLow?"text-[var(--mc-color-danger)]":"text-muted-foreground"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span>
           </button>;})}
         </div>}
       </SectionCard>
       <SectionCard title="调整库存" sub="填写调整原因，方便事后追溯">
-        {!canEdit?<p className="text-sm text-[#8194a8]">当前账号仅能查看库存，或当前为本地演示模式。</p>:<form onSubmit={save} className="space-y-4">
-          <div><label htmlFor="inventory-sku" className="text-sm font-medium">商品规格</label><AppSelect id="inventory-sku" className="mt-2 h-10 w-full rounded-xl border border-[#e3eaf1] bg-white px-3 text-sm" value={selected} onChange={e=>choose(e.target.value)} required><option value="">请选择规格</option>{skus.map(sku=><option value={sku.id} key={sku.id}>{sku.label}</option>)}</AppSelect></div>
+        {!canEdit?<p className="text-sm text-muted-foreground">当前账号仅能查看库存，或当前为本地演示模式。</p>:<form onSubmit={save} className="space-y-4">
+          <div><label htmlFor="inventory-sku" className="text-sm font-medium">商品规格</label><AppSelect id="inventory-sku" className="mt-2 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm" value={selected} onChange={e=>choose(e.target.value)} required><option value="">请选择规格</option>{skus.map(sku=><option value={sku.id} key={sku.id}>{sku.label}</option>)}</AppSelect></div>
           <div className="grid grid-cols-2 gap-3"><div><label htmlFor="inventory-quantity" className="text-sm font-medium">当前数量</label><Input id="inventory-quantity" type="number" min="0" max="100000000" step="1" value={quantity} onChange={e=>setQuantity(e.target.value)} className="mt-2" required/></div><div><label htmlFor="inventory-threshold" className="text-sm font-medium">预警线</label><Input id="inventory-threshold" type="number" min="0" max="100000000" step="1" value={threshold} onChange={e=>setThreshold(e.target.value)} className="mt-2" required/></div></div>
           <div><label htmlFor="inventory-note" className="text-sm font-medium">调整原因</label><Input id="inventory-note" value={note} maxLength={240} onChange={e=>setNote(e.target.value)} placeholder="如：仓库盘点、采购入库" className="mt-2" required/></div>
           <Button type="submit" loading={busy} disabled={busy||!selected||!note.trim()}>{!busy&&<Save size={16} />}{busy?"正在保存…":"保存库存"}</Button>
@@ -92,7 +92,7 @@ export default function InventoryPage(){
       </SectionCard>
     </div>
     <div className="mt-5"><SectionCard title="最近调整流水" sub="仅显示最近 30 条，完整历史保存在云端">
-      {!snapshot?.movements.length?<p className="text-sm text-[#8194a8]">暂无库存调整。</p>:<div className="space-y-2">{snapshot.movements.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-[#eef1f4] py-2.5 text-sm"><div><strong>{names.get(row.sku_id)||"已归档 SKU"}</strong><span className="ml-2 text-[#8194a8]">{row.note}</span></div><div className="text-[#53677d]">{row.quantity_before} → {row.quantity_after} <span className={row.delta>=0?"text-[#16a085]":"text-[#e85d65]"}>({row.delta>0?"+":""}{row.delta})</span><span className="ml-3 text-xs text-[#9aa8b6]">{new Date(row.created_at).toLocaleString("zh-CN")}</span></div></div>)}</div>}
+      {!snapshot?.movements.length?<p className="text-sm text-muted-foreground">暂无库存调整。</p>:<div className="space-y-2">{snapshot.movements.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-2.5 text-sm"><div><strong>{names.get(row.sku_id)||"已归档 SKU"}</strong><span className="ml-2 text-muted-foreground">{row.note}</span></div><div className="text-muted-foreground">{row.quantity_before} → {row.quantity_after} <span className={row.delta>=0?"text-[var(--mc-color-success)]":"text-[var(--mc-color-danger)]"}>({row.delta>0?"+":""}{row.delta})</span><span className="ml-3 text-xs text-muted-foreground">{new Date(row.created_at).toLocaleString("zh-CN")}</span></div></div>)}</div>}
     </SectionCard></div>
   </>;
 }
