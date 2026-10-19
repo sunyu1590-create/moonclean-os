@@ -1,6 +1,14 @@
-export const APP_VERSION = "0.9.4";
+export const APP_VERSION = "0.9.5";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.5",
+    date: "2026-10-19",
+    title: "夜间模式旧版提示",
+    changes: [
+      "夜间模式标记为 0.9.3 旧预览版本；后续功能和界面不再为夜间模式单独适配。",
+    ],
+  },
   {
     version: "0.9.4",
     date: "2026-10-19",

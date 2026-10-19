@@ -681,6 +681,7 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
 }
 
 /* Night palette is opt-in and local to this browser. */
+/* Legacy night theme is frozen at v0.9.3. Do not add or update night-specific styles for future features. */
 html[data-theme="night"] {
   color-scheme: dark;
   --background: #17212e;

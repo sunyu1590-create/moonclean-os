@@ -477,7 +477,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
-          {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为旧预览版本</div>}
+          {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为 0.9.3 旧预览版本，不会为新变化做适配</div>}
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
           {error && (
             <div
