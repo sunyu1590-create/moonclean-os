@@ -1,6 +1,6 @@
-# MoonClean OS · 第三阶段预接入
+# MoonClean OS · 1.0.0
 
-在第一阶段 Next.js 项目上增加 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。原有经营总览、推广、商品、财务、数据中心和统一十进制财务计算继续使用。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。
+MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
 
 ## DeepSeek 售后总结（可选）
 
