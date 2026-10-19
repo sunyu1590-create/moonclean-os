@@ -267,10 +267,26 @@ select:focus-visible {
 .mobile-primary-nav { isolation: isolate; }
 .mobile-active-indicator { transform-origin: center; }
 .mobile-primary-nav { touch-action: pan-y; }
+.app-shell-root { position: relative; isolation: isolate; }
+.app-shell-root::before,
+.app-shell-root::after { position: fixed; z-index: -1; inset: 0; content: ""; pointer-events: none; opacity: 0; }
+.app-shell-root::before {
+  background: radial-gradient(ellipse at 12% 18%, rgba(119,190,255,.15), transparent 30%), radial-gradient(ellipse at 88% 32%, rgba(108,220,196,.11), transparent 27%), radial-gradient(ellipse at 56% 92%, rgba(148,180,255,.12), transparent 33%);
+  transform: translate3d(0,0,0);
+}
+.app-shell-root::after {
+  background-image: radial-gradient(circle, rgba(91,157,216,.28) 0 1px, transparent 1.7px), radial-gradient(circle, rgba(99,191,175,.23) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(154,183,231,.23) 0 1px, transparent 1.8px);
+  background-position: 8px 12px, 53px 37px, 19px 71px;
+  background-size: 91px 97px, 137px 149px, 181px 167px;
+  mask-image: linear-gradient(180deg, transparent, #000 12%, #000 84%, transparent);
+}
+.app-shell-root.motion-level-refined::before { opacity: 1; animation: page-ambient-drift 24s ease-in-out infinite alternate; }
+.app-shell-root.motion-level-refined::after { opacity: .55; animation: page-particle-drift 34s linear infinite; }
+.app-shell-root.motion-level-standard::before { opacity: .4; }
 .mobile-primary-nav a,
 .mobile-primary-nav button { -webkit-user-drag: none; user-select: none; }
 html[data-motion="refined"] main > * {
-  animation: premium-page-enter var(--mc-motion-emphasis) var(--mc-ease-emphasis) both;
+  animation: premium-page-enter-refined var(--mc-motion-emphasis) var(--mc-ease-emphasis) both;
 }
 html[data-motion="refined"] main > *:nth-child(2) { animation-delay: 35ms; }
 html[data-motion="refined"] main > *:nth-child(3) { animation-delay: 70ms; }
@@ -473,6 +489,19 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
   from { opacity: 0; transform: translateY(9px) scale(.996); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+@keyframes premium-page-enter-refined {
+  from { opacity: 0; filter: blur(4px); transform: translateY(12px) scale(.994); }
+  68% { filter: blur(.7px); }
+  to { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+}
+@keyframes page-ambient-drift {
+  from { transform: translate3d(-1.2%, -1%, 0) scale(1); }
+  to { transform: translate3d(1.2%, 1%, 0) scale(1.035); }
+}
+@keyframes page-particle-drift {
+  from { background-position: 8px 12px, 53px 37px, 19px 71px; }
+  to { background-position: 8px -68px, 53px 117px, 19px -79px; }
+}
 @keyframes liquid-nav-arrive {
   from { opacity: 0; transform: translateY(24px) scale(.94); }
   70% { transform: translateY(-3px) scale(1.01); }
@@ -549,41 +578,41 @@ html[data-motion="simple"] .motion-switch-panel { border-radius: 18px !important
 .data-transition-refined::before { position:absolute; inset:0; background:radial-gradient(circle at 17% 30%,rgba(110,190,255,.18),transparent 24%),radial-gradient(circle at 82% 78%,rgba(85,207,176,.13),transparent 26%); content:""; pointer-events:none; }
 .data-transition-card { position:relative; z-index:1; }
 .data-transition-refined .data-transition-card { border-color:rgba(255,255,255,.96); background:rgba(255,255,255,.88); box-shadow:0 26px 82px rgba(42,91,139,.17),inset 0 1px 0 white; backdrop-filter:blur(12px) saturate(1.15); }
-.data-brand-emblem { isolation:isolate; }
-.data-brand-orbit { position:absolute; border:1px solid rgba(83,166,232,.36); border-radius:50%; opacity:0; }
-.data-brand-orbit-outer { inset:-8px; }
-.data-brand-orbit-inner { inset:-3px; border-color:rgba(46,173,150,.38); }
-.data-brand-particle { position:absolute; z-index:2; width:4px; height:4px; border-radius:50%; background:#fff; box-shadow:0 0 9px 2px rgba(64,157,229,.72); opacity:0; }
-.data-brand-particle-one { top:-7px; left:50%; }
-.data-brand-particle-two { bottom:1px; right:-5px; background:#80dfc2; }
-.data-transition-refined .data-brand-orbit-outer { opacity:.8; animation:data-orbit 6s linear infinite; }
-.data-transition-refined .data-brand-orbit-inner { opacity:.64; animation:data-orbit-reverse 9s linear infinite; }
-.data-transition-refined .data-brand-particle { opacity:.9; animation:data-particle 2.4s ease-in-out infinite; }
-.data-transition-refined .data-brand-particle-two { animation-delay:-1.2s; }
-.data-transition-standard .data-brand-orbit-outer { opacity:.58; }
-.data-transition-standard .data-brand-orbit-inner, .data-transition-standard .data-brand-particle { display:none; }
+.data-mode-emblem { isolation:isolate; }
+.data-mode-orbit { position:absolute; inset:-6px; border:1px solid rgba(83,166,232,.32); border-radius:24px; opacity:0; }
+.data-mode-particle { position:absolute; z-index:2; width:4px; height:4px; border-radius:50%; background:#fff; box-shadow:0 0 9px 2px rgba(64,157,229,.72); opacity:0; }
+.data-mode-particle-one { top:-5px; left:50%; }
+.data-mode-particle-two { bottom:3px; right:-4px; background:#80dfc2; }
+.data-transition-refined .data-mode-orbit { opacity:.8; animation:data-orbit 3.6s ease-in-out infinite alternate; }
+.data-transition-refined .data-mode-particle { opacity:.9; animation:data-particle 1.7s ease-in-out infinite; }
+.data-transition-refined .data-mode-particle-two { animation-delay:-.85s; }
+.data-transition-standard .data-mode-orbit { opacity:.58; }
+.data-transition-standard .data-mode-particle { display:none; }
 .data-loader-spinner { animation:mc-spin 1.15s linear infinite; }
 .data-transition-simple .data-loader-spinner { animation:none; }
 .data-transition-progress .data-space-progress { animation-duration:1.5s; }
-.data-transition-complete .data-brand-orbit { animation:data-orbit-close 140ms ease-out forwards; }
-.data-transition-complete .data-brand-particle { animation:data-particle-close 120ms ease-out forwards; }
-.data-transition-complete .data-brand-emblem { transform:scale(.97); transition:transform 140ms ease-out; }
+.data-transition-complete .data-mode-orbit { animation:data-orbit-close 140ms ease-out forwards; }
+.data-transition-complete .data-mode-particle { animation:data-particle-close 120ms ease-out forwards; }
+.data-transition-complete .data-mode-emblem { transform:scale(.97); transition:transform 140ms ease-out; }
 .data-transition-complete .data-transition-progress .data-space-progress { animation:none; width:100%; transition:width 120ms ease-out; }
 @keyframes data-orbit-close { to { transform:scale(.58); opacity:0; } }
 @keyframes data-particle-close { to { transform:scale(.1); opacity:0; } }
 .data-transition-simple .data-transition-card { border-color:#e3eaf0; background:#fff; box-shadow:none; backdrop-filter:none; }
-.data-transition-simple .data-brand-orbit, .data-transition-simple .data-brand-particle { display:none; }
+.data-transition-simple .data-mode-orbit, .data-transition-simple .data-mode-particle { display:none; }
 @keyframes data-orbit { to { transform:rotate(360deg); } }
 @keyframes data-orbit-reverse { to { transform:rotate(-360deg); } }
 @keyframes data-particle { 0%,100% { transform:scale(.72); opacity:.46; } 50% { transform:scale(1.2); opacity:1; } }
 html[data-motion="standard"] .data-transition-card { animation-duration:220ms; }
 html[data-motion="simple"] .data-transition-screen { background:#f5f7f9; }
 html[data-motion="simple"] .data-space-enter, html[data-motion="simple"] .data-space-orbit,
-html[data-motion="simple"] .data-space-progress, html[data-motion="simple"] .data-brand-orbit,
-html[data-motion="simple"] .data-brand-particle { animation:none !important; }
+html[data-motion="simple"] .data-space-progress, html[data-motion="simple"] .data-mode-orbit,
+html[data-motion="simple"] .data-mode-particle { animation:none !important; }
 @media (prefers-reduced-motion: reduce) {
-  .data-space-enter, .data-space-orbit, .data-space-progress, .data-brand-orbit,
-  .data-brand-particle, .data-loader-spinner, .motion-switch-screen::before { animation:none !important; }
+  .data-space-enter, .data-space-orbit, .data-space-progress, .data-mode-orbit,
+  .data-mode-particle, .data-loader-spinner, .motion-switch-screen::before,
+  .app-shell-root::before, .app-shell-root::after { animation:none !important; }
+  .app-shell-root::before, .app-shell-root::after { opacity:0 !important; }
+  html[data-motion="refined"] main > * { animation-name:premium-page-enter !important; }
   .data-transition-card, .motion-switch-panel { backdrop-filter:none !important; }
 }
 @media (prefers-reduced-motion: reduce) {

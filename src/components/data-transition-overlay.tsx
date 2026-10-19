@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { ArrowRight, Check, Circle, Cloud, HardDrive, LoaderCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/release-notes";
 import { MOTION_LEVELS, useMotionPreferences } from "@/components/motion-preferences";
@@ -32,15 +31,13 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
     >
       <div className={`data-transition-card w-full max-w-[380px] rounded-[28px] border border-white/90 bg-white/90 px-5 py-5 shadow-[0_22px_75px_rgba(42,91,139,0.12),inset_0_1px_0_white] sm:px-7 sm:py-6 ${transition ? "data-space-enter" : ""}`}>
         <div className="flex items-center gap-4">
-          <div className="data-brand-emblem relative grid size-[58px] shrink-0 place-items-center rounded-[20px] bg-white shadow-[0_8px_25px_rgba(37,108,162,.12)] ring-1 ring-white">
-            <span aria-hidden="true" className="data-brand-orbit data-brand-orbit-outer" />
-            <span aria-hidden="true" className="data-brand-orbit data-brand-orbit-inner" />
-            <Image src="/yue-ming-jing-logo.png" alt="" width={48} height={48} className="relative z-[1] size-11 object-contain" priority />
-            <span aria-hidden="true" className="data-brand-particle data-brand-particle-one" />
-            <span aria-hidden="true" className="data-brand-particle data-brand-particle-two" />
+          <div className="data-mode-emblem relative grid size-[58px] shrink-0 place-items-center rounded-[20px] bg-[#edf6ff] text-[#3189e8] shadow-[0_8px_25px_rgba(37,108,162,.12)] ring-1 ring-white">
+            <span aria-hidden="true" className="data-mode-orbit" />
+            <ModeIcon mode={targetMode} size={22} />
+            <span aria-hidden="true" className="data-mode-particle data-mode-particle-one" />
+            <span aria-hidden="true" className="data-mode-particle data-mode-particle-two" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold tracking-[.2em] text-[#4389c8]">MOONCLEAN OS</p>
             <h2 className="mt-1 text-base font-semibold tracking-tight text-[#172b45]">
               {switching ? `正在切换到${modeLabel[targetMode]}` : "正在准备经营空间"}
             </h2>

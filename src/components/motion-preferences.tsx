@@ -6,7 +6,7 @@ import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
-  { id: "refined", label: "精致", short: "丰富动效", detail: "柔光层次、品牌启动序列与细腻弹性反馈。", experience: "丰富细腻" },
+  { id: "refined", label: "精致", short: "丰富动效", detail: "流动柔光、页面景深与细腻交互反馈。", experience: "丰富细腻" },
   { id: "standard", label: "标准", short: "适中动效", detail: "清晰短促的过渡和基础交互反馈。", experience: "轻盈克制" },
   { id: "simple", label: "简单", short: "关闭动效", detail: "直接显示内容，关闭装饰性过渡。", experience: "清爽直接" },
 ];

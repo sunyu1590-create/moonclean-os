@@ -334,7 +334,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const indicatorTransform = `translateX(${activeIndicatorSlot * 100}%)`;
   return (
-    <div className="min-h-screen md:flex">
+    <div className={`app-shell-root min-h-screen md:flex motion-level-${motionLevel}`}>
       <aside
         className={cn(
           "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-[#eaedf1] bg-white transition-all md:flex",
@@ -477,6 +477,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main key={mode} className="mx-auto max-w-[1530px] px-5 pb-28 pt-7 md:px-9 md:pb-12 md:pt-10">
+          {nightMode && <div role="status" className="mb-4 rounded-xl border border-[#dce5ef] bg-white/70 px-3 py-2 text-xs text-[#718196]">当前为旧预览版本</div>}
           {logoutError && <div role="alert" className="mb-4 rounded-xl bg-[#fff0f1] p-3 text-sm text-[#e85d65]">{logoutError}</div>}
           {error && (
             <div

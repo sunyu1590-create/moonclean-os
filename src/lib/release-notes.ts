@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.3";
+export const APP_VERSION = "0.9.4";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.4",
+    date: "2026-10-19",
+    title: "精致动效与夜间预览提示",
+    changes: [
+      "恢复无品牌标志的启动加载卡片；切换到精致模式仍保留全屏切换动画，并保留页面渐入模糊。",
+      "精致模式增加全站柔光背景与低密度漂浮粒子；夜间配色维持现状，并显示旧预览版本提示。",
+    ],
+  },
   {
     version: "0.9.3",
     date: "2026-10-19",
