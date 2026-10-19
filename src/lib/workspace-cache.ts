@@ -1,14 +1,19 @@
 import type { WorkspaceResource, WorkspaceRow } from "@/lib/workspace";
+import { getWorkspaceHotFeature, type WorkspaceFeature } from "@/lib/workspace-usage";
 
 export const WORKSPACE_CACHE_TTL = 30_000;
 export const WORKSPACE_REFRESH_EVENT = "moonclean:workspace-refresh";
 export const WORKSPACE_CACHE_UPDATED_EVENT = "moonclean:workspace-cache-updated";
 
-type CacheEntry = { rows: WorkspaceRow[]; updatedAt: number; bytes: number };
+type CacheEntry = { rows: WorkspaceRow[]; updatedAt: number; bytes: number; feature: WorkspaceFeature };
 type RefreshEventDetail = { refreshers: Array<() => Promise<void>> };
 type UpdatedEventDetail = { storeId: string; userId: string; updatedAt: number };
 
-const MAX_CACHE_BYTES = 3 * 1024 * 1024;
+const BASE_CACHE_BYTES = 3 * 1024 * 1024;
+const MAX_CACHE_BYTES = 4 * 1024 * 1024;
+const MAX_HOT_FEATURE_BYTES = 3 * 1024 * 1024;
+const MAX_COLD_FEATURE_BYTES = 1 * 1024 * 1024;
+const MAX_CACHE_ENTRY_BYTES = 3 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 12;
 const cache = new Map<string, CacheEntry>();
 let cacheBytes = 0;
@@ -36,40 +41,64 @@ function estimateBytes(value: unknown, limit = MAX_CACHE_BYTES): number {
   return bytes;
 }
 
-export function getWorkspaceCache(userId: string, storeId: string, resource: WorkspaceResource) {
+export function getWorkspaceCache(userId: string, storeId: string, resource: WorkspaceResource, feature?: WorkspaceFeature) {
   const key = cacheKey(userId, storeId, resource);
   const entry = cache.get(key);
   if (!entry) return null;
   cache.delete(key);
+  if (feature) entry.feature = feature;
   cache.set(key, entry);
+  pruneWorkspaceCache();
   return entry;
 }
 
-export function setWorkspaceCache(userId: string, storeId: string, resource: WorkspaceResource, rows: WorkspaceRow[], updatedAt = Date.now()) {
+export function setWorkspaceCache(userId: string, storeId: string, resource: WorkspaceResource, rows: WorkspaceRow[], updatedAt = Date.now(), feature: WorkspaceFeature = "notes") {
   const key = cacheKey(userId, storeId, resource);
   const old = cache.get(key);
   if (old) cacheBytes -= old.bytes;
   cache.delete(key);
 
   const bytes = estimateBytes(rows);
-  if (bytes > MAX_CACHE_BYTES) {
+  if (bytes > MAX_CACHE_ENTRY_BYTES) {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent<UpdatedEventDetail>(WORKSPACE_CACHE_UPDATED_EVENT, { detail: { storeId, userId, updatedAt } }));
     }
     return;
   }
 
-  cache.set(key, { rows, updatedAt, bytes });
+  cache.set(key, { rows, updatedAt, bytes, feature });
   cacheBytes += bytes;
-  while (cache.size > MAX_CACHE_ENTRIES || cacheBytes > MAX_CACHE_BYTES) {
-    const oldestKey = cache.keys().next().value as string | undefined;
-    if (!oldestKey) break;
-    const oldest = cache.get(oldestKey);
-    cache.delete(oldestKey);
-    if (oldest) cacheBytes -= oldest.bytes;
-  }
+  pruneWorkspaceCache();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent<UpdatedEventDetail>(WORKSPACE_CACHE_UPDATED_EVENT, { detail: { storeId, userId, updatedAt } }));
+  }
+}
+
+export function pruneWorkspaceCache() {
+  const hotFeature = getWorkspaceHotFeature()?.feature ?? null;
+  const measure = () => {
+    let hotBytes = 0;
+    let coldBytes = 0;
+    for (const entry of cache.values()) {
+      if (hotFeature && entry.feature === hotFeature) hotBytes += entry.bytes;
+      else coldBytes += entry.bytes;
+    }
+    return { hotBytes, coldBytes };
+  };
+  while (cache.size > 0) {
+    const { hotBytes, coldBytes } = measure();
+    const tooMany = cache.size > MAX_CACHE_ENTRIES;
+    const tooLarge = hotFeature
+      ? cacheBytes > MAX_CACHE_BYTES || hotBytes > MAX_HOT_FEATURE_BYTES || coldBytes > MAX_COLD_FEATURE_BYTES
+      : cacheBytes > BASE_CACHE_BYTES;
+    if (!tooMany && !tooLarge) break;
+    const oldestCold = hotFeature
+      ? [...cache.entries()].find(([, entry]) => entry.feature !== hotFeature)
+      : undefined;
+    const [oldestKey, oldest] = oldestCold || cache.entries().next().value || [];
+    if (!oldestKey || !oldest) break;
+    cache.delete(oldestKey);
+    cacheBytes -= oldest.bytes;
   }
 }
 

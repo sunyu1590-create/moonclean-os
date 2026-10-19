@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.12";
+export const APP_VERSION = "0.9.13";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.13",
+    date: "2026-10-19",
+    title: "高频运营模块缓存优先",
+    changes: [
+      "根据最近 60 秒的页面访问和操作次数识别最常用模块，并优先保留该模块的数据缓存；其他模块继续使用基础缓存。",
+      "热门模块缓存最多约 3 MB，其余模块合计约 1 MB；总缓存最多约 4 MB，沿用 30 秒云端检查和手动刷新。",
+    ],
+  },
   {
     version: "0.9.12",
     date: "2026-10-19",

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-provider";
 import { notifyFeedback } from "@/lib/feedback";
 import { getWorkspaceCache, setWorkspaceCache, WORKSPACE_CACHE_TTL, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
+import type { WorkspaceFeature } from "@/lib/workspace-usage";
 import { localWorkspaceKey, resourceSchemas, type WorkspaceResource, type WorkspaceRow } from "@/lib/workspace";
 
 function readLocal(storeId: string, resource: WorkspaceResource): WorkspaceRow[] {
@@ -12,7 +13,7 @@ function readLocal(storeId: string, resource: WorkspaceResource): WorkspaceRow[]
 function writeLocal(storeId: string, resource: WorkspaceResource, rows: WorkspaceRow[]) { localStorage.setItem(localWorkspaceKey(storeId,resource),JSON.stringify(rows)); }
 type PendingRequest = { key: string; promise: Promise<void> };
 
-export function useWorkspaceResource(resource: WorkspaceResource) {
+export function useWorkspaceResource(resource: WorkspaceResource, feature: WorkspaceFeature) {
   const { mode, activeStoreId, user } = useApp();
   const userId = user?.id || "";
   const [rows,setRows] = useState<WorkspaceRow[]>([]);
@@ -39,7 +40,7 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
     if (!userId) { setLoading(false); return false; }
 
     const requestKey = `${mode}:${userId}:${activeStoreId}:${resource}`;
-    const cached = getWorkspaceCache(userId,activeStoreId,resource);
+    const cached = getWorkspaceCache(userId,activeStoreId,resource,feature);
     if (cached && activeKeyRef.current === requestKey) {
       commitRows(cached.rows);
       setLastUpdated(cached.updatedAt);
@@ -64,7 +65,7 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
         const updatedAt = Date.now();
         setLastUpdated(updatedAt);
         setError("");
-        setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt);
+        setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt,feature);
       }
     })();
     const pending = { key: requestKey, promise };
@@ -78,7 +79,7 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
       if (pendingRef.current === pending) pendingRef.current = null;
       if (activeKeyRef.current === requestKey) { setLoading(false); setRefreshing(false); }
     }
-  },[activeStoreId,commitRows,mode,resource,userId]);
+  },[activeStoreId,commitRows,feature,mode,resource,userId]);
 
   useEffect(()=>{
     const requestKey = `${mode}:${userId}:${activeStoreId || ""}:${resource}`;
@@ -86,7 +87,7 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
     const frame=window.requestAnimationFrame(()=>{
       if(activeKeyRef.current!==requestKey)return;
       if (mode === "cloud" && activeStoreId && userId) {
-        const cached = getWorkspaceCache(userId,activeStoreId,resource);
+        const cached = getWorkspaceCache(userId,activeStoreId,resource,feature);
         if (cached) {
           commitRows(cached.rows); setLastUpdated(cached.updatedAt); setLoading(false); setError("");
         } else { commitRows([]); setLastUpdated(null); setLoading(true); }
@@ -114,7 +115,7 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
       window.removeEventListener(WORKSPACE_REFRESH_EVENT,onRefresh);
       document.removeEventListener("visibilitychange",onVisibilityChange);
     };
-  },[activeStoreId,commitRows,mode,refresh,resource,userId]);
+  },[activeStoreId,commitRows,feature,mode,refresh,resource,userId]);
 
   const mutate=useCallback(async (method:"POST"|"PATCH"|"DELETE",value:Record<string,unknown>,success:string): Promise<WorkspaceRow|void> => {
     let created: WorkspaceRow|void = undefined;
@@ -169,11 +170,11 @@ export function useWorkspaceResource(resource: WorkspaceResource) {
       if(userId) {
         const updatedAt=Date.now();
         setLastUpdated(updatedAt);
-        setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt);
+        setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt,feature);
       }
     }
     notifyFeedback({kind:"success",title:success,description:mode==="cloud"?"已保存到云端店铺。":"已保存在此设备。"});
     return created;
-  },[activeStoreId,commitRows,mode,resource,userId]);
+  },[activeStoreId,commitRows,feature,mode,resource,userId]);
   return {rows,loading,refreshing,error,lastUpdated,refresh,create:(v:Record<string,unknown>)=>mutate("POST",v,"已创建"),update:(v:Record<string,unknown>)=>mutate("PATCH",v,"已保存"),remove:(id:string)=>mutate("DELETE",{id},"已移入回收站"),archive:(id:string)=>mutate("DELETE",{id,archive:true},"已归档"),restore:(id:string)=>mutate("DELETE",{id,restore:true},"已恢复"),unarchive:(id:string)=>mutate("DELETE",{id,restore:true,restoreArchive:true},"已取消归档")};
 }

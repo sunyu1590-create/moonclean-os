@@ -15,7 +15,8 @@ import type { WorkspaceResource, WorkspaceRow } from "@/lib/workspace";
 import { operationsRequest } from "@/lib/operations";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { AppData } from "@/lib/model";
-import { getLatestWorkspaceCacheTime, refreshWorkspacePage, WORKSPACE_CACHE_UPDATED_EVENT } from "@/lib/workspace-cache";
+import { getLatestWorkspaceCacheTime, pruneWorkspaceCache, refreshWorkspacePage, WORKSPACE_CACHE_UPDATED_EVENT } from "@/lib/workspace-cache";
+import { trackWorkspaceInteraction, type WorkspaceFeature } from "@/lib/workspace-usage";
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type Module = "notes"|"experiments"|"competitors"|"service"|"copilot";
@@ -45,7 +46,7 @@ function MarkdownReply({content}:{content:string}) {
    return <p key={index}>{inline(value)}</p>;
  })}</div>;
 }
-function useRows(resource:WorkspaceResource){ return useWorkspaceResource(resource); }
+function useRows(resource:WorkspaceResource,feature:WorkspaceFeature){ return useWorkspaceResource(resource,feature); }
 function useMutationFeedback() { return useCallback((cause:unknown,action:string)=>notifyFeedback({kind:"error",title:action,description:cause instanceof Error?cause.message:"请检查网络后重试"}),[]); }
 async function createWorkspaceTask(input:{storeId:string|null;mode:"cloud"|"local";update:(fn:(data:AppData)=>AppData)=>Promise<void>;title:string;detail:string;sourceModule?:"notes"|"experiments"|"competitors"|"service-cases"|"copilot-conversations";sourceId?:string}) {
  if(!input.storeId)throw new Error("请先选择店铺");
@@ -56,7 +57,7 @@ async function createWorkspaceTask(input:{storeId:string|null;mode:"cloud"|"loca
 }
 
 function NotesModule({initialNoteId=""}:{initialNoteId?:string}){
- const router=useRouter();const {mode,activeStoreId,data,update,role}=useApp(); const {rows,loading,error,refresh,create,update:save,remove,restore,archive:archiveRow,unarchive}=useRows("notes"); const versions=useRows("note-versions");const experiments=useRows("experiments");const competitors=useRows("competitors");const cases=useRows("service-cases");const conversations=useRows("copilot-conversations"); const report=useMutationFeedback();
+ const router=useRouter();const {mode,activeStoreId,data,update,role}=useApp(); const {rows,loading,error,refresh,create,update:save,remove,restore,archive:archiveRow,unarchive}=useRows("notes","notes"); const versions=useRows("note-versions","notes");const experiments=useRows("experiments","notes");const competitors=useRows("competitors","notes");const cases=useRows("service-cases","notes");const conversations=useRows("copilot-conversations","notes"); const report=useMutationFeedback();
  const [selected,setSelected]=useState("");const [search,setSearch]=useState("");const [filter,setFilter]=useState("active");const [title,setTitle]=useState("");const [body,setBody]=useState("");const [category,setCategory]=useState("运营复盘");const [folder,setFolder]=useState("");const [tags,setTags]=useState("");const [relatedType,setRelatedType]=useState("");const [relatedId,setRelatedId]=useState("");const [saveStatus,setSaveStatus]=useState("已同步");const [busy,setBusy]=useState(false);const [isNew,setIsNew]=useState(false);const editor=useRef<HTMLTextAreaElement>(null); const canEdit=mode==="local"||role!=="viewer";
  const visible=useMemo(()=>rows.filter(row=>{const deleted=Boolean(row.deleted_at);const archived=Boolean(row.archived_at);return (filter==="trash"?deleted:filter==="archive"?archived:filter==="favorites"?!deleted&&!archived&&Boolean(row.is_favorite):!deleted&&!archived)&&`${row.title} ${row.body_markdown} ${row.category} ${(row.tags as string[]||[]).join(" ")}`.toLowerCase().includes(search.toLowerCase());}).sort((a,b)=>Number(Boolean(b.is_pinned))-Number(Boolean(a.is_pinned))||String(b.updated_at||b.created_at).localeCompare(String(a.updated_at||a.created_at))),[rows,search,filter]);
  const current=rows.find(row=>row.id===selected);
@@ -86,8 +87,8 @@ function NotesModule({initialNoteId=""}:{initialNoteId?:string}){
 function ExperimentsModule({initialRecordId=""}:{initialRecordId?:string}){
   const { data, mode, activeStoreId, update } = useApp();
   const router = useRouter();
-  const exp = useRows("experiments");
-  const notes = useRows("notes");
+  const exp = useRows("experiments","experiments");
+  const notes = useRows("notes","notes");
   const [editing, setEditing] = useState<WorkspaceRow | null>(null);
   const [search, setSearch] = useState("");
   const report = useMutationFeedback();
@@ -146,7 +147,7 @@ function ExperimentsModule({initialRecordId=""}:{initialRecordId?:string}){
 }
 
 function CompetitorsModule({initialRecordId=""}:{initialRecordId?:string}){
- const {data,mode,activeStoreId,update}=useApp();const router=useRouter();const competitors=useRows("competitors");const prices=useRows("competitor-prices");const report=useMutationFeedback();const [editing,setEditing]=useState<WorkspaceRow|null>(null);const [selected,setSelected]=useState<string[]>([]);const [form,setForm]=useState({brand:"",product_name:"",product_url:"",platform:"pinduoduo",specifications:"",current_price:"",unit_quantity:"",unit_name:"瓶",selling_points:"",promotion:"",image_url:"",source_note:"",our_product_id:""});const [search,setSearch]=useState("");const [historyId,setHistoryId]=useState("");
+ const {data,mode,activeStoreId,update}=useApp();const router=useRouter();const competitors=useRows("competitors","competitors");const prices=useRows("competitor-prices","competitors");const report=useMutationFeedback();const [editing,setEditing]=useState<WorkspaceRow|null>(null);const [selected,setSelected]=useState<string[]>([]);const [form,setForm]=useState({brand:"",product_name:"",product_url:"",platform:"pinduoduo",specifications:"",current_price:"",unit_quantity:"",unit_name:"瓶",selling_points:"",promotion:"",image_url:"",source_note:"",our_product_id:""});const [search,setSearch]=useState("");const [historyId,setHistoryId]=useState("");
  const open=useCallback((row?:WorkspaceRow)=>{setEditing(row||null);setForm(row?{brand:String(row.brand||""),product_name:String(row.product_name),product_url:String(row.product_url||""),platform:String(row.platform),specifications:String(row.specifications||""),current_price:String(row.current_price),unit_quantity:String(row.unit_quantity||""),unit_name:String(row.unit_name||"件"),selling_points:(row.selling_points as string[]||[]).join("，"),promotion:String(row.promotion||""),image_url:String(row.image_url||""),source_note:String(row.source_note||""),our_product_id:String(row.our_product_id||"")}:{brand:"",product_name:"",product_url:"",platform:"pinduoduo",specifications:"",current_price:"",unit_quantity:"",unit_name:"件",selling_points:"",promotion:"",image_url:"",source_note:"",our_product_id:""});},[]);
  const openedId=useRef("");useEffect(()=>{if(!initialRecordId||openedId.current===initialRecordId)return;const row=competitors.rows.find(item=>item.id===initialRecordId);if(!row)return;const timer=window.setTimeout(()=>{open(row);openedId.current=initialRecordId;},0);return()=>window.clearTimeout(timer);},[initialRecordId,competitors.rows,open]);
  const save=async(e:React.FormEvent)=>{e.preventDefault();try{const payload={brand:form.brand,product_name:form.product_name,product_url:form.product_url,platform:form.platform,specifications:form.specifications,current_price:Number(form.current_price),unit_quantity:form.unit_quantity?Number(form.unit_quantity):null,unit_name:form.unit_name,selling_points:form.selling_points.split(/[，,]/).map(s=>s.trim()).filter(Boolean),promotion:form.promotion,image_url:form.image_url,source_note:form.source_note,our_product_id:form.our_product_id||null};if(editing)await competitors.update({id:editing.id,...payload});else await competitors.create(payload);open();}catch(e){report(e,"竞品保存失败");}};
@@ -159,7 +160,7 @@ function CompetitorsModule({initialRecordId=""}:{initialRecordId?:string}){
 
 const serviceCategories:Record<string,string>={presales:"售前咨询",specification:"商品规格",usage:"产品使用方法",logistics:"物流问题",leakage:"漏液与包装破损",refund:"退款退货",complaint:"投诉处理",negative_review:"差评沟通",follow_up:"售后回访",other:"其他"};
 function ServiceModule({initialRecordId=""}:{initialRecordId?:string}){
- const {mode,activeStoreId,data,role,update}=useApp();const router=useRouter();const notes=useRows("notes");const templates=useRows("service-templates");const cases=useRows("service-cases");const logs=useRows("service-case-logs");const report=useMutationFeedback();const [tab,setTab]=useState<"templates"|"cases">("templates");const [editTemplate,setEditTemplate]=useState<WorkspaceRow|null>(null);const [templateForm,setTemplateForm]=useState({title:"",category:"presales",body:"",variables:"product_name, order_number, customer_name"});const [caseId,setCaseId]=useState("");const [caseForm,setCaseForm]=useState({order_number:"",customer_name:"",product_id:"",assigned_to:"",issue_category:"usage",description:"",status:"open",resolution:"",compensation_amount:"0"});const [attachments,setAttachments]=useState<string[]>([]);const [search,setSearch]=useState("");const [vars,setVars]=useState<Record<string,string>>({});const [caseFilter,setCaseFilter]=useState("all");const canEdit=mode==="local"||role!=="viewer";
+ const {mode,activeStoreId,data,role,update}=useApp();const router=useRouter();const notes=useRows("notes","notes");const templates=useRows("service-templates","service");const cases=useRows("service-cases","service");const logs=useRows("service-case-logs","service");const report=useMutationFeedback();const [tab,setTab]=useState<"templates"|"cases">("templates");const [editTemplate,setEditTemplate]=useState<WorkspaceRow|null>(null);const [templateForm,setTemplateForm]=useState({title:"",category:"presales",body:"",variables:"product_name, order_number, customer_name"});const [caseId,setCaseId]=useState("");const [caseForm,setCaseForm]=useState({order_number:"",customer_name:"",product_id:"",assigned_to:"",issue_category:"usage",description:"",status:"open",resolution:"",compensation_amount:"0"});const [attachments,setAttachments]=useState<string[]>([]);const [search,setSearch]=useState("");const [vars,setVars]=useState<Record<string,string>>({});const [caseFilter,setCaseFilter]=useState("all");const canEdit=mode==="local"||role!=="viewer";
  const openTemplate=(row?:WorkspaceRow)=>{setEditTemplate(row||null);setTemplateForm(row?{title:String(row.title),category:String(row.category),body:String(row.body),variables:(row.variables as string[]||[]).join(", ")}:{title:"",category:"presales",body:"",variables:"product_name, order_number, customer_name"});};
  const saveTemplate=async(e:React.FormEvent)=>{e.preventDefault();try{const payload={...templateForm,variables:templateForm.variables.split(/[，,]/).map(s=>s.trim()).filter(Boolean)};if(editTemplate)await templates.update({id:editTemplate.id,...payload});else await templates.create(payload);openTemplate();}catch(e){report(e,"话术保存失败");}};
  const openCase=useCallback((row?:WorkspaceRow)=>{setCaseId(String(row?.id||""));setAttachments((row?.attachment_paths as string[]||[]));setCaseForm(row?{order_number:String(row.order_number),customer_name:String(row.customer_name),product_id:String(row.product_id||""),assigned_to:String(row.assigned_to||""),issue_category:String(row.issue_category),description:String(row.description),status:String(row.status),resolution:String(row.resolution),compensation_amount:String(row.compensation_amount)}:{order_number:"",customer_name:"",product_id:"",assigned_to:"",issue_category:"usage",description:"",status:"open",resolution:"",compensation_amount:"0"});},[]);
@@ -174,7 +175,7 @@ function ServiceModule({initialRecordId=""}:{initialRecordId?:string}){
 }
 
 function CopilotModule({initialQuestion="",initialCompetitorId="",initialConversationId=""}:{initialQuestion?:string;initialCompetitorId?:string;initialConversationId?:string}){
- const {mode,activeStoreId,data,role,update}=useApp();const conversations=useRows("copilot-conversations");const messages=useRows("copilot-messages");const notes=useRows("notes");const usage=useRows("copilot-usage");const report=useMutationFeedback();const [conversationId,setConversationId]=useState(initialConversationId);const [forceNewConversation,setForceNewConversation]=useState(Boolean(initialQuestion));const [question,setQuestion]=useState(initialQuestion);const [sending,setSending]=useState(false);const [search,setSearch]=useState("");const [configured,setConfigured]=useState<boolean|null>(null);const [productIds,setProductIds]=useState<string[]>([]);const [competitorIds]=useState<string[]>(initialCompetitorId?[initialCompetitorId]:[]);
+ const {mode,activeStoreId,data,role,update}=useApp();const conversations=useRows("copilot-conversations","copilot");const messages=useRows("copilot-messages","copilot");const notes=useRows("notes","notes");const usage=useRows("copilot-usage","copilot");const report=useMutationFeedback();const [conversationId,setConversationId]=useState(initialConversationId);const [forceNewConversation,setForceNewConversation]=useState(Boolean(initialQuestion));const [question,setQuestion]=useState(initialQuestion);const [sending,setSending]=useState(false);const [search,setSearch]=useState("");const [configured,setConfigured]=useState<boolean|null>(null);const [productIds,setProductIds]=useState<string[]>([]);const [competitorIds]=useState<string[]>(initialCompetitorId?[initialCompetitorId]:[]);
  useEffect(()=>{if(!activeStoreId||mode!=="cloud")return;let alive=true;fetch(`/api/stores/${activeStoreId}/ai/deepseek`,{cache:"no-store"}).then(r=>r.json()).then(r=>{if(alive)setConfigured(Boolean(r.configured));}).catch(()=>{if(alive)setConfigured(false);});return()=>{alive=false;};},[activeStoreId,mode]);
  const activeConversationId=conversationId||(forceNewConversation?"":String(conversations.rows.find(c=>!c.deleted_at)?.id||""));
  const activeMessages=messages.rows.filter(m=>m.conversation_id===activeConversationId).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
@@ -201,6 +202,13 @@ export function WorkspacePage({module,initialQuestion,initialCompetitorId,initia
   window.addEventListener(WORKSPACE_CACHE_UPDATED_EVENT,onUpdated);
   return()=>window.removeEventListener(WORKSPACE_CACHE_UPDATED_EVENT,onUpdated);
  },[activeStoreId,cacheScope,user?.id]);
+ useEffect(()=>{
+  const frame=window.requestAnimationFrame(()=>{
+   trackWorkspaceInteraction(module);
+   pruneWorkspaceCache();
+  });
+  return()=>window.cancelAnimationFrame(frame);
+ },[module]);
  const refresh=async()=>{setRefreshing(true);try{await refreshWorkspacePage();notifyFeedback({kind:"success",title:"云端内容已刷新",description:"当前页面的数据已重新检查。"});}catch(cause){notifyFeedback({kind:"error",title:"部分内容刷新失败",description:cause instanceof Error?cause.message:"请检查网络后重试。"});}finally{setRefreshing(false);if(cacheScope&&activeStoreId&&user?.id)setCacheUpdate({scope:cacheScope,updatedAt:getLatestWorkspaceCacheTime(user.id,activeStoreId)||Date.now()});}};
  let content:React.ReactNode;
  switch(module){
@@ -210,11 +218,11 @@ export function WorkspacePage({module,initialQuestion,initialCompetitorId,initia
   case"service":content=<ServiceModule initialRecordId={initialRecordId}/>;break;
   case"copilot":content=<CopilotModule initialQuestion={initialQuestion} initialCompetitorId={initialCompetitorId} initialConversationId={initialConversationId}/>;break;
  }
- return <>
+ return <div onClickCapture={()=>{trackWorkspaceInteraction(module);pruneWorkspaceCache();}}>
   {mode==="cloud"&&<div className="mb-2 flex items-center justify-end gap-2 px-1 text-[10px] text-[#8b9bab] sm:mb-3">
    <span>{lastUpdated?`最近同步 ${new Date(lastUpdated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})} · 30 秒自动检查`:"云端缓存 · 30 秒自动检查"}</span>
    <Button size="xs" variant="outline" disabled={refreshing} onClick={()=>void refresh()}><RefreshCw size={12} className={refreshing?"animate-spin":""}/>{refreshing?"刷新中":"手动刷新"}</Button>
   </div>}
   {content}
- </>;
+ </div>;
 }
