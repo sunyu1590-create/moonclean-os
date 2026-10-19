@@ -74,7 +74,7 @@ const Context = createContext<ContextValue | null>(null);
 const ACTIVE_KEY = "moonclean-active-store";
 const DATA_MODE_KEY = "moonclean-data-mode-v1";
 const DATA_MODE_COOKIE = "moonclean-data-mode";
-const MIN_TRANSITION_MS = 460;
+const MIN_SWITCH_TRANSITION_MS = 360;
 const TRANSITION_STEP_MS = 85;
 const waitForTransitionStep = () => new Promise<void>((resolve) => window.setTimeout(resolve, TRANSITION_STEP_MS));
 function persistDataMode(target: "local" | "cloud") {
@@ -125,16 +125,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(
     async (preferred?: string) => {
       const showOpening = !hasLoadedRef.current;
-      const startedAt = Date.now();
       if (showOpening) {
         setDataTransition(makeTransition("opening", mode));
-        await waitForTransitionStep();
       }
       setLoading(true);
       setError(null);
+      let openingSucceeded = false;
       try {
         if (mode === "local") {
-          if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 1) : current); await waitForTransitionStep(); }
+          if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 1) : current);
           const loaded = repository.load();
           if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 2) : current);
           setDisplayCurrency(loaded.settings.store.currency);
@@ -146,7 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             throw new Error(
               "尚未配置 Supabase，请参照 .env.example 设置项目地址和 Publishable Key",
             );
-          if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 1) : current); await waitForTransitionStep(); }
+          if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 1) : current);
           const response = await listStores();
           setStores(response.stores);
           setUser(response.user);
@@ -159,7 +158,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setActiveStoreId(id || null);
           if (id) {
             try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* Keep the current session usable if storage is blocked. */ }
-            if (showOpening) { setDataTransition((current) => current ? updateTransitionStep(current, 2) : current); await waitForTransitionStep(); }
+            if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 2) : current);
             const loaded = await cloud.load(id);
             if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 3) : current);
             setDisplayCurrency(loaded.settings.store.currency);
@@ -170,16 +169,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setData(null);
           }
         }
+        openingSucceeded = true;
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "加载失败");
         dataRef.current = null;
         setData(null);
       } finally {
         if (showOpening) {
-          setDataTransition((current) => current ? finishTransition(current) : current);
-          const remaining = MIN_TRANSITION_MS - (Date.now() - startedAt);
-          if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
-          hasLoadedRef.current = true;
+          if (openingSucceeded) {
+            setDataTransition((current) => current ? finishTransition(current) : current);
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (!reduced) await new Promise((resolve) => setTimeout(resolve, 120));
+            hasLoadedRef.current = true;
+          }
           setDataTransition(null);
         }
         setLoading(false);
@@ -291,7 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error(message);
     } finally {
       setDataTransition((current) => current ? finishTransition(current) : current);
-      const remaining = MIN_TRANSITION_MS - (Date.now() - startedAt);
+      const remaining = MIN_SWITCH_TRANSITION_MS - (Date.now() - startedAt);
       if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
       setDataTransition(null);
       setLoading(false);

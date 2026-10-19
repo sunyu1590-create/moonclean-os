@@ -336,7 +336,7 @@ export default function Products() {
                 <Button variant="outline" onClick={() => setOpen(false)}>
                   取消
                 </Button>
-                <Button onClick={() => void save()} disabled={saving}>
+                <Button loading={saving} onClick={() => void save()} disabled={saving}>
                   {saving ? "保存中…" : "保存商品"}
                 </Button>
               </div>

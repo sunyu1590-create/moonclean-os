@@ -1,4 +1,5 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { LoaderCircle } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
@@ -39,18 +40,29 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonProps = ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & { loading?: boolean };
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  loading = false,
+  children,
+  "aria-busy": ariaBusy,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const busy = loading || ariaBusy === true;
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-loading={busy ? "true" : undefined}
+      aria-busy={busy || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {busy && <LoaderCircle aria-hidden="true" className="mc-button-spinner size-4 shrink-0" />}
+      {children}
+    </ButtonPrimitive>
   );
 }
 

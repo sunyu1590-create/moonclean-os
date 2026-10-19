@@ -6,13 +6,13 @@ import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
-  { id: "refined", label: "精致", short: "丰富动效", detail: "流光、柔和模糊与弹性反馈。", experience: "丰富细腻" },
-  { id: "standard", label: "标准", short: "适中动效", detail: "轻量过渡与基础交互反馈。", experience: "轻盈克制" },
-  { id: "simple", label: "简单", short: "关闭动效", detail: "直接切换，减少视觉效果。", experience: "清爽直接" },
+  { id: "refined", label: "精致", short: "丰富动效", detail: "柔光层次、品牌启动序列与细腻弹性反馈。", experience: "丰富细腻" },
+  { id: "standard", label: "标准", short: "适中动效", detail: "清晰短促的过渡和基础交互反馈。", experience: "轻盈克制" },
+  { id: "simple", label: "简单", short: "关闭动效", detail: "直接显示内容，关闭装饰性过渡。", experience: "清爽直接" },
 ];
 
 type MotionTransition = { id: number; to: MotionLevel };
-type MotionContextValue = { level: MotionLevel; ready: boolean; setLevel: (level: MotionLevel) => void };
+type MotionContextValue = { level: MotionLevel; ready: boolean; reducedMotion: boolean; setLevel: (level: MotionLevel) => void };
 const STORAGE_KEY = "moonclean-motion-level-v1";
 const MotionContext = createContext<MotionContextValue | null>(null);
 
@@ -39,6 +39,7 @@ function MotionSwitchScreen({ transition }: { transition: MotionTransition }) {
 export function MotionPreferencesProvider({ children }: { children: ReactNode }) {
   const [level, setLevelState] = useState<MotionLevel>("standard");
   const [ready, setReady] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const [transition, setTransition] = useState<MotionTransition | null>(null);
   const transitionId = useRef(0);
   const timer = useRef<number | null>(null);
@@ -55,6 +56,14 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   }, []);
 
   useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.dataset.motion = level;
   }, [level]);
 
@@ -67,11 +76,15 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
     try { localStorage.setItem(STORAGE_KEY, next); } catch { /* This session still adopts the selected profile. */ }
     document.documentElement.dataset.motion = next;
     setLevelState(next);
+    if (reducedMotion || next === "simple") {
+      setTransition(null);
+      return;
+    }
     setTransition({ id, to: next });
-    timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "simple" ? 320 : 560);
-  }, [level]);
+    timer.current = window.setTimeout(() => setTransition(current => current?.id === id ? null : current), next === "standard" ? 320 : 700);
+  }, [level, reducedMotion]);
 
-  return <MotionContext.Provider value={{ level, ready, setLevel }}>
+  return <MotionContext.Provider value={{ level, ready, reducedMotion, setLevel }}>
     {children}
     {transition && <MotionSwitchScreen transition={transition}/>}
   </MotionContext.Provider>;

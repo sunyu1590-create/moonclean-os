@@ -6,6 +6,7 @@ import { Download, RefreshCw, ShoppingBag } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { downloadText, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { operationsRequest } from "@/lib/operations";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 type Order={id:string;external_id:string;status:string;placed_at:string;gross_sales:string;is_demo:boolean};
@@ -45,7 +46,7 @@ export default function OrdersPage(){
     {mode!=="cloud"&&<p className="mb-5 rounded-2xl bg-white p-4 text-sm text-[#8194a8]">订单中心使用云端同步数据，配置 Supabase 并登录后可使用。</p>}
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[#fff0f1] p-4 text-sm text-[#d35760]">{error}</p>}
     <SectionCard title="订单记录" sub={snapshot?`共 ${snapshot.count} 笔，当前第 ${page} 页，每页 20 笔`:"正在读取云端订单"} action={<div className="flex flex-wrap gap-2"><input aria-label="筛选本页订单号" value={search} onChange={e=>setSearch(e.target.value)} placeholder="筛选本页订单号" className="h-9 w-40 rounded-xl border border-[#e3eaf1] px-3 text-xs"/><AppSelect aria-label="筛选订单状态" value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}} className="h-9 rounded-xl border border-[#e3eaf1] bg-white px-3 text-xs"><option value="all">全部状态</option>{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect></div>}>
-      {loading?<p className="text-sm text-[#8194a8]">正在读取云端订单…</p>:!visible.length?<p className="text-sm text-[#8194a8]">本页暂无订单。可在平台连接中心创建模拟订单并同步。</p>:<div className="space-y-3">{visible.map(order=>{
+      {loading?<TableSkeleton rows={5} columns={4}/>:!visible.length?<p className="text-sm text-[#8194a8]">本页暂无订单。可在平台连接中心创建模拟订单并同步。</p>:<div className="space-y-3">{visible.map(order=>{
         const items=snapshot?.items.filter(item=>item.order_id===order.id)||[];
         const refunds=snapshot?.refunds.filter(refund=>refund.order_id===order.id)||[];
         return <div key={order.id} className="rounded-2xl border border-[#e9eef3] p-4">
