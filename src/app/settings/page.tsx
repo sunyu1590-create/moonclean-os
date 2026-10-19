@@ -40,6 +40,7 @@ import { parseAppData } from "@/lib/repository";
 import { MOTION_LEVELS, useMotionPreferences, type MotionLevel } from "@/components/motion-preferences";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { notifyFeedback } from "@/lib/feedback";
+import { AttachmentBackup } from "@/components/attachment-backup";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
   const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel } = useMotionPreferences();
@@ -453,6 +454,12 @@ export default function SettingsPage() {
                   {backupBusy ? "正在备份全部云端数据…" : "备份全部云端数据"}
                 </Button>
               )}
+              {mode === "cloud" && role === "owner" && (
+                <div className="rounded-xl border border-[#e8eef4] bg-white p-3">
+                  <p className="mb-2 text-xs font-semibold text-[#324b63]">售后附件迁移</p>
+                  <AttachmentBackup />
+                </div>
+              )}
               {backupMessage && (
                 <p role="status" className="text-xs text-[#168a70]">
                   {backupMessage}
@@ -484,7 +491,7 @@ export default function SettingsPage() {
             </div>
             <p className="mt-4 text-xs leading-5 text-[#9aabba]">
               {mode === "cloud"
-                ? "完整备份包括业务记录、SKU 成本历史、订单、库存、成员关系与操作日志。出于安全考虑，登录密码和平台访问令牌不导出；迁移后需重新邀请成员并配置平台连接。"
+                ? "完整 JSON 备份包括业务记录和售后附件路径；附件文件可用下方单独 ZIP 导出与恢复。登录密码和平台访问令牌不导出，迁移后需重新邀请成员并配置平台连接。"
                 : "本地全量备份包含商品及 SKU 成本、经营日报、推广、待办、库存、设置和其他本地工作区数据。导入会替换当前本地工作区，并在替换前自动下载现有备份。云端订单、售后和平台连接数据不属于本地工作区。"}
             </p>
           </SectionCard>

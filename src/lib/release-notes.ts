@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.0";
+export const APP_VERSION = "0.9.1";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.1",
+    date: "2026-10-19",
+    title: "售后附件独立备份与迁移",
+    changes: [
+      "可单独导出售后附件 ZIP 归档，并将附件恢复到所选店铺；恢复前会校验工单、路径和文件，不覆盖已有的不同文件。",
+      "附件迁移显示实时进度与逐项失败结果；仅店铺 Owner 可以操作。",
+    ],
+  },
   {
     version: "0.9.0",
     date: "2026-10-18",
