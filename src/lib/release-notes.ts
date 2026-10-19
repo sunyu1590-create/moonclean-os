@@ -1,6 +1,15 @@
-export const APP_VERSION = "0.9.14";
+export const APP_VERSION = "0.9.15";
 
 export const RELEASE_NOTES = [
+  {
+    version: "0.9.15",
+    date: "2026-10-19",
+    title: "清除默认缩放展开过渡",
+    changes: [
+      "清空浏览器设置后的默认页面切换改为模糊上浮；模糊渐显现在只做透明度与清晰度变化，不再从小方块放大展开。",
+      "避免默认动效与已移除的苹果式展开相似，两个页面过渡选项都只作用于路由内容。",
+    ],
+  },
   {
     version: "0.9.14",
     date: "2026-10-19",

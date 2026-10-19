@@ -42,7 +42,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   const [level, setLevelState] = useState<MotionLevel>("standard");
   const [ready, setReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("blur-fade");
+  const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("blur-lift");
   const [transition, setTransition] = useState<MotionTransition | null>(null);
   const transitionId = useRef(0);
   const timer = useRef<number | null>(null);

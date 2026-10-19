@@ -255,7 +255,7 @@ export default function SettingsPage() {
               <p className="mb-2 text-xs font-semibold text-[#526a80]">底栏页面切换</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
-                  { id: "blur-fade", label: "模糊渐显", description: "轻微虚化后渐显，切换更轻", Icon: Sparkles },
+                  { id: "blur-fade", label: "模糊渐显", description: "只淡入并清晰，不缩放展开", Icon: Sparkles },
                   { id: "blur-lift", label: "模糊上浮", description: "轻微虚化并向上浮现", Icon: MoveUpRight },
                 ] as const).map(({ id, label, description, Icon }) => {
                   const selected = pageTransitionStyle === id;
