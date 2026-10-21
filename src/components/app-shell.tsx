@@ -189,6 +189,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
   const [mobileRouteEntering, setMobileRouteEntering] = useState(false);
+  const [mobileMoreOrigin, setMobileMoreOrigin] = useState({ x: 50, y: 320 });
   const sheetDrag = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const suppressSheetHandleClick = useRef(false);
   const [sheetDragging, setSheetDragging] = useState(false);
@@ -304,6 +305,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : mobilePrimary.length < 4 ? [...mobilePrimary, href] : mobilePrimary;
     setMobilePrimary(next);
     localStorage.setItem(mobileNavStorageKey, JSON.stringify(next));
+  }
+  function updateMobileNavPointer(event: React.PointerEvent<HTMLElement>) {
+    const track = event.currentTarget.querySelector<HTMLElement>(".mobile-primary-nav-track");
+    const bounds = (track ?? event.currentTarget).getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mobile-pointer-x", `${event.clientX - bounds.left}px`);
+    event.currentTarget.style.setProperty("--mobile-pointer-y", `${event.clientY - bounds.top}px`);
+    event.currentTarget.dataset.pointerActive = "true";
+  }
+  function clearMobileNavPointer(event: React.PointerEvent<HTMLElement>) {
+    event.currentTarget.dataset.pointerActive = "false";
+  }
+  function openMobileMenu(event: React.MouseEvent<HTMLButtonElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const clickX = event.detail === 0 ? bounds.left + bounds.width / 2 : event.clientX;
+    const clickY = event.detail === 0 ? bounds.top + bounds.height / 2 : event.clientY;
+    const panelHeight = window.innerHeight * 0.56;
+    setMobileMoreOrigin({
+      x: Math.max(0, Math.min(window.innerWidth, clickX)),
+      y: Math.max(0, Math.min(panelHeight, clickY - (window.innerHeight - panelHeight))),
+    });
+    setMobileMenuOpen(true);
   }
   function selectMobileRoute() {
     setMobileRouteEntering(true);
@@ -575,25 +597,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
-      <nav aria-label="主导航" className={cn("mobile-primary-nav material-standard fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] p-1.5 md:hidden", `mobile-primary-nav-${motionLevel}`)}>
-        <div className="relative grid grid-cols-5">
+      <nav aria-label="主导航" onPointerMove={updateMobileNavPointer} onPointerDown={updateMobileNavPointer} onPointerLeave={clearMobileNavPointer} className={cn("mobile-primary-nav material-standard fixed inset-x-3 bottom-[max(8px,env(safe-area-inset-bottom))] z-30 rounded-[23px] p-1.5 md:hidden", `mobile-primary-nav-${motionLevel}`)}>
+        <div className="mobile-primary-nav-track relative grid grid-cols-5">
           <span aria-hidden="true" className="mobile-active-indicator pointer-events-none absolute inset-y-0.5 left-0 w-1/5 rounded-[16px] border border-white/70 bg-[var(--mc-tint-blue)]/90 shadow-[0_2px_8px_rgba(31,91,150,0.1)] transition-transform duration-300 ease-out" style={{ transform: indicatorTransform } as React.CSSProperties}>
             {motionLevel === "refined" && <span className="mobile-active-spectrum"/>}
             {motionLevel === "refined" && <><i/><i/><i/><i/></>}
           </span>
+          {motionLevel === "refined" && <span aria-hidden="true" className="mobile-nav-touch-glow"/>}
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return <Link key={href} href={href} onClick={() => setMobileRouteEntering(true)} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}
-          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={() => setMobileMenuOpen(true)} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-primary" : "text-muted-foreground")}>
+          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={openMobileMenu} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-primary" : "text-muted-foreground")}>
             <Menu size={20}/><span>更多</span>
           </button>
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
-        <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
+        <SheetContent side="bottom" style={{ "--mobile-more-origin-x": `${mobileMoreOrigin.x}px`, "--mobile-more-origin-y": `${mobileMoreOrigin.y}px` } as React.CSSProperties} className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
           <button type="button" aria-label={mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能"} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title="上下滑动展开或收起">
             <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[var(--mc-tint-blue)]" />
           </button>

@@ -489,6 +489,7 @@ html[data-motion="simple"] .motion-switch-panel { border-radius: 18px !important
 .data-transition-standard .data-transition-card.data-space-enter { animation-duration:300ms; }
 .data-transition-simple .data-transition-card.data-space-enter { animation:none; }
 .data-mode-emblem { isolation:isolate; }
+.data-transition-refined .data-mode-emblem > svg { transform-origin:50% 50%; animation:data-mode-icon-float 2.6s cubic-bezier(.42,0,.58,1) infinite; }
 .data-mode-orbit { position:absolute; inset:-6px; border:1px solid rgba(83,166,232,.32); border-radius:24px; opacity:0; }
 .data-mode-particle { position:absolute; z-index:2; width:4px; height:4px; border-radius:50%; background:#fff; box-shadow:0 0 9px 2px rgba(64,157,229,.72); opacity:0; }
 .data-mode-particle-one { top:-5px; left:50%; }
@@ -506,6 +507,7 @@ html[data-motion="simple"] .motion-switch-panel { border-radius: 18px !important
 .data-transition-complete .data-transition-progress .data-space-progress { animation:none; width:100%; transition:width 120ms ease-out; }
 @keyframes data-orbit-close { to { transform:scale(.58); opacity:0; } }
 @keyframes data-particle-close { to { transform:scale(.1); opacity:0; } }
+@keyframes data-mode-icon-float { 0%,100% { transform:translateY(0) rotate(0) scale(1); } 50% { transform:translateY(-2px) rotate(-3deg) scale(1.035); } }
 .data-transition-simple .data-transition-card { border-color:#e3eaf0; background:#fff; box-shadow:none; backdrop-filter:none; }
 .data-transition-simple .data-mode-orbit, .data-transition-simple .data-mode-particle { display:none; }
 @keyframes data-orbit { to { transform:rotate(360deg); } }
@@ -518,7 +520,7 @@ html[data-motion="simple"] .data-space-progress, html[data-motion="simple"] .dat
 html[data-motion="simple"] .data-mode-particle { animation:none !important; }
 @media (prefers-reduced-motion: reduce) {
   .data-space-enter, .data-space-orbit, .data-space-progress, .data-mode-orbit,
-  .data-mode-particle, .data-loader-spinner, .motion-switch-screen::before,
+  .data-mode-particle, .data-mode-emblem > svg, .data-loader-spinner, .motion-switch-screen::before,
   .app-shell-root::before, .app-shell-root::after { animation:none !important; }
   .app-shell-root::before, .app-shell-root::after { opacity:0 !important; }
   html[data-motion="refined"] .app-page-transition { animation-name:premium-page-enter !important; }
@@ -902,85 +904,120 @@ html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
   }
 }
 
-/* Larger spring response for the blur-lift page transition. */
+/* Calm blur-lift transitions without bounce or overshoot. */
 @keyframes page-enter-blur-lift {
-  0% { opacity: 0; filter: blur(8px); transform: translate3d(0, 32px, 0) scale(.97); }
-  72% { opacity: 1; filter: blur(1px); transform: translate3d(0, -3px, 0) scale(1.006); }
-  88% { filter: blur(0); transform: translate3d(0, 1px, 0) scale(.998); }
-  100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
+  from { opacity: 0; filter: blur(7px); transform: translate3d(0, 16px, 0) scale(.985); }
+  to { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
 }
-@keyframes mobile-page-enter-blur-spring {
-  0% { opacity: 0; filter: blur(10px); transform: translate3d(0, 26px, 0) scale(.93); }
-  72% { opacity: 1; filter: blur(1px); transform: translate3d(0, -5px, 0) scale(1.01); }
-  88% { filter: blur(0); transform: translate3d(0, 1px, 0) scale(.998); }
-  100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
+@keyframes mobile-page-enter-blur {
+  from { opacity: 0; filter: blur(7px); transform: translate3d(0, 14px, 0) scale(.985); }
+  to { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
 }
 html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .app-page-transition {
   animation-name: page-enter-blur-lift;
-  animation-duration: 620ms;
-  animation-timing-function: cubic-bezier(.22,.82,.3,1);
+  animation-duration: 540ms;
+  animation-timing-function: cubic-bezier(.22,.68,.25,1);
 }
 html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page-transition {
   animation-name: page-enter-blur-lift;
-  animation-duration: 480ms;
-  animation-timing-function: cubic-bezier(.22,.82,.3,1);
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(.22,.68,.25,1);
 }
 @media (max-width: 767px) {
   html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .app-page-transition {
-    animation-name: mobile-page-enter-blur-spring;
-    animation-duration: 680ms;
-    animation-timing-function: cubic-bezier(.22,.82,.3,1);
-    transform-origin: 50% 100%;
+    animation-name: mobile-page-enter-blur;
+    animation-duration: 520ms;
+    animation-timing-function: cubic-bezier(.22,.68,.25,1);
+    transform-origin: 50% 50%;
   }
   html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page-transition {
-    animation-name: mobile-page-enter-blur-spring;
-    animation-duration: 540ms;
-    transform-origin: 50% 100%;
+    animation-name: mobile-page-enter-blur;
+    animation-duration: 400ms;
+    transform-origin: 50% 50%;
   }
-  html[data-motion="refined"] .mobile-more-sheet[data-side="bottom"] {
-    transition-duration: 620ms !important;
-    transition-timing-function: cubic-bezier(.2,.92,.28,1) !important;
+  html[data-motion="refined"] .mobile-more-sheet[data-side="bottom"],
+  html[data-motion="standard"] .mobile-more-sheet[data-side="bottom"] {
+    transition-duration: 780ms !important;
+    transition-timing-function: cubic-bezier(.22,.68,.25,1) !important;
     transition-property: translate, height, border-radius, opacity, scale, filter !important;
-    transform-origin: 50% 100%;
+    transform-origin: var(--mobile-more-origin-x, 50%) var(--mobile-more-origin-y, 90%);
+    will-change: opacity, filter, scale;
   }
   html[data-motion="refined"] .mobile-more-sheet[data-starting-style],
   html[data-motion="refined"] .mobile-more-sheet[data-ending-style] {
-    opacity: .3;
-    filter: blur(12px);
-    translate: 0 100dvh !important;
-    scale: .88;
+    opacity: .08;
+    filter: blur(16px);
+    translate: 0 0 !important;
+    scale: .68;
   }
-  html[data-motion="refined"] .mobile-more-sheet[data-open] {
+  html[data-motion="refined"] .mobile-more-sheet[data-open],
+  html[data-motion="standard"] .mobile-more-sheet[data-open] {
     opacity: 1;
     filter: blur(0);
     translate: 0 0 !important;
     scale: 1;
-    animation: mobile-more-panel-enter 620ms cubic-bezier(.22,.82,.3,1) both;
   }
-  html[data-motion="standard"] .mobile-more-sheet[data-open] {
-    animation: mobile-more-panel-enter 500ms cubic-bezier(.22,.82,.3,1) both;
+  html[data-motion="standard"] .mobile-more-sheet[data-starting-style],
+  html[data-motion="standard"] .mobile-more-sheet[data-ending-style] {
+    opacity: .16;
+    filter: blur(10px);
+    translate: 0 0 !important;
+    scale: .82;
   }
-  @keyframes mobile-more-panel-enter {
-    0% { opacity: .2; filter: blur(12px); transform: translate3d(0, 9vh, 0); }
-    70% { opacity: 1; filter: blur(1px); transform: translate3d(0, -5px, 0); }
-    88% { filter: blur(0); transform: translate3d(0, 1px, 0); }
-    100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+  html[data-motion="refined"] .mobile-nav-touch-glow {
+    position: absolute;
+    z-index: 0;
+    left: var(--mobile-pointer-x, 50%);
+    top: var(--mobile-pointer-y, 50%);
+    width: 62px;
+    height: 62px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(92,174,255,.34) 0%, rgba(168,151,255,.22) 37%, rgba(112,224,201,.12) 58%, transparent 74%);
+    filter: blur(9px);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: opacity 220ms ease;
+  }
+  html[data-motion="refined"] .mobile-primary-nav-refined[data-pointer-active="true"] .mobile-nav-touch-glow { opacity: .9; }
+  html[data-motion="refined"] .mobile-nav-touch-glow::before {
+    position: absolute;
+    inset: 8px;
+    border-radius: inherit;
+    background: radial-gradient(circle at 18% 28%, rgba(255,255,255,.9) 0 1px, transparent 2px),
+      radial-gradient(circle at 74% 22%, rgba(143,195,255,.9) 0 1px, transparent 2px),
+      radial-gradient(circle at 68% 76%, rgba(175,159,255,.8) 0 1px, transparent 2px),
+      radial-gradient(circle at 28% 72%, rgba(130,230,210,.9) 0 1px, transparent 2px);
+    content: "";
+    opacity: 0;
+    transform: scale(.72);
+    transition: opacity 180ms ease, transform 320ms cubic-bezier(.22,.68,.25,1);
+  }
+  html[data-motion="refined"] .mobile-primary-nav-refined[data-pointer-active="true"] .mobile-nav-touch-glow::before { opacity: .9; transform: scale(1); }
+  html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator i {
+    display: block;
+    width: 3px;
+    height: 3px;
+    box-shadow: 0 0 7px 1px rgba(90,171,255,.62);
+  }
+  html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator {
+    transition: transform 620ms cubic-bezier(.22,.68,.25,1), box-shadow 420ms ease, background-color 420ms ease;
   }
   html:not([data-motion="simple"]) .app-shell-root .app-page-transition.mobile-nav-route-enter {
-    animation-name: mobile-page-enter-blur-spring;
-    animation-duration: 680ms;
-    animation-timing-function: cubic-bezier(.22,.82,.3,1);
+    animation-name: mobile-page-enter-blur;
+    animation-duration: 520ms;
+    animation-timing-function: cubic-bezier(.22,.68,.25,1);
     animation-fill-mode: both;
-    transform-origin: 50% 100%;
+    transform-origin: 50% 50%;
   }
 }
 html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal {
   opacity: .01;
-  filter: blur(7px);
-  transform: translate3d(0, 26px, 0) scale(.975);
-  transition: opacity 600ms cubic-bezier(.22,.82,.3,1) var(--mc-scroll-delay, 0ms),
-    filter 600ms cubic-bezier(.22,.82,.3,1) var(--mc-scroll-delay, 0ms),
-    transform 680ms cubic-bezier(.22,.9,.3,1) var(--mc-scroll-delay, 0ms);
+  filter: blur(5px);
+  transform: translate3d(0, 13px, 0) scale(.99);
+  transition: opacity 500ms cubic-bezier(.22,.68,.25,1) var(--mc-scroll-delay, 0ms),
+    filter 500ms cubic-bezier(.22,.68,.25,1) var(--mc-scroll-delay, 0ms),
+    transform 520ms cubic-bezier(.22,.68,.25,1) var(--mc-scroll-delay, 0ms);
   will-change: opacity, filter, transform;
 }
 html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
