@@ -18,6 +18,7 @@ import {
 } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppSelect } from "@/components/ui/app-select";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -59,6 +60,7 @@ export default function DataPage() {
   const { data, update, role, saving, mode } = useApp();
   const canEdit = role !== "viewer";
   const [query, setQuery] = useState("");
+  const [dataFilter,setDataFilter]=useState<"all"|"incomplete_cost"|"no_product_split"|"last7"|"last30">("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DailyMetric | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -184,9 +186,17 @@ export default function DataPage() {
     await update(current=>({...current,daily:[...current.daily.filter(item=>!byDate.has(item.date)),...parsedRows].sort((a,b)=>a.date.localeCompare(b.date))}));
     return true;
   }
+  const incompleteCostCount=data.daily.filter(row=>row.costComplete===false).length;
+  const noProductSplitCount=data.daily.filter(row=>!Object.values(row.productSales||{}).some(value=>Number(value)>0)).length;
+  const today=storeToday(data.settings.store.timezone);
+  const daysAgo=(count:number)=>{const date=new Date(`${today}T12:00:00Z`);date.setUTCDate(date.getUTCDate()-count+1);return date.toISOString().slice(0,10);};
   const filtered = [...data.daily]
-    .filter((r) => !query || r.date.includes(query))
-    .reverse();
+    .filter((r) => !query || r.date.includes(query.trim()))
+    .filter(r=>dataFilter!=="incomplete_cost"||r.costComplete===false)
+    .filter(r=>dataFilter!=="no_product_split"||!Object.values(r.productSales||{}).some(value=>Number(value)>0))
+    .filter(r=>dataFilter!=="last7"||(r.date>=daysAgo(7)&&r.date<=today))
+    .filter(r=>dataFilter!=="last30"||(r.date>=daysAgo(30)&&r.date<=today))
+    .sort((a,b)=>b.date.localeCompare(a.date));
   return (
     <>
       <PageHead
@@ -244,9 +254,9 @@ export default function DataPage() {
       <div className="mb-5"><QuickMetricEntry rows={data.daily} disabled={!canEdit} onImport={importPasted}/></div>
       <SectionCard
         title="历史经营数据"
-        sub={`共 ${data.daily.length} 条日记录 · 可按日期筛选`}
+        sub={`共 ${data.daily.length} 条日记录 · 当前显示 ${filtered.length} 条`}
         action={
-          <div className="relative">
+          <div className="flex flex-wrap gap-2"><AppSelect aria-label="按数据质量和日期筛选" value={dataFilter} onChange={event=>setDataFilter(event.target.value as typeof dataFilter)} className="h-9 rounded-xl border border-border bg-card px-3 text-xs"><option value="all">全部日期</option><option value="incomplete_cost">成本待补齐（{incompleteCostCount}）</option><option value="no_product_split">商品未分配（{noProductSplitCount}）</option><option value="last7">近 7 天</option><option value="last30">近 30 天</option></AppSelect><div className="relative">
             <Search
               className="absolute left-3 top-2.5 text-muted-foreground"
               size={15}
@@ -257,9 +267,10 @@ export default function DataPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-          </div>
+          </div></div>
         }
       >
+        {(incompleteCostCount>0||noProductSplitCount>0)&&<div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs text-muted-foreground"><strong className="text-foreground">快速定位</strong>{incompleteCostCount>0&&<Button type="button" size="sm" variant={dataFilter==="incomplete_cost"?"default":"outline"} className="h-7 px-2 text-[11px]" onClick={()=>setDataFilter(dataFilter==="incomplete_cost"?"all":"incomplete_cost")}>成本待补齐 {incompleteCostCount} 天</Button>}{noProductSplitCount>0&&<Button type="button" size="sm" variant={dataFilter==="no_product_split"?"default":"outline"} className="h-7 px-2 text-[11px]" onClick={()=>setDataFilter(dataFilter==="no_product_split"?"all":"no_product_split")}>可选商品分摊 {noProductSplitCount} 天</Button>}<span>商品分摊为可选项；筛选后可直接编辑日报。</span></div>}
         <div className="overflow-x-auto">
           <table className="w-full min-w-[840px] text-left text-sm">
             <thead className="border-b text-xs text-muted-foreground">
@@ -272,6 +283,7 @@ export default function DataPage() {
                 <th>物流费用</th>
                 <th>日报补充指标</th>
                 <th>其他费用</th>
+                <th>数据检查</th>
                 <th>来源</th>
                 <th className="text-right">操作</th>
               </tr>
@@ -292,6 +304,9 @@ export default function DataPage() {
                     {row.reportDetails ? <details className="cursor-pointer"><summary>查看指标</summary><div className="mt-2 min-w-40 space-y-1 rounded-lg bg-[var(--mc-tint-blue)] p-2"><p>买家 {row.reportDetails.buyers ?? "—"} · 访客 {row.reportDetails.visitors ?? "—"}</p><p>客单价 {row.reportDetails.averageOrderValue ? formatMoney(row.reportDetails.averageOrderValue) : "—"}</p><p>转化率 {row.reportDetails.conversionRate ? `${row.reportDetails.conversionRate}%` : "—"}</p><p>退款单 {row.reportDetails.refundOrders ?? "—"} · 访客价值 {row.reportDetails.visitorValue ? formatMoney(row.reportDetails.visitorValue) : "—"}</p></div></details> : "—"}
                   </td>
                   <td>{formatMoney(row.otherExpenses)}</td>
+                  <td className="text-xs text-muted-foreground">
+                    <span className="flex flex-wrap gap-1.5">{row.costComplete===false&&<span className="rounded-full bg-[var(--mc-tint-orange)] px-2 py-1 text-[var(--mc-color-warning)]">成本待补</span>}{!Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="rounded-full bg-[var(--mc-tint-blue)] px-2 py-1 text-primary">未分摊（可选）</span>}{row.costComplete!==false&&Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="text-[var(--mc-color-success)]">成本完整</span>}</span>
+                  </td>
                   <td className="text-xs text-muted-foreground">
                     {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "image_import" ? "截图识别" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
                   </td>
