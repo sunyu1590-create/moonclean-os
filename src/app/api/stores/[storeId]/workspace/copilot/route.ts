@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, rejectCrossOriginMutation, requireStore } from "@/lib/supabase/auth";
-import { createServiceSupabaseClient, getSupabaseServiceKey } from "@/lib/supabase/service";
 
-const inputSchema = z.object({ conversationId: z.uuid().optional(), question: z.string().trim().min(1).max(4000), productIds: z.array(z.uuid()).max(10).default([]), competitorIds: z.array(z.uuid()).max(10).default([]) });
+const inputSchema = z.object({ apiKey: z.string().trim().min(20).max(512), conversationId: z.uuid().optional(), question: z.string().trim().min(1).max(4000), productIds: z.array(z.uuid()).max(10).default([]), competitorIds: z.array(z.uuid()).max(10).default([]) });
 const recentCalls = new Map<string, number>();
 export async function POST(request: Request, { params }: { params: Promise<{ storeId: string }> }) {
   const denied = rejectCrossOriginMutation(request); if (denied) return denied;
@@ -26,20 +25,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   const recent = recentCalls.get(auth.user.id) || 0;
   if (Date.now() - recent < 8_000) return NextResponse.json({ error: "AI 请求较频繁，请稍后再试。", conversationId }, { status: 429 });
   recentCalls.set(auth.user.id,Date.now());
-  let key = process.env.DEEPSEEK_API_KEY || "";
-  let serviceDb: ReturnType<typeof createServiceSupabaseClient> | null = null;
-  if (getSupabaseServiceKey()) {
-    try {
-      serviceDb = createServiceSupabaseClient();
-      const { data } = await serviceDb.from("store_ai_credentials").select("api_key").eq("store_id",storeId).maybeSingle();
-      if (data?.api_key) key = data.api_key;
-    } catch { if (!key) return NextResponse.json({ error:"AI 密钥配置读取失败，请检查服务端配置或系统设置。",conversationId },{status:503}); }
-  }
-  if (!serviceDb) return NextResponse.json({ error:"未配置 Supabase 服务端访问密钥，暂时无法记录 AI 使用情况。",conversationId },{status:503});
-  if (!key) return NextResponse.json({ error:"尚未配置 DeepSeek API Key。请前往「系统设置 → AI 服务」完成配置后再使用。",conversationId },{status:503});
-  const startedAt=Date.now();
-  const logUsage=async(input:{outcome:"success"|"failed";status?:number;promptTokens?:number|null;completionTokens?:number|null;errorCode?:string})=>{
-    await serviceDb!.from("copilot_usage_logs").insert({store_id:storeId,user_id:auth.user.id,provider:"deepseek",model:process.env.DEEPSEEK_MODEL||"deepseek-chat",outcome:input.outcome,http_status:input.status??null,prompt_tokens:input.promptTokens??null,completion_tokens:input.completionTokens??null,duration_ms:Date.now()-startedAt,error_code:input.errorCode??null});
+  const key = parsed.data.apiKey;
+  const startedAt = Date.now();
+  const logUsage = async (entry: { outcome: "success" | "failed"; status?: number; promptTokens?: number | null; completionTokens?: number | null; errorCode?: string }) => {
+    await supabase.from("copilot_usage_logs").insert({ store_id: storeId, user_id: auth.user.id, provider: "deepseek", model: process.env.DEEPSEEK_MODEL || "deepseek-chat", outcome: entry.outcome, http_status: entry.status ?? null, prompt_tokens: entry.promptTokens ?? null, completion_tokens: entry.completionTokens ?? null, duration_ms: Date.now() - startedAt, error_code: entry.errorCode ?? null });
   };
   try {
     const [daily, ads, products, skuDaily, experiments, competitors, history, ownPrompt, templates] = await Promise.all([
@@ -85,10 +74,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
         {role:"user",content:`用户问题：${parsed.data.question}\n仅供分析的真实数据：${JSON.stringify(context)}`},
       ]})
     });
-    if (!response.ok) { await logUsage({outcome:"failed",status:response.status,errorCode:response.status===401||response.status===403?"authentication_error":response.status===429?"rate_limited":"provider_error"}); return NextResponse.json({error:response.status===401?"DeepSeek API Key 无效。":response.status===429?"DeepSeek 请求受限，请稍后重试。":"DeepSeek 暂时无法完成分析，请稍后重试。",conversationId},{status:502}); }
+    if (!response.ok) { await logUsage({ outcome: "failed", status: response.status, errorCode: response.status === 401 || response.status === 403 ? "authentication_error" : response.status === 429 ? "rate_limited" : "provider_error" }); return NextResponse.json({error:response.status===401||response.status===403?"DeepSeek API Key 无效。":response.status===429?"DeepSeek 请求受限，请稍后重试。":"DeepSeek 暂时无法完成分析，请稍后重试。",conversationId},{status:502}); }
     const raw = await response.json() as {choices?:{message?:{content?:string}}[];usage?:{prompt_tokens?:number;completion_tokens?:number}};
     const answer = raw.choices?.[0]?.message?.content?.trim();
-    if (!answer) { await logUsage({outcome:"failed",status:502,errorCode:"empty_response"}); return NextResponse.json({error:"AI 未返回有效分析内容，请稍后重试。",conversationId},{status:502}); }
+    if (!answer) { await logUsage({ outcome: "failed", status: 502, errorCode: "empty_response" }); return NextResponse.json({error:"AI 未返回有效分析内容，请稍后重试。",conversationId},{status:502}); }
     const { error: userMessageError } = await supabase.from("copilot_messages").insert({store_id:storeId,conversation_id:conversationId,role:"user",content:parsed.data.question});
     if (userMessageError) throw userMessageError;
     const citations = [
@@ -98,10 +87,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
       {label:"运营实验",count:(experiments.data||[]).length,source:"operation_experiments"},
       {label:"竞品档案",count:(competitors.data||[]).length,source:"competitors"},
     ];
-    const { data: saved, error: saveError } = await serviceDb.from("copilot_messages").insert({store_id:storeId,conversation_id:conversationId,role:"assistant",content:answer,citations,model,prompt_tokens:raw.usage?.prompt_tokens ?? null,completion_tokens:raw.usage?.completion_tokens ?? null}).select("id,role,content,citations,model,created_at").single();
+    const { data: saved, error: saveError } = await supabase.from("copilot_messages").insert({store_id:storeId,conversation_id:conversationId,role:"assistant",content:answer,citations,model,prompt_tokens:raw.usage?.prompt_tokens ?? null,completion_tokens:raw.usage?.completion_tokens ?? null}).select("id,role,content,citations,model,created_at").single();
     if (saveError) throw saveError;
     await supabase.from("copilot_conversations").update({updated_at:new Date().toISOString()}).eq("store_id",storeId).eq("id",conversationId!);
-    await logUsage({outcome:"success",status:200,promptTokens:raw.usage?.prompt_tokens,completionTokens:raw.usage?.completion_tokens});
+    await logUsage({ outcome: "success", status: 200, promptTokens: raw.usage?.prompt_tokens, completionTokens: raw.usage?.completion_tokens });
     return NextResponse.json({conversationId,message:saved,model,generatedAt:new Date().toISOString()},{headers:{"Cache-Control":"no-store"}});
-  } catch (error) { await logUsage({outcome:"failed",status:502,errorCode:"request_or_persistence_error"}); return apiError(error,"AI 分析失败，请检查网络或稍后重试"); }
+  } catch (error) { await logUsage({ outcome: "failed", status: 502, errorCode: "request_or_persistence_error" }); return apiError(error,"AI 分析失败，请检查网络或稍后重试"); }
 }

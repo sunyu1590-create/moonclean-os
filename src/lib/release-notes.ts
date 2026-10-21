@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.11";
+export const APP_VERSION = "1.1.12";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.12",
+    date: "2026-10-21",
+    title: "DeepSeek 密钥免平台校验直连",
+    changes: [
+      "系统设置直接保存 DeepSeek Key 到当前浏览器，不再调用 Vercel/Supabase 密钥校验或写入数据库。",
+      "售后总结、智能建议和 Copilot 使用输入的 Key；云端业务数据与对话仍按现有店铺权限读取和保存。",
+      "Copilot 回复可通过当前登录会话写入对话历史，不再依赖 Supabase 服务端密钥。",
+    ],
+  },
   {
     version: "1.1.11",
     date: "2026-10-21",

@@ -6,6 +6,7 @@ import { Bot, Clock3, RefreshCw, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { Button } from "@/components/ui/button";
 import { notifyFeedback } from "@/lib/feedback";
+import { readDeepSeekKey } from "@/lib/deepseek-key";
 
 type Feature = "dashboard" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
@@ -26,6 +27,8 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
 
   const generate = useCallback(async (automatic = false) => {
     if (mode !== "cloud" || !activeStoreId || busy) return;
+    const apiKey = readDeepSeekKey(activeStoreId);
+    if (!apiKey) { setError("请先在系统设置输入 DeepSeek API Key。"); return; }
     setBusy(true);
     setError("");
     try {
@@ -33,7 +36,7 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feature, context }),
+        body: JSON.stringify({ apiKey, feature, context }),
         cache: "no-store",
       });
       const result = await response.json() as { suggestion?: string; generatedAt?: string; error?: string };

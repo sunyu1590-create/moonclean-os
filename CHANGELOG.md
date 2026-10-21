@@ -1,5 +1,14 @@
 # 更新日志
 
+## 1.1.12 · 2026-10-21
+
+DeepSeek Key 改为浏览器本地配置。
+
+- 系统设置只需粘贴并保存 Key；不再调用 Supabase 校验或把 DeepSeek Key 写入数据库。
+- 售后总结、经营建议和 Copilot 在请求时使用当前浏览器保存的 Key。
+- Copilot 回复可在当前登录会话下保存到店铺历史，不再依赖服务端 Supabase 密钥。
+- Key 保存在当前浏览器；换设备或清理网站数据后需要重新输入。AI 请求会经 MoonClean 服务转发到 DeepSeek。
+
 ## 1.1.11 · 2026-10-21
 
 移除 DeepSeek Key 的额外加密配置。

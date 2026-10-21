@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Decimal from "decimal.js";
 import { AlertCircle, Bot, CheckCircle2, Clock3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
+import { readDeepSeekKey } from "@/lib/deepseek-key";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,9 @@ export default function AfterSalesPage() {
     if (!activeStoreId) return;
     setAiBusy(true); setAiError(""); setSummary("");
     try {
-      const response = await fetch(`/api/stores/${activeStoreId}/after-sales/summary`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: aiPeriod }) });
+      const apiKey = readDeepSeekKey(activeStoreId);
+      if (!apiKey) throw new Error("请先在系统设置输入 DeepSeek API Key。");
+      const response = await fetch(`/api/stores/${activeStoreId}/after-sales/summary`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, days: aiPeriod }) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "AI 分析失败");
       setSummary(body.summary || "未能读取分析结果");

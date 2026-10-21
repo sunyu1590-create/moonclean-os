@@ -1,12 +1,12 @@
-# MoonClean OS · 1.1.11
+# MoonClean OS · 1.1.12
 
-MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件；1.0.1 细化精致模式流光、加载反馈和滚动入场动效；1.1.0 新增独立动效设置模块；1.1.1 至 1.1.11 持续优化阶段百分比加载、页面切换、手机导航、全站通知反馈与弹层动效，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
+MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件；1.0.1 细化精致模式流光、加载反馈和滚动入场动效；1.1.0 新增独立动效设置模块；1.1.1 至 1.1.12 持续优化页面切换、通知弹层和 DeepSeek 配置，同时保留 Supabase Authentication、多店铺、团队角色、跨设备业务数据同步及本地数据迁移。版本详情见 [更新日志](CHANGELOG.md)。
 
 ## DeepSeek 售后总结（可选）
 
-售后分析页提供人工问题分类和 DeepSeek 总结窗口。在系统设置的“DeepSeek API 接入”卡片中粘贴 API Key，点击“验证并保存”即可按店铺配置。密钥经服务端验证后以明文保存在 Supabase 的服务端专用表中，页面不会读回已保存密钥；数据库管理员可读取该值。
+售后分析页提供人工问题分类和 DeepSeek 总结窗口。在系统设置的“DeepSeek API 接入”卡片中粘贴 API Key 并保存即可。密钥只保存在当前浏览器本地；调用时由 MoonClean 服务转发至 DeepSeek，不写入 Supabase。换浏览器或清理网站数据后需要重新输入。
 
-保存店铺密钥需要 Supabase 服务端访问权限：优先使用 Vercel Supabase 集成提供的 `SUPABASE_SERVICE_ROLE_KEY`，也兼容 `SUPABASE_SECRET_KEY`。这些变量仅用于服务器访问 Supabase，不用于额外加密；不要添加 `NEXT_PUBLIC_` 前缀。首次部署需应用 `supabase/migrations/20261018151830_store_deepseek_credentials.sql` 和 `supabase/migrations/20261021143608_remove_deepseek_encryption.sql`。也可使用服务器环境变量 `DEEPSEEK_API_KEY` 作为所有店铺的只读备用配置；`DEEPSEEK_MODEL` 默认 `deepseek-chat`。不要把任何密钥提交到仓库或发到浏览器。
+应用 DeepSeek Key 不需要配置 Vercel 与 Supabase 的服务端密钥集成。云端业务数据仍由现有 Supabase 登录与店铺权限读取；`DEEPSEEK_MODEL` 默认 `deepseek-chat`。不要把密钥提交到仓库或发到他人可访问的位置。
 
 AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSeek 提交统计周期、订单/退款数量、金额汇总和问题类别，不提交订单号、买家信息或客服备注。未配置密钥时，分析窗口会明确提示如何启用，其他售后统计与分类照常使用。
 

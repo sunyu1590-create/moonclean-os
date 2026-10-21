@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStore } from "@/lib/supabase/auth";
-import { createServiceSupabaseClient, getSupabaseServiceKey } from "@/lib/supabase/service";
 
 const featureSchema = z.enum(["dashboard", "advertising", "products", "finance", "data", "orders", "inventory", "tasks", "pricing", "product-insights", "reports", "integrations"]);
 const safeValue = z.union([
@@ -10,6 +9,7 @@ const safeValue = z.union([
   z.enum(["数据不足", "成本数据不足", "未填写"]),
 ]);
 const inputSchema = z.object({
+  apiKey: z.string().trim().min(20).max(512),
   feature: featureSchema,
   context: z.record(z.string().max(48), safeValue).refine((value) => Object.keys(value).length <= 24, "分析字段过多"),
 });
@@ -44,18 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   const allowedKeys = new Set(allowedContextKeys[parsed.data.feature]);
   if (Object.keys(parsed.data.context).some((field) => !allowedKeys.has(field))) return NextResponse.json({ error: "AI 分析仅接受页面提供的汇总指标" }, { status: 400 });
 
-  let key = process.env.DEEPSEEK_API_KEY || "";
-  if (getSupabaseServiceKey()) {
-    try {
-      const credentialDb = createServiceSupabaseClient();
-      const { data, error } = await credentialDb.from("store_ai_credentials").select("api_key").eq("store_id", storeId).maybeSingle();
-      if (error) throw error;
-      if (data?.api_key) key = data.api_key;
-    } catch {
-      if (!key) return NextResponse.json({ error: "DeepSeek 配置存储不可用，请检查数据库迁移和服务端密钥。" }, { status: 503 });
-    }
-  }
-  if (!key) return NextResponse.json({ error: "尚未配置 DeepSeek API Key，请前往系统设置完成接入。" }, { status: 503 });
+  const key = parsed.data.apiKey;
 
   const now = Date.now();
   const last = recentRequests.get(auth.user.id) || 0;
