@@ -39,6 +39,7 @@ import {
   FlaskConical,
   SearchCheck,
   Headset,
+  MessageCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ const nav = [
   { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
   { href: "/notes", label: "运营备忘录", icon: NotebookPen },
   { href: "/copilot", label: "AI 运营助手", icon: BrainCircuit },
+  { href: "/ai-chat", label: "AI 聊天", icon: MessageCircle },
   { href: "/ai-settings", label: "AI 设置", icon: Sparkles },
   { href: "/experiments", label: "运营实验室", icon: FlaskConical },
   { href: "/competitors", label: "竞品情报", icon: SearchCheck },
