@@ -10,7 +10,7 @@ import { notifyFeedback } from "@/lib/feedback";
 import { getCachedDeepSeekKey } from "@/lib/deepseek-key";
 import { MarkdownContent } from "@/components/markdown-content";
 
-type Feature = "dashboard" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
+type Feature = "dashboard" | "exceptions" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
 type CacheEntry = { suggestion: string; generatedAt: string; contextKey: string };
 

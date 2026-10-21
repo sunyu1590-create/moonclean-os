@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Decimal from "decimal.js";
 import {
-  AlertCircle,
   ArrowUpRight,
   ArrowRight,
   BadgePercent,
@@ -23,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { OperationsWidget } from "@/components/operations-widget";
 import { DashboardIntelligence } from "@/components/dashboard-intelligence";
+import { OperationsExceptionCenter } from "@/components/operations-exception-center";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
@@ -54,20 +54,6 @@ export default function Dashboard() {
   const target = new Decimal(data.settings.salesTarget);
   const targetPercent = target.gt(0) ? new Decimal(monthSales).div(target).mul(100) : null;
   const targetProgress = targetPercent ? Decimal.min(targetPercent, 100).toNumber() : 0;
-  const alerts: string[] = [];
-  if (rows.some(row => row.costComplete === false)) alerts.push("部分经营日期缺少可靠成本，利润为不完整估算");
-  if (summary.margin !== null && summary.margin < data.settings.marginAlert)
-    alerts.push(
-      `近 ${days} 天利润率 ${summary.margin}% 低于预警阈值 ${data.settings.marginAlert}%`,
-    );
-  if (!todayRows.length) alerts.push("今日尚未录入经营数据");
-  if (
-    todayAds.some(
-      (ad) => Number(ad.spend) > 0 && Number(ad.attributedSales) === 0,
-    )
-  )
-    alerts.push("今日广告有消耗，但未录入归因成交额");
-  if (!alerts.length) alerts.push("当前没有需要处理的经营异常");
   return (
     <>
       <PageHead
@@ -187,23 +173,7 @@ export default function Dashboard() {
           </div>
         </SectionCard>
       </div>
-      <SectionCard
-        title="经营异常提醒"
-        sub="根据当前录入数据与设置阈值自动识别"
-        className="mt-5"
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          {alerts.map((alert, index) => (
-            <div
-              key={alert}
-              className={`flex items-center gap-3 rounded-xl border p-4 text-sm ${alerts.length === 1 && index === 0 && alert.startsWith("当前") ? "border-border bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "border-border bg-[var(--mc-tint-orange)] text-[var(--mc-color-warning)]"}`}
-            >
-              <AlertCircle size={18} />
-              {alert}
-            </div>
-          ))}
-        </div>
-      </SectionCard>
+      <OperationsExceptionCenter />
       <OperationsWidget />
     </>
   );
