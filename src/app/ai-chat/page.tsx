@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bot, Check, CircleAlert, Copy, Eraser, History, KeyRound, LoaderCircle, Maximize2, MessageCircle, Minimize2, Plus, Send, Settings2, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
@@ -77,9 +78,11 @@ export default function AiChatPage() {
   const [preparing, setPreparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [immersive, setImmersive] = useState(false);
+  const [immersiveClosing, setImmersiveClosing] = useState(false);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const immersiveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -139,6 +142,37 @@ export default function AiChatPage() {
   const currentModel = useMemo(() => models.find((item) => item.id === model) || models[0], [model]);
   const effortIndex = Math.max(0, efforts.findIndex((item) => item.id === effort));
   const busy = sending || preparing;
+
+  useEffect(() => {
+    if (!immersive) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") exitImmersive();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => { window.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; };
+  // This listener only needs to track whether immersive mode is mounted.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [immersive]);
+
+  useEffect(() => () => { if (immersiveTimerRef.current) window.clearTimeout(immersiveTimerRef.current); }, []);
+
+  function enterImmersive() {
+    if (immersiveTimerRef.current) window.clearTimeout(immersiveTimerRef.current);
+    setImmersiveClosing(false);
+    setImmersive(true);
+  }
+
+  function exitImmersive() {
+    if (!immersive || immersiveClosing) return;
+    setImmersiveClosing(true);
+    immersiveTimerRef.current = window.setTimeout(() => {
+      setImmersive(false);
+      setImmersiveClosing(false);
+      immersiveTimerRef.current = null;
+    }, 220);
+  }
 
   function saveCurrentConversation() {
     if (!messages.length || !activeConversationId) return;
@@ -264,11 +298,11 @@ export default function AiChatPage() {
     } catch { setError("剪贴板不可用，请检查浏览器权限。"); }
   }
 
-  return <div className={immersive ? "fixed inset-0 z-[70] flex flex-col bg-background px-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" : "mx-auto max-w-6xl max-md:-mx-5 max-md:-mt-5"}>
+  const page = <div className={immersive ? `ai-chat-immersive fixed inset-0 z-40 flex h-[100dvh] w-screen flex-col overflow-hidden bg-background px-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ${immersiveClosing ? "ai-chat-immersive-closing" : ""}` : "mx-auto max-w-6xl max-md:-mx-5 max-md:-mt-5"}>
     <div className="mb-3 hidden items-center justify-between gap-2 px-5 md:mb-5 md:flex md:px-0"><div className="min-w-0"><p className="flex items-center gap-2 text-[11px] font-semibold tracking-[.15em] text-primary before:h-px before:w-5 before:bg-primary">AI CHAT / 自由对话</p><h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">AI 聊天</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">自由选择模型和推理强度。这个聊天窗口不读取店铺经营数据。</p></div><div className="flex shrink-0 gap-2"><Link href="/ai-settings" aria-label="AI 设置" className="inline-flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-[var(--mc-tint-blue)] hover:text-primary md:size-auto md:px-3"><Settings2 size={16}/><span className="hidden md:inline">AI 设置</span></Link><Button variant="outline" size="icon-sm" aria-label="清空聊天" title="清空聊天" onClick={() => setClearOpen(true)} disabled={!messages.length || busy}><Eraser size={15}/></Button></div></div>
 
-    <section aria-label="AI 聊天窗口" className={immersive ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-card" : "flex h-[calc(100dvh-400px)] min-h-[430px] flex-col overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_16px_50px_rgba(31,57,82,.075)] max-md:h-[calc(100dvh-240px)] max-md:w-full max-md:rounded-none max-md:border-x-0 max-md:border-b-0 md:min-h-[65dvh] md:rounded-[24px]"}>
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-[var(--mc-tint-blue)]/45 px-3 py-2.5 md:px-5 md:py-3"><div className="flex min-w-0 items-center gap-2"><span className="hidden size-9 shrink-0 place-items-center rounded-xl bg-card text-primary shadow-sm sm:grid"><MessageCircle size={17}/></span><div className="min-w-0"><h2 className="truncate text-sm font-semibold">{category}</h2><p className="truncate text-[10px] text-muted-foreground">{currentModel.name} · 推理{efforts.find((item) => item.id === effort)?.label}</p></div></div><div className="flex items-center gap-1.5"><span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium sm:inline-flex ${configured ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-card text-muted-foreground"}`}><span className={`size-1.5 rounded-full ${configured ? "bg-[var(--mc-color-success)]" : "bg-muted-foreground"}`}/>{mode !== "cloud" ? "需要云端店铺" : configured ? "密钥已就绪" : "待配置 DeepSeek"}</span><Button variant="outline" size="icon-sm" aria-label="聊天历史" title="聊天历史" onClick={() => { saveCurrentConversation(); setHistoryOpen(true); }} className="size-9"><History size={16}/></Button><Button variant="outline" size="icon-sm" aria-label="新建聊天" title="新建聊天" onClick={startNewChat} disabled={busy} className="size-9"><Plus size={17}/></Button><Button variant="outline" size="icon-sm" aria-label={immersive ? "退出沉浸模式" : "沉浸模式"} title={immersive ? "退出沉浸模式" : "沉浸模式"} onClick={() => setImmersive((value) => !value)} className="size-9">{immersive ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}</Button></div></header>
+    <section aria-label="AI 聊天窗口" className={immersive ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-card" : "flex h-[calc(100dvh-400px)] min-h-[430px] flex-col overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_16px_50px_rgba(31,57,82,.075)] max-md:h-[calc(100dvh-145px)] max-md:w-full max-md:rounded-none max-md:border-x-0 max-md:border-b-0 md:min-h-[65dvh] md:rounded-[24px]"}>
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-[var(--mc-tint-blue)]/45 px-3 py-2.5 md:px-5 md:py-3"><div className="flex min-w-0 items-center gap-2"><span className="hidden size-9 shrink-0 place-items-center rounded-xl bg-card text-primary shadow-sm sm:grid"><MessageCircle size={17}/></span><div className="min-w-0"><h2 className="truncate text-sm font-semibold">{category}</h2><p className="truncate text-[10px] text-muted-foreground">{currentModel.name} · 推理{efforts.find((item) => item.id === effort)?.label}</p></div></div><div className="flex items-center gap-1.5"><span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium sm:inline-flex ${configured ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-card text-muted-foreground"}`}><span className={`size-1.5 rounded-full ${configured ? "bg-[var(--mc-color-success)]" : "bg-muted-foreground"}`}/>{mode !== "cloud" ? "需要云端店铺" : configured ? "密钥已就绪" : "待配置 DeepSeek"}</span><Button variant="outline" size="icon-sm" aria-label="聊天历史" title="聊天历史" onClick={() => { saveCurrentConversation(); setHistoryOpen(true); }} className="size-9"><History size={16}/></Button><Button variant="outline" size="icon-sm" aria-label="新建聊天" title="新建聊天" onClick={startNewChat} disabled={busy} className="size-9"><Plus size={17}/></Button><Button variant="outline" size="icon-sm" aria-label={immersive ? "退出沉浸模式" : "沉浸模式"} title={immersive ? "退出沉浸模式" : "沉浸模式"} onClick={immersive ? exitImmersive : enterImmersive} className="size-9">{immersive ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}</Button></div></header>
       <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 md:py-6">
         {mode === "cloud" && activeStoreId && loadedStoreId !== activeStoreId ? <p role="status" className="py-12 text-center text-xs text-muted-foreground">正在读取这台设备的聊天内容…</p> : mode !== "cloud" ? <div className="mx-auto max-w-md rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-5 text-center"><KeyRound size={23} className="mx-auto text-primary"/><h3 className="mt-3 text-sm font-semibold">先切换到云端店铺</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">自由聊天使用当前店铺保存的 DeepSeek 密钥；不会读取店铺经营数据。</p></div> : !configured && messages.length === 0 ? <div className="mx-auto max-w-xl py-12 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">想聊点什么？</h3><p className="mt-1 text-xs text-muted-foreground">先到 AI 设置保存 DeepSeek Key，就可以开始自由对话。</p><Link href="/ai-settings" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"><KeyRound size={15}/>配置 AI 密钥</Link></div> : messages.length === 0 ? <div className="mx-auto max-w-2xl py-10 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">随心开始一段对话</h3><p className="mt-1 text-xs text-muted-foreground">可以问问题、聊兴趣、写故事、头脑风暴，或试试不同模型与推理强度。</p><div className="mt-5 flex flex-wrap justify-center gap-2">{["讲个短一点的科幻故事", "给我设计一个周末小游戏", "解释一下为什么天空是蓝色的", "来一轮脑筋急转弯"].map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)} className="rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-[var(--mc-tint-blue)] hover:text-primary">{prompt}</button>)}</div></div> : messages.map((message) => <article key={message.id} className={`group flex gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`${message.role === "user" ? "max-w-[92%]" : "w-full max-w-full sm:w-auto sm:max-w-[82%]"} min-w-0 rounded-2xl px-3.5 py-3 sm:px-4 ${message.role === "user" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md border border-border bg-[var(--mc-tint-blue)]/45 text-foreground"}`}><div className={`mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold ${message.role === "user" ? "text-primary-foreground/75" : "text-muted-foreground"}`}>{message.role === "user" ? "你" : <><Bot size={12}/>DeepSeek · {message.model || model}</>}</div>{message.role === "assistant" ? message.content ? <MarkdownContent content={message.content} className="text-base leading-7"/>: sending ? <span className="py-1"><AiStreamStatus active hasText={false}/></span> : <p className="text-xs text-muted-foreground">暂无回复内容</p> : <p className="whitespace-pre-wrap break-words text-base leading-7">{message.content}</p>}{message.role === "assistant" && message.content && <button type="button" onClick={() => void copyMessage(message)} className="mt-2 flex min-h-7 items-center gap-1 text-[10px] text-muted-foreground opacity-70 transition-opacity hover:text-primary group-hover:opacity-100">{copiedId === message.id ? <Check size={12}/> : <Copy size={12}/>}{copiedId === message.id ? "已复制" : "复制回复"}</button>}</div></article>)}
         {error && <p role="alert" className="mx-auto flex max-w-2xl items-start gap-2 rounded-xl bg-[var(--mc-tint-red)] p-3 text-xs leading-5 text-[var(--mc-color-danger)]"><CircleAlert size={15} className="mt-0.5 shrink-0"/>{error}</p>}
@@ -298,4 +332,5 @@ export default function AiChatPage() {
     {activeStoreId && <DeepSeekUnlockDialog storeId={activeStoreId} open={unlockOpen} onOpenChange={setUnlockOpen} onUnlock={(apiKey) => sendWithKey(apiKey)}/>}
     <AlertDialog open={clearOpen} onOpenChange={setClearOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>清空这段聊天？</AlertDialogTitle><AlertDialogDescription>当前浏览器保存的聊天内容会被删除，不能撤回。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); clearChat(); }}>清空聊天</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
+  return immersive ? createPortal(page, document.body) : page;
 }

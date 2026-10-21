@@ -1219,3 +1219,19 @@ html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
     transition-duration: 1ms !important;
   }
 }
+
+.ai-chat-immersive { animation: ai-chat-immersive-enter 240ms cubic-bezier(.2,.72,.25,1) both; }
+.ai-chat-immersive-closing { animation: ai-chat-immersive-exit 220ms cubic-bezier(.4,0,.8,.3) both; pointer-events: none; }
+@keyframes ai-chat-immersive-enter {
+  from { opacity: 0; transform: scale(.985); filter: blur(5px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes ai-chat-immersive-exit {
+  from { opacity: 1; transform: scale(1); filter: blur(0); }
+  to { opacity: 0; transform: scale(.985); filter: blur(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-chat-immersive, .ai-chat-immersive-closing { animation: none !important; }
+}
+html[data-motion="simple"] .ai-chat-immersive,
+html[data-motion="simple"] .ai-chat-immersive-closing { animation: none !important; }
