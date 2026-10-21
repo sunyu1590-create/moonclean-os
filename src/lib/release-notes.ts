@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.5";
+export const APP_VERSION = "1.1.6";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.6",
+    date: "2026-10-21",
+    title: "新增可选通知入场动效",
+    changes: [
+      "操作通知新增柔雾显现、轻柔展开和方向滑入三种可选动效，适用于全部通知外观。",
+      "通知关闭与自动收起加入对应的柔和退场；Low 档和系统减少动态效果设置会直接呈现。",
+    ],
+  },
   {
     version: "1.1.5",
     date: "2026-10-21",
