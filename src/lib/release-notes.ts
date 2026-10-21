@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.0.1";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.0.1",
+    date: "2026-10-21",
+    title: "精致动效与滚动加载体验优化",
+    changes: [
+      "恢复 Max 精致模式的流光渐彩选中效果，并为页面背景加入克制的主题适配柔光。",
+      "精致模式的骨架屏加载加入蓝紫薄荷色 Shimmer 流光。",
+      "模糊上浮页面切换新增卡片滚动入场效果；Low 档与系统减少动态效果设置会关闭该效果。",
+    ],
+  },
   {
     version: "1.0.0",
     date: "2026-10-19",

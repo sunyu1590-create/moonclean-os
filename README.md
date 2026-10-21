@@ -1,6 +1,6 @@
-# MoonClean OS · 1.0.0
+# MoonClean OS · 1.0.1
 
-MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
+MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件；1.0.1 细化精致模式流光、加载反馈和滚动入场动效，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
 
 ## DeepSeek 售后总结（可选）
 
