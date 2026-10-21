@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.1";
+export const APP_VERSION = "1.1.2";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.2",
+    date: "2026-10-21",
+    title: "进度过渡平滑与手机导航动效细化",
+    changes: [
+      "加载百分比在真实步骤之间连续推进，消除阶段切换时的突跳。",
+      "降低模糊上浮的弹跳幅度，保留清晰的位移与柔和回弹。",
+      "手机底栏和“更多”入口采用可辨识的底部模糊放大过渡，动效更克制。",
+    ],
+  },
   {
     version: "1.1.1",
     date: "2026-10-21",

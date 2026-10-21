@@ -188,6 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
+  const [mobileRouteEntering, setMobileRouteEntering] = useState(false);
   const sheetDrag = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const suppressSheetHandleClick = useRef(false);
   const [sheetDragging, setSheetDragging] = useState(false);
@@ -270,6 +271,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       });
     };
   }, [pathname, loading, pageTransitionStyle, motionLevel, reducedMotion]);
+  useEffect(() => {
+    if (!mobileRouteEntering) return;
+    const timer = window.setTimeout(() => setMobileRouteEntering(false), 900);
+    return () => window.clearTimeout(timer);
+  }, [pathname, mobileRouteEntering]);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -298,6 +304,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : mobilePrimary.length < 4 ? [...mobilePrimary, href] : mobilePrimary;
     setMobilePrimary(next);
     localStorage.setItem(mobileNavStorageKey, JSON.stringify(next));
+  }
+  function selectMobileRoute() {
+    setMobileRouteEntering(true);
+    setMobileMenuOpen(false);
   }
   async function chooseDataMode(next: "local" | "cloud") {
     if (next === mode || modeSwitchBusy) {
@@ -547,7 +557,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span aria-hidden="true" className="mc-saving-glide" />
             </div>
           )}
-          <div key={pathname} ref={pageTransitionRef} className="app-page-transition">
+          <div key={pathname} ref={pageTransitionRef} className={cn("app-page-transition", mobileRouteEntering && "mobile-nav-route-enter")}>
             {loading ? (
               <div className="mc-workspace-skeleton" role="status" aria-label="正在加载店铺数据">
                 <span className="sr-only">正在加载店铺数据…</span>
@@ -573,7 +583,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
+            return <Link key={href} href={href} onClick={() => setMobileRouteEntering(true)} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}
@@ -603,12 +613,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {customizingNav && <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-foreground">底栏快捷入口</p><span className="text-xs text-muted-foreground">已选 {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground")}><Icon size={17}/><span className="flex-1 truncate">{label}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-border bg-primary text-primary-foreground" : "border-border")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-muted-foreground hover:text-primary">恢复默认底栏</button></div>}
           <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground">经营工具</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
           </div>
           <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-muted-foreground">系统与账号</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={()=>setMobileMenuOpen(false)} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
-            {mode==="cloud"&&<Link href="/account" onClick={()=>setMobileMenuOpen(false)} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm font-medium text-foreground"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><CircleUserRound size={18}/></span>账号设置</Link>}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {mode==="cloud"&&<Link href="/account" onClick={selectMobileRoute} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm font-medium text-foreground"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><CircleUserRound size={18}/></span>账号设置</Link>}
           </div>
         </SheetContent>
       </Sheet>

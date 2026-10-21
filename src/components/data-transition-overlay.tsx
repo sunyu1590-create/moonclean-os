@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Circle, Cloud, HardDrive, LoaderCircle } from "lucide-react";
 import { APP_VERSION } from "@/lib/release-notes";
 import { MOTION_LEVELS, useMotionPreferences } from "@/components/motion-preferences";
@@ -16,15 +17,54 @@ const ModeIcon = ({ mode, size = 17 }: { mode: Mode; size?: number }) =>
 
 export function DataTransitionOverlay({ transition }: { transition: Transition | null }) {
   const { level, ready, reducedMotion } = useMotionPreferences();
+  const [animatedProgress, setAnimatedProgress] = useState(0);
+  const progressRef = useRef(0);
+  const steps = transition?.steps ?? [];
+  const completedSteps = steps.filter((step) => step.status === "done").length;
+  const activeStep = steps.findIndex((step) => step.status === "active");
+  const complete = steps.length > 0 && completedSteps === steps.length;
+
+  useEffect(() => {
+    if (!transition) {
+      progressRef.current = 0;
+      setAnimatedProgress(0);
+      return;
+    }
+    if (complete) {
+      progressRef.current = 100;
+      setAnimatedProgress(100);
+      return;
+    }
+    if (reducedMotion || level === "simple") {
+      const staticProgress = steps.length
+        ? ((completedSteps + (activeStep >= 0 ? 1 : 0)) / steps.length) * 100
+        : 0;
+      progressRef.current = Math.min(98, staticProgress);
+      setAnimatedProgress(progressRef.current);
+      return;
+    }
+
+    const startedAt = performance.now();
+    let frame = 0;
+    const animate = (now: number) => {
+      const elapsed = Math.min(now - startedAt, 5_000);
+      const activeFraction = activeStep >= 0 ? Math.min(0.92, elapsed / 5_000 * 0.92) : 0;
+      const target = steps.length
+        ? Math.min(98, ((completedSteps + activeFraction) / steps.length) * 100)
+        : 0;
+      progressRef.current += (target - progressRef.current) * 0.065;
+      setAnimatedProgress(progressRef.current);
+      if ((activeStep >= 0 && elapsed < 5_000) || Math.abs(target - progressRef.current) > 0.15) {
+        frame = window.requestAnimationFrame(animate);
+      }
+    };
+    frame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frame);
+  }, [transition, steps.length, completedSteps, activeStep, complete, reducedMotion, level]);
+
   if (!transition) return null;
   const switching = transition?.kind === "switching";
-  const complete = transition?.steps.every(step => step.status === "done") ?? false;
-  const completedSteps = transition?.steps.filter((step) => step.status === "done").length ?? 0;
-  const hasActiveStep = transition?.steps.some((step) => step.status === "active") ?? false;
-  const totalSteps = transition?.steps.length ?? 0;
-  const progressPercent = complete ? 100 : totalSteps
-    ? Math.round(((completedSteps + (hasActiveStep ? 1 : 0)) / totalSteps) * 100)
-    : 0;
+  const progressPercent = complete ? 100 : Math.min(98, Math.round(animatedProgress));
   const targetMode = !transition ? "local" : transition.kind === "opening" ? transition.mode : transition.to;
   const motionLabel = MOTION_LEVELS.find((item) => item.id === level)?.label || "Standard";
   return (
@@ -58,7 +98,7 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
           <LoaderCircle className="data-loader-spinner size-[18px] shrink-0 text-primary" aria-hidden="true" />
         </div>
         <div className="mt-5 space-y-2.5 border-t border-border pt-4">
-          {(transition?.steps || []).map((step, index) => (
+          {steps.map((step, index) => (
             <div key={`${index}-${step.label}`} className={`flex items-center gap-2.5 text-xs ${step.status === "pending" ? "text-muted-foreground" : "text-muted-foreground"}`}>
               <span className={`data-step-icon grid size-[18px] shrink-0 place-items-center rounded-full ${step.status === "done" ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : step.status === "active" ? "bg-[var(--mc-tint-blue)] text-primary" : "text-muted-foreground"}`}>
                 {step.status === "done" ? <Check size={12} strokeWidth={2.5} /> : step.status === "active" ? <LoaderCircle size={12} className="data-loader-spinner" /> : <Circle size={10} />}

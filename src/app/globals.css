@@ -559,13 +559,9 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
 @keyframes data-space-orbit {
   to { transform: rotate(360deg); }
 }
-@keyframes data-space-progress {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(260%); }
-}
 .data-space-enter { animation: data-space-enter 460ms cubic-bezier(.2,.75,.25,1) both; }
 .data-space-orbit { animation: data-space-orbit 7s linear infinite; }
-.data-space-progress { min-width: 0; transition: width 520ms cubic-bezier(.22,.8,.25,1); }
+.data-space-progress { min-width: 0; }
 @keyframes insight-row-enter {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -896,70 +892,95 @@ html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
     transition: none;
     will-change: auto;
   }
+  .mobile-more-sheet[data-open],
+  .mobile-more-sheet[data-starting-style],
+  .mobile-more-sheet[data-ending-style] {
+    animation: none !important;
+    transition: none !important;
+    filter: none !important;
+    scale: 1 !important;
+  }
 }
 
 /* Larger spring response for the blur-lift page transition. */
 @keyframes page-enter-blur-lift {
-  0% { opacity: 0; filter: blur(12px); transform: translate3d(0, 52px, 0) scale(.92); }
-  64% { opacity: 1; filter: blur(1px); transform: translate3d(0, -8px, 0) scale(1.018); }
-  83% { filter: blur(0); transform: translate3d(0, 3px, 0) scale(.996); }
+  0% { opacity: 0; filter: blur(8px); transform: translate3d(0, 32px, 0) scale(.97); }
+  72% { opacity: 1; filter: blur(1px); transform: translate3d(0, -3px, 0) scale(1.006); }
+  88% { filter: blur(0); transform: translate3d(0, 1px, 0) scale(.998); }
   100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
 }
 @keyframes mobile-page-enter-blur-spring {
-  0% { opacity: 0; filter: blur(14px); transform-origin: 50% 100%; transform: translate3d(0, 42px, 0) scale(.8); }
-  62% { opacity: 1; filter: blur(1px); transform: translate3d(0, -12px, 0) scale(1.035); }
-  82% { filter: blur(0); transform: translate3d(0, 4px, 0) scale(.994); }
+  0% { opacity: 0; filter: blur(10px); transform: translate3d(0, 26px, 0) scale(.93); }
+  72% { opacity: 1; filter: blur(1px); transform: translate3d(0, -5px, 0) scale(1.01); }
+  88% { filter: blur(0); transform: translate3d(0, 1px, 0) scale(.998); }
   100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0) scale(1); }
 }
 html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .app-page-transition {
   animation-name: page-enter-blur-lift;
-  animation-duration: 760ms;
-  animation-timing-function: cubic-bezier(.2,.8,.25,1);
+  animation-duration: 620ms;
+  animation-timing-function: cubic-bezier(.22,.82,.3,1);
 }
 html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page-transition {
   animation-name: page-enter-blur-lift;
-  animation-duration: 560ms;
-  animation-timing-function: cubic-bezier(.2,.8,.25,1);
+  animation-duration: 480ms;
+  animation-timing-function: cubic-bezier(.22,.82,.3,1);
 }
 @media (max-width: 767px) {
   html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .app-page-transition {
     animation-name: mobile-page-enter-blur-spring;
-    animation-duration: 820ms;
-    animation-timing-function: cubic-bezier(.2,.8,.25,1);
+    animation-duration: 680ms;
+    animation-timing-function: cubic-bezier(.22,.82,.3,1);
     transform-origin: 50% 100%;
   }
   html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page-transition {
     animation-name: mobile-page-enter-blur-spring;
-    animation-duration: 620ms;
+    animation-duration: 540ms;
     transform-origin: 50% 100%;
   }
   html[data-motion="refined"] .mobile-more-sheet[data-side="bottom"] {
-    transition-duration: 720ms !important;
-    transition-timing-function: cubic-bezier(.2,1.22,.34,1) !important;
+    transition-duration: 620ms !important;
+    transition-timing-function: cubic-bezier(.2,.92,.28,1) !important;
     transition-property: translate, height, border-radius, opacity, scale, filter !important;
     transform-origin: 50% 100%;
   }
   html[data-motion="refined"] .mobile-more-sheet[data-starting-style],
   html[data-motion="refined"] .mobile-more-sheet[data-ending-style] {
-    opacity: .25;
-    filter: blur(14px);
+    opacity: .3;
+    filter: blur(12px);
     translate: 0 100dvh !important;
-    scale: .82;
+    scale: .88;
   }
   html[data-motion="refined"] .mobile-more-sheet[data-open] {
     opacity: 1;
     filter: blur(0);
     translate: 0 0 !important;
     scale: 1;
+    animation: mobile-more-panel-enter 620ms cubic-bezier(.22,.82,.3,1) both;
+  }
+  html[data-motion="standard"] .mobile-more-sheet[data-open] {
+    animation: mobile-more-panel-enter 500ms cubic-bezier(.22,.82,.3,1) both;
+  }
+  @keyframes mobile-more-panel-enter {
+    0% { opacity: .2; filter: blur(12px); transform: translate3d(0, 9vh, 0); }
+    70% { opacity: 1; filter: blur(1px); transform: translate3d(0, -5px, 0); }
+    88% { filter: blur(0); transform: translate3d(0, 1px, 0); }
+    100% { opacity: 1; filter: blur(0); transform: translate3d(0, 0, 0); }
+  }
+  html:not([data-motion="simple"]) .app-shell-root .app-page-transition.mobile-nav-route-enter {
+    animation-name: mobile-page-enter-blur-spring;
+    animation-duration: 680ms;
+    animation-timing-function: cubic-bezier(.22,.82,.3,1);
+    animation-fill-mode: both;
+    transform-origin: 50% 100%;
   }
 }
 html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal {
   opacity: .01;
-  filter: blur(10px);
-  transform: translate3d(0, 42px, 0) scale(.95);
-  transition: opacity 720ms cubic-bezier(.2,.8,.25,1) var(--mc-scroll-delay, 0ms),
-    filter 720ms cubic-bezier(.2,.8,.25,1) var(--mc-scroll-delay, 0ms),
-    transform 820ms cubic-bezier(.2,1.22,.34,1) var(--mc-scroll-delay, 0ms);
+  filter: blur(7px);
+  transform: translate3d(0, 26px, 0) scale(.975);
+  transition: opacity 600ms cubic-bezier(.22,.82,.3,1) var(--mc-scroll-delay, 0ms),
+    filter 600ms cubic-bezier(.22,.82,.3,1) var(--mc-scroll-delay, 0ms),
+    transform 680ms cubic-bezier(.22,.9,.3,1) var(--mc-scroll-delay, 0ms);
   will-change: opacity, filter, transform;
 }
 html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
@@ -970,7 +991,7 @@ html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
 }
 @media (hover:hover) and (pointer:fine) {
   html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible.glass-card:hover {
-    transform: translate3d(0, -3px, 0) scale(1);
+    transform: translate3d(0, -2px, 0) scale(1);
   }
 }
 @media (prefers-reduced-motion:reduce) {
