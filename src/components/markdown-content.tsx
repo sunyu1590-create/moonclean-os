@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 function inline(value: string): ReactNode[] {
   return value.split(/(\*\*[^*]+\*\*)/g).map((part, index) => part.startsWith("**") && part.endsWith("**")
@@ -8,8 +8,8 @@ function inline(value: string): ReactNode[] {
     : part);
 }
 
-export function MarkdownContent({ content, className = "" }: { content: string; className?: string }) {
-  return <div className={`space-y-2 text-sm leading-7 ${className}`}>
+export function MarkdownContent({ content, className = "", style }: { content: string; className?: string; style?: CSSProperties }) {
+  return <div className={`space-y-2 text-sm leading-7 ${className}`} style={style}>
     {content.split("\n").map((line, index) => {
       const value = line.trim();
       if (!value) return <div key={index} className="h-1" />;
