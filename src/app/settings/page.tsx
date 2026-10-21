@@ -38,7 +38,8 @@ import { parseAppData } from "@/lib/repository";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { notifyFeedback } from "@/lib/feedback";
 import { AttachmentBackup } from "@/components/attachment-backup";
-import { encryptDeepSeekKey } from "@/lib/deepseek-key";
+import { clearCachedDeepSeekKey, DEEPSEEK_UNLOCK_DURATIONS, encryptDeepSeekKey, getDeepSeekUnlockDuration, setDeepSeekUnlockDuration, type DeepSeekUnlockDuration } from "@/lib/deepseek-key";
+import { PinPad } from "@/components/ui/pin-pad";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
   const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -62,6 +63,7 @@ export default function SettingsPage() {
   const [deepSeekState, setDeepSeekState] = useState<{ configured: boolean; locked?: boolean } | null>(null);
   const [deepSeekBusy, setDeepSeekBusy] = useState(false);
   const [deepSeekMessage, setDeepSeekMessage] = useState("");
+  const [deepSeekUnlockDuration, setDeepSeekUnlockDurationState] = useState<DeepSeekUnlockDuration>("3d");
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -100,6 +102,11 @@ export default function SettingsPage() {
       .catch(() => { if (!cancelled) setDeepSeekState({ configured: false }); });
     return () => { cancelled = true; };
   }, [activeStoreId, canManage, mode]);
+  useEffect(() => {
+    if (!activeStoreId) return;
+    const frame = window.requestAnimationFrame(() => setDeepSeekUnlockDurationState(getDeepSeekUnlockDuration(activeStoreId)));
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStoreId]);
   if (!data || !draft) return <p>正在加载数据…</p>;
   async function saveDeepSeekKey() {
     if (!activeStoreId || !deepSeekKey.trim()) { setDeepSeekMessage("请先粘贴 DeepSeek API Key。"); return; }
@@ -111,7 +118,8 @@ export default function SettingsPage() {
       const response = await fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(envelope) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "云端保存失败");
-      setDeepSeekKey(""); setDeepSeekPin(""); setDeepSeekPinConfirm(""); setDeepSeekMessage("已加密保存到当前云端店铺。每次使用 AI 时都需要输入四位密码。");
+      await clearCachedDeepSeekKey(activeStoreId);
+      setDeepSeekKey(""); setDeepSeekPin(""); setDeepSeekPinConfirm(""); setDeepSeekMessage("密钥已加密保存到当前云端店铺。按所选有效期重新验证密码。");
       setDeepSeekState({ configured: true });
       notifyFeedback({ kind: "success", title: "DeepSeek 配置已保存", description: "密钥已加密后保存到云端。" });
     } catch (cause) { const message = cause instanceof Error ? cause.message : "DeepSeek 配置失败"; setDeepSeekMessage(message); notifyFeedback({ kind: "error", title: "DeepSeek 配置失败", description: message }); }
@@ -124,6 +132,7 @@ export default function SettingsPage() {
       const response = await fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { method: "DELETE", credentials: "same-origin" });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || "清除云端配置失败");
+      await clearCachedDeepSeekKey(activeStoreId);
       setDeepSeekState({ configured: false });
       setDeepSeekKey(""); setDeepSeekPin(""); setDeepSeekPinConfirm("");
       setDeepSeekMessage("已清除云端密钥和密码保护。现在可以重新保存密钥并设置新密码。");
@@ -261,10 +270,11 @@ export default function SettingsPage() {
             {mode !== "cloud" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--mc-tint-blue)] p-3"><span className={`size-2 rounded-full ${deepSeekState?.configured && !deepSeekState.locked ? "bg-[var(--mc-color-success)]" : "bg-[var(--mc-tint-blue)]"}`}/><span className="text-sm font-medium text-muted-foreground">{deepSeekState?.locked ? "密码错误次数已用完，密钥已销毁" : deepSeekState?.configured ? "云端已加密保存" : "尚未配置"}</span></div>
               <div><Label htmlFor="deepseek-api-key">DeepSeek API Key</Label><Input id="deepseek-api-key" type="password" autoComplete="new-password" value={deepSeekKey} onChange={(event) => setDeepSeekKey(event.target.value)} disabled={deepSeekBusy} placeholder={deepSeekState?.configured ? "输入新 Key 以替换云端密钥" : "粘贴 DeepSeek API Key"} className="mt-1.5"/></div>
-              <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor="deepseek-pin">设置四位数字密码</Label><Input id="deepseek-pin" inputMode="numeric" maxLength={4} autoComplete="new-password" type="password" value={deepSeekPin} onChange={(event) => setDeepSeekPin(event.target.value.replace(/\D/g, "").slice(0, 4))} disabled={deepSeekBusy} placeholder="每次调用 AI 时使用" className="mt-1.5"/></div><div><Label htmlFor="deepseek-pin-confirm">再次输入密码</Label><Input id="deepseek-pin-confirm" inputMode="numeric" maxLength={4} autoComplete="new-password" type="password" value={deepSeekPinConfirm} onChange={(event) => setDeepSeekPinConfirm(event.target.value.replace(/\D/g, "").slice(0, 4))} disabled={deepSeekBusy} placeholder="确认四位密码" className="mt-1.5"/></div></div>
+              <div className="grid gap-4 sm:grid-cols-2"><div><Label>设置四位数字密码</Label><div className="mt-1.5"><PinPad value={deepSeekPin} onChange={setDeepSeekPin} disabled={deepSeekBusy} label="设置四位数字密码"/></div></div><div><Label>再次输入密码</Label><div className="mt-1.5"><PinPad value={deepSeekPinConfirm} onChange={setDeepSeekPinConfirm} disabled={deepSeekBusy} label="再次输入四位密码"/></div></div></div>
+              <div><Label htmlFor="deepseek-unlock-duration">密码有效期</Label><AppSelect id="deepseek-unlock-duration" value={deepSeekUnlockDuration} disabled={!activeStoreId || deepSeekBusy} onChange={(event) => { const value = event.target.value as DeepSeekUnlockDuration; setDeepSeekUnlockDurationState(value); if (activeStoreId) void setDeepSeekUnlockDuration(activeStoreId, value); }} className="mt-1.5 h-10 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground">{DEEPSEEK_UNLOCK_DURATIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</AppSelect><p className="mt-1 text-[10px] leading-4 text-muted-foreground">有效期保存在本机浏览器；到期后需要重新输入密码。更改选项会立即结束当前解锁状态。</p></div>
               <div className="flex flex-wrap items-center gap-2"><Button type="button" loading={deepSeekBusy} onClick={() => void saveDeepSeekKey()} disabled={deepSeekBusy || !deepSeekKey.trim() || deepSeekPin.length !== 4 || deepSeekPinConfirm.length !== 4}>{deepSeekBusy ? "正在加密保存…" : deepSeekState?.configured ? "更换密钥并重设密码" : "保存密钥"}</Button>{deepSeekState?.configured && <Button type="button" variant="outline" disabled={deepSeekBusy} onClick={() => void deleteDeepSeekKey()}>忘记密码 / 清除密钥</Button>}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="text-xs font-medium text-primary underline underline-offset-2">前往 DeepSeek 创建 API Key</a></div>
               {deepSeekMessage && <p role={deepSeekMessage.includes("已保存") || deepSeekMessage.includes("已删除") ? "status" : "alert"} className={`rounded-xl p-3 text-xs leading-5 ${deepSeekMessage.includes("已保存") || deepSeekMessage.includes("已删除") ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]"}`}>{deepSeekMessage}</p>}
-              <p className="text-[10px] leading-5 text-muted-foreground">密钥在当前浏览器端用四位密码加密，云端仅保存密文；MoonClean 不接收密码，也不会验证 DeepSeek Key。每次 AI 调用都需要输入密码。累计输错五次会销毁密钥；忘记密码时清除密钥后重新设置。四位密码适合防止设备旁的误操作，不应与高强度账号密码共用。</p>
+              <p className="text-[10px] leading-5 text-muted-foreground">密钥在当前浏览器端用四位密码加密，云端仅保存密文；MoonClean 不接收密码，也不会验证 DeepSeek Key。浏览器仅在所选有效期内保存不可导出的加密密钥句柄，不保存明文 API Key。累计输错五次会销毁密钥；忘记密码时清除密钥后重新设置。四位密码适合防止设备旁的误操作，不应与高强度账号密码共用。</p>
             </div>}
           </SectionCard>
           <SectionCard

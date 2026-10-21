@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.13";
+export const APP_VERSION = "1.1.14";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.14",
+    date: "2026-10-21",
+    title: "DeepSeek 解锁期限与自定义密码键盘",
+    changes: [
+      "DeepSeek 密码有效期新增每次、5 小时、10 小时、1 天和 3 天选项，默认 3 天；期限内复用本机不可导出的加密密钥句柄，到期后重新验证。",
+      "PIN 设置、确认和解锁改用应用内数字键盘，不再调起手机系统键盘；更改有效期、替换或清除密钥时会撤销本机解锁缓存。",
+      "修复 AI 智能建议和售后总结把 Markdown 星号直接显示的问题，正确呈现重点文字、标题和编号列表。",
+    ],
+  },
   {
     version: "1.1.13",
     date: "2026-10-21",
