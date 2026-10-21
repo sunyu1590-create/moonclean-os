@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Decimal from "decimal.js";
 import { AlertCircle, Bot, CheckCircle2, Clock3, RefreshCw, Save, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
-import { readDeepSeekKey } from "@/lib/deepseek-key";
+import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ export default function AfterSalesPage() {
   const [aiError, setAiError] = useState("");
   const [summary, setSummary] = useState("");
   const [aiPeriod, setAiPeriod] = useState<Period>(7);
+  const [pinOpen, setPinOpen] = useState(false);
   const [now, setNow] = useState(0);
   const canEdit = role !== "viewer";
 
@@ -89,12 +90,10 @@ export default function AfterSalesPage() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "售后问题保存失败"); }
     finally { setSavingId(""); }
   }
-  async function requestSummary() {
+  async function requestSummary(apiKey: string) {
     if (!activeStoreId) return;
     setAiBusy(true); setAiError(""); setSummary("");
     try {
-      const apiKey = readDeepSeekKey(activeStoreId);
-      if (!apiKey) throw new Error("请先在系统设置输入 DeepSeek API Key。");
       const response = await fetch(`/api/stores/${activeStoreId}/after-sales/summary`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, days: aiPeriod }) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "AI 分析失败");
@@ -129,6 +128,7 @@ export default function AfterSalesPage() {
       {loading ? <p className="text-sm text-muted-foreground">正在加载售后数据…</p> : !sorted.length ? <div className="text-sm text-muted-foreground">暂无退款记录。可在平台连接中心同步退款。<Link className="ml-2 text-primary underline" href="/integrations">前往平台连接</Link></div> : <div className="space-y-3">{sorted.map((refund) => { const order = orderById.get(refund.order_id); const state = refund.status === "succeeded" ? "退款成功" : refund.status === "pending" ? "处理中" : "已驳回"; const draft = draftFor(refund); return <div key={refund.id} className="rounded-2xl border border-border p-3 sm:p-4"><div className="mb-3 flex flex-wrap items-start justify-between gap-2"><div><strong className="text-sm text-foreground">{refund.external_id}</strong><p className="mt-1 text-xs text-muted-foreground">订单 {order?.external_id || "未同步"} · {state}{order?.is_demo && <span className="ml-2 text-primary">模拟数据</span>}</p></div><strong className={refund.status === "succeeded" ? "text-[var(--mc-color-danger)]" : "text-muted-foreground"}>{formatMoney(refund.amount)}</strong></div><div className="grid gap-2 sm:grid-cols-[minmax(180px,.65fr)_1fr_auto] sm:items-end"><div><Label className="mb-1 block text-xs">售后问题</Label><AppSelect aria-label="售后问题" className="h-9 w-full rounded-xl border border-border bg-card px-3 text-sm" value={draft.reason} disabled={!canEdit} onChange={(event) => setDrafts((current) => ({ ...current, [refund.id]: { ...draft, reason: event.target.value as Draft["reason"] } }))}><option value="">选择问题类型</option>{REFUND_REASONS.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}</AppSelect></div><div><Label className="mb-1 block text-xs">处理备注（选填）</Label><Input aria-label="处理备注" maxLength={300} disabled={!canEdit} value={draft.note} onChange={(event) => setDrafts((current) => ({ ...current, [refund.id]: { ...draft, note: event.target.value } }))} placeholder="例如：已补发，跟进物流单号"/></div><Button size="sm" variant="outline" disabled={!canEdit || savingId === refund.id || !refund.connection_id} onClick={() => void saveIssue(refund)}><Save size={14}/>{savingId === refund.id ? "保存中" : "保存分类"}</Button></div></div>; })}</div>}
     </SectionCard>
     <p className="mt-3 text-xs leading-5 text-muted-foreground">销售额和退款比率按最近已同步的订单与退款记录计算；平台模拟连接数据会显示“模拟数据”。DeepSeek 仅接收时间范围、条数和金额汇总，不会发送订单号、买家信息或备注。</p>
-    <Dialog open={aiOpen} onOpenChange={setAiOpen}><DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><Bot size={20} className="text-primary"/>DeepSeek 售后分析</DialogTitle><DialogDescription>根据当前店铺的售后汇总，识别高频问题并给出处理建议。只提交汇总数字，不提交订单号和客户信息。</DialogDescription></DialogHeader><div className="space-y-4"><div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground">分析周期</span><div className="flex gap-2">{([7, 30, 90] as const).map((days) => <Button key={days} size="sm" variant={aiPeriod === days ? "default" : "outline"} onClick={() => setAiPeriod(days)}>{days} 天</Button>)}</div></div>{aiError && <p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm leading-5 text-[var(--mc-color-danger)]">{aiError} <Link href="/settings" className="ml-1 font-semibold underline">前往系统设置配置 DeepSeek</Link></p>}{summary && <div className="whitespace-pre-wrap rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm leading-7 text-foreground">{summary}</div>}<div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs leading-5 text-muted-foreground"><span>API Key 在系统设置配置并由服务端保存，不会回传到页面。</span><Button onClick={() => void requestSummary()} disabled={aiBusy || !activeStoreId}><Sparkles size={15}/>{aiBusy ? "分析中…" : summary ? "重新分析" : "生成分析"}</Button></div></div></DialogContent></Dialog>
+    <Dialog open={aiOpen} onOpenChange={setAiOpen}><DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle className="flex items-center gap-2"><Bot size={20} className="text-primary"/>DeepSeek 售后分析</DialogTitle><DialogDescription>根据当前店铺的售后汇总，识别高频问题并给出处理建议。只提交汇总数字，不提交订单号和客户信息。</DialogDescription></DialogHeader><div className="space-y-4"><div className="flex flex-wrap items-center gap-3"><span className="text-sm text-muted-foreground">分析周期</span><div className="flex gap-2">{([7, 30, 90] as const).map((days) => <Button key={days} size="sm" variant={aiPeriod === days ? "default" : "outline"} onClick={() => setAiPeriod(days)}>{days} 天</Button>)}</div></div>{aiError && <p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm leading-5 text-[var(--mc-color-danger)]">{aiError} <Link href="/settings" className="ml-1 font-semibold underline">前往系统设置配置 DeepSeek</Link></p>}{summary && <div className="whitespace-pre-wrap rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm leading-7 text-foreground">{summary}</div>}<div className="flex items-center justify-between gap-3 rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs leading-5 text-muted-foreground"><span>调用前输入四位密码解锁云端加密密钥。</span><Button onClick={() => setPinOpen(true)} disabled={aiBusy || !activeStoreId}><Sparkles size={15}/>{aiBusy ? "分析中…" : summary ? "重新分析" : "生成分析"}</Button></div></div></DialogContent></Dialog>
+    {activeStoreId && <DeepSeekUnlockDialog storeId={activeStoreId} open={pinOpen} onOpenChange={setPinOpen} onUnlock={(apiKey) => requestSummary(apiKey)}/>}
   </>;
 }

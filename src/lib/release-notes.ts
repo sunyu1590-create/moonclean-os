@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.12";
+export const APP_VERSION = "1.1.13";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.13",
+    date: "2026-10-21",
+    title: "DeepSeek 云端 PIN 加密保存",
+    changes: [
+      "DeepSeek Key 由浏览器使用四位密码加密后保存到云端，设置时不再请求 DeepSeek 验证；云端只保存加密密文。",
+      "AI 智能建议、售后总结和 Copilot 每次调用前都需要输入密码，累计输错五次会清除密钥；忘记密码可清除后重新设置。",
+      "密钥管理限店铺所有者和管理员，数据库按店铺成员策略隔离；AI 请求期间解密后的 Key 会临时经 MoonClean 服务转发，不会持久保存。",
+    ],
+  },
   {
     version: "1.1.12",
     date: "2026-10-21",
