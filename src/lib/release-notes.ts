@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.3";
+export const APP_VERSION = "1.1.4";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.4",
+    date: "2026-10-21",
+    title: "修复全站路由闪帧与更多面板入场",
+    changes: [
+      "统一全站页面切换只播放一次模糊上浮，避免过渡结束后因动画重置再次闪动。",
+      "修复手机“更多”面板开场状态被弹层最终状态覆盖的问题，点击时也会从触点缓慢放大进入。",
+    ],
+  },
   {
     version: "1.1.3",
     date: "2026-10-21",

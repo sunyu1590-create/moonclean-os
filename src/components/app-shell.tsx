@@ -188,7 +188,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
-  const [mobileRouteEntering, setMobileRouteEntering] = useState(false);
   const [mobileMoreOrigin, setMobileMoreOrigin] = useState({ x: 50, y: 320 });
   const sheetDrag = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const suppressSheetHandleClick = useRef(false);
@@ -272,11 +271,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       });
     };
   }, [pathname, loading, pageTransitionStyle, motionLevel, reducedMotion]);
-  useEffect(() => {
-    if (!mobileRouteEntering) return;
-    const timer = window.setTimeout(() => setMobileRouteEntering(false), 900);
-    return () => window.clearTimeout(timer);
-  }, [pathname, mobileRouteEntering]);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -328,7 +322,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMobileMenuOpen(true);
   }
   function selectMobileRoute() {
-    setMobileRouteEntering(true);
     setMobileMenuOpen(false);
   }
   async function chooseDataMode(next: "local" | "cloud") {
@@ -579,7 +572,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span aria-hidden="true" className="mc-saving-glide" />
             </div>
           )}
-          <div key={pathname} ref={pageTransitionRef} className={cn("app-page-transition", mobileRouteEntering && "mobile-nav-route-enter")}>
+          <div key={pathname} ref={pageTransitionRef} className="app-page-transition">
             {loading ? (
               <div className="mc-workspace-skeleton" role="status" aria-label="正在加载店铺数据">
                 <span className="sr-only">正在加载店铺数据…</span>
@@ -606,7 +599,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {motionLevel === "refined" && <span aria-hidden="true" className="mobile-nav-touch-glow"/>}
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
-            return <Link key={href} href={href} onClick={() => setMobileRouteEntering(true)} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
               <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
             </Link>;
           })}

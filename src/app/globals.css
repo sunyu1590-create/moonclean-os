@@ -964,6 +964,20 @@ html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page
     translate: 0 0 !important;
     scale: .82;
   }
+  /* Base UI briefly sets both data-open and data-starting-style on entry.
+     This higher-specificity state makes that first frame visible to CSS transitions. */
+  html[data-motion="refined"] .mobile-more-sheet[data-open][data-starting-style] {
+    opacity: .08;
+    filter: blur(16px);
+    translate: 0 0 !important;
+    scale: .68;
+  }
+  html[data-motion="standard"] .mobile-more-sheet[data-open][data-starting-style] {
+    opacity: .16;
+    filter: blur(10px);
+    translate: 0 0 !important;
+    scale: .82;
+  }
   html[data-motion="refined"] .mobile-nav-touch-glow {
     position: absolute;
     z-index: 0;
@@ -1002,13 +1016,6 @@ html[data-motion="standard"] .app-shell-root.page-transition-blur-lift .app-page
   }
   html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator {
     transition: transform 620ms cubic-bezier(.22,.68,.25,1), box-shadow 420ms ease, background-color 420ms ease;
-  }
-  html:not([data-motion="simple"]) .app-shell-root .app-page-transition.mobile-nav-route-enter {
-    animation-name: mobile-page-enter-blur;
-    animation-duration: 520ms;
-    animation-timing-function: cubic-bezier(.22,.68,.25,1);
-    animation-fill-mode: both;
-    transform-origin: 50% 50%;
   }
 }
 html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal {
