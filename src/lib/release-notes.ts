@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.24";
+export const APP_VERSION = "1.1.25";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.25",
+    date: "2026-10-21",
+    title: "聊天窗口高度与首页缓存反馈",
+    changes: [
+      "增加手机 AI 聊天面板高度，填满输入区与底部导航之间的可用空间。",
+      "首页快照优先显示后提供通知，按本次缓存先于云端数据可用的实际秒数，说明首屏提前时间；后台同步失败时会说明仍在显示缓存数据。",
+    ],
+  },
   {
     version: "1.1.24",
     date: "2026-10-21",

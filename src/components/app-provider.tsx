@@ -177,6 +177,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (id) {
             try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* Keep the current session usable if storage is blocked. */ }
             const cachedSnapshot = readCoreSnapshot(response.user.id, id);
+            let cachedDisplayedAt: number | null = null;
             if (cachedSnapshot) {
               servedFromCache = true;
               const currentRole = response.stores.find((store) => store.id === id)?.role;
@@ -184,6 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               dataRef.current = cached;
               setDisplayCurrency(cached.settings.store.currency);
               setData(cached);
+              cachedDisplayedAt = performance.now();
               setLoading(false);
               setDataTransition(null);
               hasLoadedRef.current = true;
@@ -197,6 +199,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             dataRef.current = loaded;
             setData(loaded);
             writeCoreSnapshot(response.user.id, id, loaded);
+            if (cachedDisplayedAt !== null) {
+              const savedSeconds = Math.max(0, (performance.now() - cachedDisplayedAt) / 1000);
+              notifyFeedback({
+                kind: "success",
+                title: "首页已从本机缓存快速显示",
+                description: `本机快照先行显示，相当于节省了约 ${savedSeconds.toFixed(1)} 秒首屏等待；后台云端同步已完成。`,
+              });
+            }
           } else {
             dataRef.current = null;
             setData(null);
@@ -204,7 +214,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         openingSucceeded = true;
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "加载失败");
+        const message = cause instanceof Error ? cause.message : "加载失败";
+        setError(message);
+        if (servedFromCache) notifyFeedback({ kind: "info", title: "已从本机缓存恢复首页", description: "缓存内容已先行显示，云端同步暂不可用；当前仍可查看最近一次保存的数据。" });
         if (!servedFromCache) { dataRef.current = null; setData(null); }
       } finally {
         if (showOpening) {
