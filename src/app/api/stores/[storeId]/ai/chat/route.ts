@@ -44,9 +44,10 @@ export async function POST(request: Request, { params }: Context) {
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        messages,
+        messages: [{ role: "system", content: "请直接回答用户的问题；需要分析时，在正文开头用一两句简短说明可见的判断依据，随后边生成边给出答案。不要输出冗长的内部推理草稿。" }, ...messages],
         reasoning_effort: reasoningEffort,
         stream: true,
+        stream_options: { include_usage: true },
       }),
       signal: AbortSignal.timeout(180_000),
     });

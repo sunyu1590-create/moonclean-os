@@ -9,7 +9,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import type { AppData, StoreRole } from "@/lib/model";
-import { hasLocalData, repository } from "@/lib/repository";
+import { hasLocalData, parseAppData, repository } from "@/lib/repository";
 import { createEmptyLocalData } from "@/lib/seed";
 import { setDisplayCurrency } from "@/lib/finance";
 import { notifyFeedback } from "@/lib/feedback";
@@ -72,6 +72,7 @@ const finishTransition = (transition: DataTransition): DataTransition => ({
 });
 const Context = createContext<ContextValue | null>(null);
 const ACTIVE_KEY = "moonclean-active-store";
+const CORE_CACHE_KEY = "moonclean-core-snapshot-v1";
 const DATA_MODE_KEY = "moonclean-data-mode-v1";
 const DATA_MODE_COOKIE = "moonclean-data-mode";
 function dataSwitchTiming() {
@@ -96,6 +97,16 @@ function readPersistedDataMode(): "local" | "cloud" | null {
     const value = cookie?.slice(DATA_MODE_COOKIE.length + 1);
     return value === "local" || value === "cloud" ? value : null;
   } catch { return null; }
+}
+function readCoreSnapshot(userId: string, storeId: string): AppData | null {
+  try {
+    const cache = JSON.parse(localStorage.getItem(`${CORE_CACHE_KEY}:${userId}:${storeId}`) || "null") as { data?: unknown } | null;
+    if (!cache?.data) return null;
+    return parseAppData(cache.data);
+  } catch { return null; }
+}
+function writeCoreSnapshot(userId: string, storeId: string, data: AppData) {
+  try { localStorage.setItem(`${CORE_CACHE_KEY}:${userId}:${storeId}`, JSON.stringify({ savedAt: Date.now(), data })); } catch { /* The cloud remains the source of truth if the local cache is unavailable. */ }
 }
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -129,13 +140,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const refresh = useCallback(
     async (preferred?: string) => {
-      const showOpening = !hasLoadedRef.current;
+      let showOpening = !hasLoadedRef.current;
       if (showOpening) {
         setDataTransition(makeTransition("opening", mode));
       }
       setLoading(true);
       setError(null);
       let openingSucceeded = false;
+      let servedFromCache = false;
       try {
         if (mode === "local") {
           if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 1) : current);
@@ -164,12 +176,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setActiveStoreId(id || null);
           if (id) {
             try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* Keep the current session usable if storage is blocked. */ }
+            const cachedSnapshot = readCoreSnapshot(response.user.id, id);
+            if (cachedSnapshot) {
+              servedFromCache = true;
+              const currentRole = response.stores.find((store) => store.id === id)?.role;
+              const cached = currentRole ? { ...cachedSnapshot, settings: { ...cachedSnapshot.settings, role: currentRole } } : cachedSnapshot;
+              dataRef.current = cached;
+              setDisplayCurrency(cached.settings.store.currency);
+              setData(cached);
+              setLoading(false);
+              setDataTransition(null);
+              hasLoadedRef.current = true;
+              loadedModeRef.current = "cloud";
+              showOpening = false;
+            }
             if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 2) : current);
             const loaded = await cloud.load(id);
             if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 3) : current);
             setDisplayCurrency(loaded.settings.store.currency);
             dataRef.current = loaded;
             setData(loaded);
+            writeCoreSnapshot(response.user.id, id, loaded);
           } else {
             dataRef.current = null;
             setData(null);
@@ -178,8 +205,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         openingSucceeded = true;
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "加载失败");
-        dataRef.current = null;
-        setData(null);
+        if (!servedFromCache) { dataRef.current = null; setData(null); }
       } finally {
         if (showOpening) {
           if (openingSucceeded) {
@@ -223,6 +249,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setDisplayCurrency(fresh.settings.store.currency);
           setData(fresh);
         }
+        if (active && user?.id) writeCoreSnapshot(user.id, activeStoreId, fresh);
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : "云端同步失败");
       }
@@ -230,7 +257,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const timer = window.setInterval(() => void sync(), 60_000);
     window.addEventListener("focus", sync);
     return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", sync); };
-  }, [mode, activeStoreId, isAuthRoute, cloud]);
+  }, [mode, activeStoreId, isAuthRoute, cloud, user?.id]);
   const switchStore = async (id: string) => {
     if (mode !== "cloud") return;
     if (!stores.some((s) => s.id === id)) throw new Error("无权访问此店铺");
@@ -239,6 +266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const loaded = await cloud.load(id);
       try { localStorage.setItem(ACTIVE_KEY, id); } catch { /* Remembering this preference is optional. */ }
+      if (user?.id) writeCoreSnapshot(user.id, id, loaded);
       setActiveStoreId(id);
       applyData(loaded);
     } catch (cause) {
@@ -335,6 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await cloud.save(next, current);
         const fresh = await cloud.load(activeStoreId || undefined);
         applyData(fresh);
+        if (user?.id && activeStoreId) writeCoreSnapshot(user.id, activeStoreId, fresh);
         setStores(current => current.map(store => store.id === fresh.settings.store.id ? {...store, name:fresh.settings.store.name, platform:fresh.settings.store.platform, currency:fresh.settings.store.currency, timezone:fresh.settings.store.timezone||"Asia/Shanghai"} : store));
       }
       notifyFeedback({ kind: "success", title: "保存成功", description: mode === "cloud" ? "数据已保存并同步到云端。" : "数据已保存到当前设备。" });

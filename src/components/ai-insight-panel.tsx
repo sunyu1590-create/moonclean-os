@@ -9,6 +9,8 @@ import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { notifyFeedback } from "@/lib/feedback";
 import { getCachedDeepSeekKey } from "@/lib/deepseek-key";
 import { MarkdownContent } from "@/components/markdown-content";
+import { readAiTextStream } from "@/lib/read-ai-stream";
+import { AiStreamStatus } from "@/components/ai-stream-status";
 
 type Feature = "dashboard" | "exceptions" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
@@ -48,12 +50,12 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
         body: JSON.stringify({ apiKey, feature, context }),
         cache: "no-store",
       });
-      const result = await response.json() as { suggestion?: string; generatedAt?: string; error?: string };
-      if (!response.ok || !result.suggestion || !result.generatedAt) throw new Error(result.error || "AI 建议生成失败，请稍后重试。");
-      setSuggestion(result.suggestion);
+      let streamed = "";
+      const result = await readAiTextStream(response, (delta) => { streamed += delta; setSuggestion(streamed); });
+      if (!streamed.trim() || typeof result?.generatedAt !== "string") throw new Error("AI 建议生成失败，请稍后重试。");
       setGeneratedAt(result.generatedAt);
       if (cacheKey) {
-        const entry: CacheEntry = { suggestion: result.suggestion, generatedAt: result.generatedAt, contextKey };
+        const entry: CacheEntry = { suggestion: streamed, generatedAt: result.generatedAt, contextKey };
         try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch { /* Current session still displays the result. */ }
       }
       notifyFeedback({ kind: "success", title: "AI 建议已生成", description: "建议已显示在当前页面。" });
@@ -86,7 +88,7 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
       <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Bot size={18}/></span><div className="min-w-0"><h2 className="text-sm font-semibold text-foreground">DeepSeek 智能建议</h2><p className="mt-0.5 text-[11px] text-muted-foreground">{autoRefresh ? "使用近 7 天脱敏汇总；密码有效期可在AI 设置中调整" : "根据当前页面的经营汇总提供参考建议"}</p></div></div>
       <div className="flex items-center gap-2">{formattedTime && <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><Clock3 size={12}/>{formattedTime}</span>}<Button type="button" size="sm" variant="outline" disabled={busy || mode !== "cloud" || !activeStoreId} onClick={() => void generate()}><RefreshCw size={13} className={busy ? "animate-spin" : ""}/>{busy ? "正在分析" : suggestion ? "重新生成" : "生成建议"}</Button></div>
     </div>
-    {mode !== "cloud" ? <p className="mt-3 rounded-xl bg-card/75 px-3 py-2.5 text-xs leading-5 text-muted-foreground">本地数据不会发送给 AI。AI 分析需要云端店铺和 DeepSeek API Key；切换至云端后，可在 <Link href="/ai-settings" className="font-semibold text-primary">AI 设置</Link> 完成配置。</p> : error ? <p role="alert" className="mt-3 rounded-xl border border-border bg-[var(--mc-tint-red)] px-3 py-2.5 text-xs leading-5 text-[var(--mc-color-danger)]">{error} {error.includes("配置") && <Link href="/ai-settings" className="font-semibold underline">前往配置</Link>}</p> : suggestion ? <div aria-live="polite" className="mt-3 rounded-xl border border-border bg-card/75 px-3.5 py-3 text-xs text-muted-foreground"><MarkdownContent content={suggestion} className="text-xs leading-6"/></div> : <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground"><Sparkles size={12}/>仅发送汇总数值、状态计数和缺失数据提示，不发送订单号、买家信息或密钥。</p>}
+    {mode !== "cloud" ? <p className="mt-3 rounded-xl bg-card/75 px-3 py-2.5 text-xs leading-5 text-muted-foreground">本地数据不会发送给 AI。AI 分析需要云端店铺和 DeepSeek API Key；切换至云端后，可在 <Link href="/ai-settings" className="font-semibold text-primary">AI 设置</Link> 完成配置。</p> : error ? <p role="alert" className="mt-3 rounded-xl border border-border bg-[var(--mc-tint-red)] px-3 py-2.5 text-xs leading-5 text-[var(--mc-color-danger)]">{error} {error.includes("配置") && <Link href="/ai-settings" className="font-semibold underline">前往配置</Link>}</p> : <><div className="mt-3"><AiStreamStatus active={busy} hasText={Boolean(suggestion)}/></div>{suggestion ? <div aria-live="polite" className="mt-2 rounded-xl border border-border bg-card/75 px-3.5 py-3 text-xs text-muted-foreground"><MarkdownContent content={suggestion} className="text-xs leading-6"/></div> : <p className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground"><Sparkles size={12}/>仅发送汇总数值、状态计数和缺失数据提示，不发送订单号、买家信息或密钥。</p>}</>}
     {activeStoreId && <DeepSeekUnlockDialog storeId={activeStoreId} open={pinOpen} onOpenChange={setPinOpen} onUnlock={(apiKey) => generate(apiKey)}/>}
   </section>;
 }

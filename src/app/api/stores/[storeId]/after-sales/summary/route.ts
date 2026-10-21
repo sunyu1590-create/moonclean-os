@@ -3,6 +3,7 @@ import Decimal from "decimal.js";
 import { z } from "zod";
 import { requireStore, rejectCrossOriginMutation } from "@/lib/supabase/auth";
 import { refundReasonSchema, REFUND_REASONS } from "@/lib/after-sales";
+import { streamDeepSeekText } from "@/lib/ai-stream";
 
 const inputSchema = z.object({ apiKey: z.string().trim().min(20).max(512), days: z.union([z.literal(7), z.literal(30), z.literal(90)]) });
 const recentRequests = new Map<string, number>();
@@ -67,18 +68,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
         model,
         temperature: 0.25,
         max_tokens: 850,
+        stream: true,
         messages: [
-          { role: "system", content: "你是中国电商售后运营分析助手。只依据给出的汇总数字，用简体中文给出简洁、具体、可执行的分析。指出样本量和未分类限制；不能声称因果，不能编造数字。建议按问题频次排序，最多给出3条行动建议。" },
+          { role: "system", content: "你是中国电商售后运营分析助手。只依据给出的汇总数字，用简体中文给出简洁、具体、可执行的分析。指出样本量和未分类限制；不能声称因果，不能编造数字。建议按问题频次排序，最多给出3条行动建议。开头简要说明可见数据依据，不展示内部推理草稿。" },
           { role: "user", content: `请分析以下脱敏汇总数据并给出问题排序和行动建议：${JSON.stringify(safeFacts)}` },
         ],
       }),
       signal: AbortSignal.timeout(25_000),
     });
     if (!response.ok) return NextResponse.json({ error: response.status === 401 ? "DeepSeek API Key 无效" : response.status === 429 ? "DeepSeek 请求频率受限，请稍后再试" : "DeepSeek 暂时无法完成分析，请稍后重试" }, { status: 502 });
-    const result = await response.json() as { choices?: { message?: { content?: string } }[] };
-    const summary = result.choices?.[0]?.message?.content?.trim();
-    if (!summary) return NextResponse.json({ error: "DeepSeek 返回内容为空，请稍后重试" }, { status: 502 });
-    return NextResponse.json({ summary, facts: safeFacts, model }, { headers: { "Cache-Control": "no-store" } });
+    return streamDeepSeekText(response, () => ({ facts: safeFacts, model }));
   } catch {
     return NextResponse.json({ error: "连接 DeepSeek 超时或网络不可用，请稍后重试" }, { status: 502 });
   }

@@ -7,6 +7,8 @@ import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { MarkdownContent } from "@/components/markdown-content";
 import { getCachedDeepSeekKey } from "@/lib/deepseek-key";
 import { notifyFeedback } from "@/lib/feedback";
+import { readAiTextStream } from "@/lib/read-ai-stream";
+import { AiStreamStatus } from "@/components/ai-stream-status";
 
 type Action = "polish" | "suggest";
 
@@ -32,9 +34,9 @@ export function AiNoteTools({ storeId, enabled, title, content, onApply }: {
         method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey, action: nextAction, title, content }), cache: "no-store",
       });
-      const data = await response.json() as { result?: string; error?: string };
-      if (!response.ok || !data.result) throw new Error(data.error || "AI 处理失败，请重试。");
-      setResult(data.result);
+      let text = "";
+      await readAiTextStream(response, (delta) => { text += delta; setResult(text); });
+      if (!text.trim()) throw new Error("AI 未返回有效内容，请重试。");
       notifyFeedback({ kind: "success", title: nextAction === "polish" ? "润色预览已生成" : "AI 建议已生成", description: "确认后才会写入当前笔记。" });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "AI 处理失败，请重试。");
@@ -58,6 +60,7 @@ export function AiNoteTools({ storeId, enabled, title, content, onApply }: {
     </div>
     {!enabled && <p className="mt-2 text-[10px] text-muted-foreground">切换到云端店铺并配置 DeepSeek 后可使用 AI 笔记功能。</p>}
     {enabled && content.length > 12000 && <p className="mt-2 text-[10px] text-muted-foreground">当前正文超过 AI 处理上限 12000 字，请先精简内容。</p>}
+    <div className="mt-2"><AiStreamStatus active={busy && !pinOpen} hasText={Boolean(result)}/></div>
     {error && <p role="alert" className="mt-3 rounded-xl bg-[var(--mc-tint-red)] p-3 text-xs leading-5 text-[var(--mc-color-danger)]">{error}</p>}
     {result && <div className="mt-3 rounded-xl border border-border bg-card p-3 sm:p-4">
       <div className="mb-2 flex items-center justify-between gap-2"><p className="text-xs font-semibold">{action === "polish" ? "润色预览" : "行动建议"}</p><span className="text-[10px] text-muted-foreground">尚未写入笔记</span></div>
