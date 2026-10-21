@@ -1,6 +1,14 @@
-export const APP_VERSION = "1.1.9";
+export const APP_VERSION = "1.1.10";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.10",
+    date: "2026-10-21",
+    title: "修复中心弹窗入场位置",
+    changes: [
+      "修复云端数据切换等中心弹窗入场时定位偏移的问题；过渡过程中保持屏幕中心，只执行模糊与缩放。",
+    ],
+  },
   {
     version: "1.1.9",
     date: "2026-10-21",

@@ -369,15 +369,15 @@ html[data-motion="simple"] .mc-skeleton::after { display:none; }
 html[data-motion="refined"] [data-slot="dialog-overlay"] { transition: opacity var(--mc-motion-normal) ease, backdrop-filter var(--mc-motion-normal) ease; backdrop-filter: blur(3px); }
 html[data-motion="refined"] [data-slot="dialog-content"] { animation: none; transform-origin: center; transition: opacity var(--mc-motion-emphasis) var(--mc-ease-emphasis), translate var(--mc-motion-emphasis) var(--mc-ease-emphasis), scale var(--mc-motion-emphasis) var(--mc-ease-emphasis), filter var(--mc-motion-emphasis) var(--mc-ease-emphasis), box-shadow var(--mc-motion-emphasis) ease; box-shadow: 0 24px 70px rgba(20,53,87,.17), inset 0 1px 0 rgba(255,255,255,.82); }
 html[data-motion="refined"] [data-slot="dialog-content"][data-starting-style],
-html[data-motion="refined"] [data-slot="dialog-content"][data-ending-style] { opacity: 0; translate: 0 0; scale: .88; filter: blur(12px); }
-html[data-motion="refined"] [data-slot="dialog-content"][data-open][data-starting-style] { opacity: 0; translate: 0 0; scale: .88; filter: blur(12px); }
+html[data-motion="refined"] [data-slot="dialog-content"][data-ending-style] { opacity: 0; translate: -50% -50%; scale: .88; filter: blur(12px); }
+html[data-motion="refined"] [data-slot="dialog-content"][data-open][data-starting-style] { opacity: 0; translate: -50% -50%; scale: .88; filter: blur(12px); }
 html[data-motion="refined"] [data-slot="dialog-content"][data-open]:not([data-starting-style]) { opacity: 1; scale: 1; filter: blur(0); }
 html[data-motion="refined"] [data-slot="dialog-overlay"][data-starting-style],
 html[data-motion="refined"] [data-slot="dialog-overlay"][data-ending-style] { opacity: 0; }
 html[data-motion="standard"] [data-slot="dialog-content"] { animation: none; transform-origin: center; transition: opacity var(--mc-motion-fast) ease-out, scale var(--mc-motion-fast) ease-out, filter var(--mc-motion-fast) ease-out; }
 html[data-motion="standard"] [data-slot="dialog-content"][data-starting-style],
 html[data-motion="standard"] [data-slot="dialog-content"][data-ending-style],
-html[data-motion="standard"] [data-slot="dialog-content"][data-open][data-starting-style] { opacity: 0; scale: .93; filter: blur(7px); }
+html[data-motion="standard"] [data-slot="dialog-content"][data-open][data-starting-style] { opacity: 0; translate: -50% -50%; scale: .93; filter: blur(7px); }
 html[data-motion="standard"] [data-slot="dialog-content"][data-open]:not([data-starting-style]) { opacity: 1; scale: 1; filter: blur(0); }
 html[data-motion="standard"] [data-slot="dialog-overlay"] { transition-duration: var(--mc-motion-fast); }
 html[data-motion="refined"] [data-slot="select-content"] { animation: none; transform-origin: var(--transform-origin, center); transition: opacity var(--mc-motion-emphasis) var(--mc-ease-emphasis), scale var(--mc-motion-emphasis) var(--mc-ease-emphasis), filter var(--mc-motion-emphasis) var(--mc-ease-emphasis); }
