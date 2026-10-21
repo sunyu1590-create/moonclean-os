@@ -178,7 +178,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     switchStore,
     switchDataMode,
   } = useApp();
-  const { level: motionLevel, pageTransitionStyle } = useMotionPreferences();
+  const { level: motionLevel, pageTransitionStyle, reducedMotion } = useMotionPreferences();
+  const pageTransitionRef = useRef<HTMLDivElement>(null);
   const [themePreference, setThemePreference] = useState<"system" | "day" | "night">("system");
   const [systemDark, setSystemDark] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
@@ -234,6 +235,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => {
+    const root = pageTransitionRef.current;
+    if (!root) return;
+
+    const targets = Array.from(root.querySelectorAll<HTMLElement>(".glass-card, .material-hero"))
+      .filter((element) => !element.parentElement?.closest(".glass-card"));
+    if (pageTransitionStyle !== "blur-lift" || motionLevel === "simple" || reducedMotion || !("IntersectionObserver" in window)) {
+      targets.forEach((element) => element.classList.remove("mc-scroll-reveal", "mc-scroll-reveal-visible"));
+      return;
+    }
+
+    targets.forEach((element) => {
+      element.classList.add("mc-scroll-reveal");
+      element.classList.remove("mc-scroll-reveal-visible");
+    });
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("mc-scroll-reveal-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -7% 0px" });
+    targets.forEach((element) => observer.observe(element));
+    return () => {
+      observer.disconnect();
+      targets.forEach((element) => element.classList.remove("mc-scroll-reveal", "mc-scroll-reveal-visible"));
+    };
+  }, [pathname, loading, pageTransitionStyle, motionLevel, reducedMotion]);
   if (authPaths.includes(pathname)) return <>{children}</>;
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
@@ -511,7 +540,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span aria-hidden="true" className="mc-saving-glide" />
             </div>
           )}
-          <div key={pathname} className="app-page-transition">
+          <div key={pathname} ref={pageTransitionRef} className="app-page-transition">
             {loading ? (
               <div className="mc-workspace-skeleton" role="status" aria-label="正在加载店铺数据">
                 <span className="sr-only">正在加载店铺数据…</span>

@@ -761,8 +761,6 @@ html[data-theme="night"][data-motion="refined"] .glass-card:hover { box-shadow: 
   html .glass-card:hover { border-color: color-mix(in srgb, var(--primary) 24%, var(--border)); box-shadow: 0 16px 42px rgb(24 39 68 / .10); }
 }
 html[data-theme="night"] .glass-card:hover { box-shadow: 0 18px 42px rgb(0 0 0 / .3); }
-html .app-shell-root::before,
-html .app-shell-root::after { display: none; }
 html .page-title { font-weight: 640; letter-spacing: -.035em; }
 html .section-title { font-size: 18px; font-weight: 620; }
 html .number { font-variant-numeric: tabular-nums lining-nums; }
@@ -781,9 +779,7 @@ html [data-slot="dialog-overlay"] { background: rgb(10 14 25 / .32); -webkit-bac
 html[data-theme="night"] [data-slot="dialog-overlay"] { background: rgb(0 0 0 / .6); }
 html .mobile-primary-nav { background: var(--mc-glass-standard); border-color: var(--mc-glass-edge); box-shadow: var(--mc-shadow-elevated); }
 html .mobile-active-indicator { background: var(--mc-tint-blue); border-color: var(--mc-glass-edge); }
-html .mobile-active-spectrum,
-html .mobile-active-indicator i,
-html .mobile-active-indicator::after { display: none; }
+html .mobile-active-indicator i { display: none; }
 html[data-motion="refined"] .app-page-transition { animation-duration: 350ms; }
 html .app-shell-root.page-transition-blur-fade .app-page-transition,
 html .app-shell-root.page-transition-blur-lift .app-page-transition { animation-duration: 400ms; }
@@ -835,7 +831,6 @@ html[data-motion="refined"] .mobile-primary-nav-refined .mobile-active-indicator
   transition-duration: 320ms;
   will-change: auto;
 }
-html[data-motion="refined"] .motion-choice-selected::before { animation: none; background: var(--primary); }
 html[data-motion="refined"] .motion-choice-card:hover { transform: translateY(-1px); box-shadow: var(--mc-shadow-card); }
 html .positive { color: var(--mc-color-success); }
 html .negative { color: var(--mc-color-danger); }
@@ -855,3 +850,51 @@ html[data-theme="night"] .data-transition-card { border-color: var(--mc-glass-ed
 html[data-theme="night"] .motion-switch-panel h2 { color: var(--foreground); }
 html[data-theme="night"] .motion-switch-description,
 html[data-theme="night"] .motion-switch-kicker { color: var(--muted-foreground); }
+
+/* Refined mode brings back the spectrum accent and a quiet, theme-aware ambient glow. */
+html[data-motion="refined"] .app-shell-root::before {
+  opacity: .72;
+  background:
+    radial-gradient(ellipse at 9% 12%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 34%),
+    radial-gradient(ellipse at 89% 27%, color-mix(in srgb, #34c759 7%, transparent), transparent 31%),
+    radial-gradient(ellipse at 51% 96%, color-mix(in srgb, #af52de 6%, transparent), transparent 38%);
+  animation: page-ambient-drift 30s ease-in-out infinite alternate;
+}
+html[data-theme="night"][data-motion="refined"] .app-shell-root::before { opacity: .4; }
+html[data-motion="refined"] .app-shell-root::after { display: none; }
+html[data-motion="refined"] .mobile-active-indicator::after { display: block; opacity: .34; }
+html[data-motion="refined"] .motion-choice-selected::before { animation-duration: 7.2s; }
+html[data-motion="refined"] .mc-skeleton::after {
+  background: linear-gradient(100deg, transparent 12%, rgba(111,190,255,.22) 38%, rgba(185,158,255,.26) 53%, rgba(99,217,189,.2) 68%, transparent 88%);
+  animation-duration: 1.7s;
+}
+
+/* Blur-lift reveals major surfaces as the user scrolls through a page. */
+html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal {
+  opacity: .01;
+  filter: blur(5px);
+  transform: translate3d(0, 18px, 0) scale(.992);
+  transition: opacity 520ms var(--mc-ease-emphasis), filter 520ms var(--mc-ease-emphasis), transform 620ms var(--mc-ease-emphasis);
+  will-change: opacity, filter, transform;
+}
+html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: auto;
+}
+@media (hover:hover) and (pointer:fine) {
+  html[data-motion="refined"] .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible.glass-card:hover {
+    transform: translate3d(0, -2px, 0) scale(1);
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal,
+  html .app-shell-root.page-transition-blur-lift .mc-scroll-reveal-visible {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+}
