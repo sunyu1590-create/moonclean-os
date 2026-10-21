@@ -134,6 +134,7 @@ export default function MotionSettingsPage() {
             {([
               { id: "glass", title: "精致玻璃卡片", description: "层级清晰，标题与说明完整展示。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
               { id: "capsule", title: "紧凑状态胶囊", description: "更轻巧的圆润提示，适合快速确认。", previewTitle: "已保存", previewDescription: "商品资料已同步。" },
+              { id: "adaptive", title: "设备适配：桌面横幅 / 手机底部提示", description: "桌面使用 macOS 风格状态横幅；手机提示自动出现在底栏上方。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
             ] as const).map((option) => {
               const selected = notificationStyle === option.id;
               return (

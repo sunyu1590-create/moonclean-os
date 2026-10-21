@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.4";
+export const APP_VERSION = "1.1.5";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.5",
+    date: "2026-10-21",
+    title: "新增设备适配通知样式",
+    changes: [
+      "保留精致玻璃卡片与紧凑状态胶囊两种通知样式，并新增桌面横幅与手机底部提示组合。",
+      "手机通知自动显示在导航底栏上方；通知样式选择保存在当前设备并应用到全站。",
+    ],
+  },
   {
     version: "1.1.4",
     date: "2026-10-21",

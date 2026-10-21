@@ -6,7 +6,7 @@ import { APP_VERSION } from "@/lib/release-notes";
 
 export type MotionLevel = "refined" | "standard" | "simple";
 export type PageTransitionStyle = "blur-fade" | "blur-lift";
-export type NotificationStyle = "glass" | "capsule";
+export type NotificationStyle = "glass" | "capsule" | "adaptive";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
   { id: "refined", label: "Max", short: "丰富动效", detail: "舒展的页面过渡、流动柔光与细腻交互反馈。", experience: "丰富细腻" },
   { id: "standard", label: "Standard", short: "适中动效", detail: "适中的页面过渡与基础交互反馈。", experience: "轻盈克制" },
@@ -64,7 +64,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
           localStorage.removeItem(PAGE_TRANSITION_STORAGE_KEY);
         }
         const savedNotificationStyle = localStorage.getItem(NOTIFICATION_STYLE_STORAGE_KEY);
-        if (savedNotificationStyle === "glass" || savedNotificationStyle === "capsule") setNotificationStyleState(savedNotificationStyle);
+        if (savedNotificationStyle === "glass" || savedNotificationStyle === "capsule" || savedNotificationStyle === "adaptive") setNotificationStyleState(savedNotificationStyle);
       } catch { /* Keep the default for private browsing modes that block storage. */ }
       setReady(true);
     });

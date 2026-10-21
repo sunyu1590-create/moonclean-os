@@ -35,7 +35,7 @@ export function FeedbackViewport() {
   }
 
   if (!toasts.length) return null;
-  return <div className="feedback-viewport" aria-label="操作通知">
+  return <div className={`feedback-viewport feedback-viewport-${notificationStyle}`} aria-label="操作通知">
     {toasts.map((toast) => {
       const Icon = toast.kind === "success" ? Check : toast.kind === "error" ? CircleAlert : Info;
       return <div key={toast.id} className={`feedback-toast feedback-toast-${toast.kind} feedback-toast-${notificationStyle}`} role={toast.kind === "error" ? "alert" : "status"}>
