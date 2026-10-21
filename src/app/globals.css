@@ -671,7 +671,7 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
   .performance-debug-panel { max-height: min(65dvh,560px); padding: 12px; border-radius: 18px; }
 }
 
-.feedback-viewport { position: fixed; z-index: 100; top: calc(env(safe-area-inset-top) + 14px); right: 16px; display: flex; width: min(390px,calc(100vw - 24px)); flex-direction: column; gap: 9px; pointer-events: none; }
+.feedback-viewport { --mc-notification-toolbar-offset: 68px; position: fixed; z-index: 100; top: calc(env(safe-area-inset-top) + var(--mc-notification-toolbar-offset) + 12px); right: 16px; display: flex; width: min(390px,calc(100vw - 24px)); flex-direction: column; gap: 9px; pointer-events: none; }
 .feedback-toast { display: flex; min-width: 0; align-items: center; gap: 11px; padding: 12px 12px 12px 14px; border: 1px solid rgba(221,232,242,.92); border-radius: 16px; background: rgba(255,255,255,.96); box-shadow: 0 12px 34px rgba(31,57,82,.16),inset 0 1px 0 rgba(255,255,255,.9); color: #263d54; backdrop-filter: blur(14px); pointer-events: auto; }
 .feedback-toast-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: #e9f7f3; color: #168f78; }
 .feedback-toast-error .feedback-toast-icon { background: #fff0f1; color: #d9535d; }
@@ -719,9 +719,10 @@ html[data-motion="simple"] .feedback-toast.is-exiting { animation: none !importa
   html:not([data-motion="simple"]) .feedback-toast-motion-directional.is-exiting { animation-name: feedback-toast-slide-up-exit; }
   html:not([data-motion="simple"]) .feedback-viewport-adaptive .feedback-toast-motion-directional.is-exiting { animation-name: feedback-toast-slide-down-exit; }
 }
-@media (max-width: 640px) { .feedback-viewport { top: calc(env(safe-area-inset-top) + 8px); right: 12px; left: 12px; width: auto; gap: 7px; } .feedback-toast { border-radius: 14px; padding: 10px 10px 10px 12px; } .feedback-toast-copy strong { font-size: 12px; } .feedback-toast-copy small { font-size: 10px; } }
+@media (max-width: 767px) { .feedback-viewport { --mc-notification-toolbar-offset: 62px; } }
+@media (max-width: 640px) { .feedback-viewport { right: 12px; left: 12px; width: auto; gap: 7px; } .feedback-toast { border-radius: 14px; padding: 10px 10px 10px 12px; } .feedback-toast-copy strong { font-size: 12px; } .feedback-toast-copy small { font-size: 10px; } }
 @media (max-width: 767px) {
-  .feedback-viewport-adaptive { top: auto; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 82px); left: 12px; width: auto; align-items: center; }
+  .feedback-viewport-adaptive { right: 12px; left: 12px; width: auto; align-items: center; }
   .feedback-viewport-adaptive .feedback-toast-adaptive { align-self: center; width: fit-content; max-width: 100%; min-height: 42px; gap: 8px; padding: 8px 12px; border-left-width: 1px; border-radius: 999px; }
   .feedback-viewport-adaptive .feedback-toast-adaptive .feedback-toast-icon { width: 24px; height: 24px; border-radius: 50%; }
   .feedback-viewport-adaptive .feedback-toast-adaptive .feedback-toast-copy small { max-width: min(260px, calc(100vw - 124px)); margin-top: 1px; font-size: 10px; line-height: 1.3; }

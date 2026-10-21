@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.28";
+export const APP_VERSION = "1.1.29";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.29",
+    date: "2026-10-21",
+    title: "通知移至应用顶栏下方",
+    changes: [
+      "全局操作通知在手机和桌面端统一显示在应用顶栏下方，不再覆盖店铺工具栏。",
+      "自适应胶囊通知也使用相同的顶部锚点，同时保留原有宽度、样式和入场动效。",
+      "新增端到端检查，覆盖手机和桌面通知与应用顶栏的间距。",
+    ],
+  },
   {
     version: "1.1.28",
     date: "2026-10-21",

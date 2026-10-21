@@ -39,3 +39,25 @@ test("AI 聊天移动端填满导航上方空间，沉浸模式实际呈现内�
   await expect(immersive).toHaveCount(0);
   await expect(chat).toBeVisible();
 });
+
+test("移动端和桌面通知都从应用顶栏下方出现", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.addInitScript(() => localStorage.setItem("moonclean-notification-style-v1", "adaptive"));
+  await page.goto("/settings");
+  await page.waitForTimeout(200); // Let the feedback event listener subscribe after hydration.
+
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    const title = `通知定位 ${viewport.width}`;
+    await page.evaluate((toastTitle) => window.dispatchEvent(new CustomEvent("moonclean:feedback", { detail: { kind: "info", title: toastTitle } })), title);
+    const toast = page.locator(".feedback-toast").filter({ hasText: title });
+    const toolbar = page.locator(".mc-toolbar");
+    await expect(toast).toBeVisible();
+    await expect.poll(async () => {
+      const toastBounds = await toast.boundingBox();
+      const toolbarBounds = await toolbar.boundingBox();
+      return toastBounds && toolbarBounds ? Math.round(toastBounds.y - toolbarBounds.y - toolbarBounds.height) : -1000;
+    }).toBeGreaterThanOrEqual(10);
+    await toast.getByRole("button", { name: "关闭通知" }).click();
+  }
+});
