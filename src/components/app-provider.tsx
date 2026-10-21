@@ -145,6 +145,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           dataRef.current = loaded;
           setData(loaded);
           setActiveStoreId(loaded.settings.store.id);
+          if (showOpening) setDataTransition((current) => current ? updateTransitionStep(current, 3) : current);
         } else {
           if (!supabaseConfig())
             throw new Error(

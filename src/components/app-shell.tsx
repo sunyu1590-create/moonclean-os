@@ -251,6 +251,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       element.classList.add("mc-scroll-reveal");
       element.classList.remove("mc-scroll-reveal-visible");
     });
+    targets.forEach((element, index) => {
+      element.style.setProperty("--mc-scroll-delay", `${Math.min(index * 55, 220)}ms`);
+    });
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
@@ -261,7 +264,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     targets.forEach((element) => observer.observe(element));
     return () => {
       observer.disconnect();
-      targets.forEach((element) => element.classList.remove("mc-scroll-reveal", "mc-scroll-reveal-visible"));
+      targets.forEach((element) => {
+        element.classList.remove("mc-scroll-reveal", "mc-scroll-reveal-visible");
+        element.style.removeProperty("--mc-scroll-delay");
+      });
     };
   }, [pathname, loading, pageTransitionStyle, motionLevel, reducedMotion]);
   if (authPaths.includes(pathname)) return <>{children}</>;

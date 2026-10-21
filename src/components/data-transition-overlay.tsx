@@ -19,6 +19,12 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
   if (!transition) return null;
   const switching = transition?.kind === "switching";
   const complete = transition?.steps.every(step => step.status === "done") ?? false;
+  const completedSteps = transition?.steps.filter((step) => step.status === "done").length ?? 0;
+  const hasActiveStep = transition?.steps.some((step) => step.status === "active") ?? false;
+  const totalSteps = transition?.steps.length ?? 0;
+  const progressPercent = complete ? 100 : totalSteps
+    ? Math.round(((completedSteps + (hasActiveStep ? 1 : 0)) / totalSteps) * 100)
+    : 0;
   const targetMode = !transition ? "local" : transition.kind === "opening" ? transition.mode : transition.to;
   const motionLabel = MOTION_LEVELS.find((item) => item.id === level)?.label || "Standard";
   return (
@@ -62,8 +68,14 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
             </div>
           ))}
         </div>
-        <div aria-hidden="true" className="data-transition-progress mt-4 h-1 overflow-hidden rounded-full bg-[var(--mc-tint-blue)]">
-          <span className="data-space-progress block h-full w-2/5 rounded-full bg-primary motion-reduce:animate-none" />
+        <div className="data-transition-progress mt-4" aria-label="加载阶段进度">
+          <div className="mb-2 flex items-center justify-between text-[10px] font-medium text-muted-foreground">
+            <span>{complete ? "准备完成" : "阶段进度"}</span>
+            <span className="tabular-nums text-xs font-semibold text-primary">{progressPercent}%</span>
+          </div>
+          <div role="progressbar" aria-label="加载阶段进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent} className="h-1.5 overflow-hidden rounded-full bg-[var(--mc-tint-blue)]">
+            <span className="data-space-progress block h-full rounded-full bg-primary" style={{ width: `${progressPercent}%` }} />
+          </div>
         </div>
         <p className="mt-3 flex items-center justify-between text-[10px] font-medium tracking-wide text-muted-foreground"><span>v{APP_VERSION}</span><span>{ready ? `${motionLabel}动效` : "正在读取动效档位"}</span></p>
       </div>
