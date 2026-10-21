@@ -1,7 +1,7 @@
 "use client";
 import { AppSelect } from "@/components/ui/app-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Boxes, ClipboardList, RefreshCw, Save } from "lucide-react";
+import { AlertTriangle, Boxes, ClipboardList, RefreshCw, Save, Search, Sparkles } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export default function InventoryPage(){
   const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(false);
   const [selected,setSelected]=useState("");const [quantity,setQuantity]=useState("0");
   const [threshold,setThreshold]=useState("10");const [note,setNote]=useState("");
+  const [query,setQuery]=useState("");const [scope,setScope]=useState<"all"|"low"|"untracked">("all");
   const skus=useMemo(()=>data?.products.flatMap(product=>product.skus.map(sku=>({id:sku.id,label:`${product.name} · ${sku.name}`})))||[],[data]);
   const names=new Map(skus.map(sku=>[sku.id,sku.label]));
   const load=useCallback(async()=>{
@@ -60,8 +61,23 @@ export default function InventoryPage(){
     }catch(cause){setError(cause instanceof Error?cause.message:"库存保存失败");}
     finally{setBusy(false);}
   }
-  const balances=snapshot?.balances||[];
+  const balances=useMemo(()=>snapshot?.balances||[],[snapshot]);
   const low=balances.filter(row=>row.quantity<=row.low_stock_threshold);
+  const visibleSkus=useMemo(()=>skus.filter(sku=>{
+    const balance=balances.find(row=>row.sku_id===sku.id);
+    if(scope==="low"&&(!balance||balance.quantity>balance.low_stock_threshold))return false;
+    if(scope==="untracked"&&balance)return false;
+    return sku.label.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  }).sort((a,b)=>{
+    const balanceA=balances.find(row=>row.sku_id===a.id),balanceB=balances.find(row=>row.sku_id===b.id);
+    const rank=(row:InventoryBalance|undefined)=>!row?1:row.quantity<=row.low_stock_threshold?0:2;
+    return rank(balanceA)-rank(balanceB)||(balanceA?balanceA.quantity-balanceA.low_stock_threshold:0)-(balanceB?balanceB.quantity-balanceB.low_stock_threshold:0)||a.label.localeCompare(b.label,"zh-CN");
+  }),[skus,balances,scope,query]);
+  function prepareReplenishment(skuId:string){
+    const row=balances.find(item=>item.sku_id===skuId);if(!row)return;
+    const target=Math.max(row.low_stock_threshold*2,row.low_stock_threshold+1);
+    choose(skuId);setQuantity(String(target));setNote(`按预警线估算补至 ${target} 件，请核对实际到货数量`);
+  }
   const canEdit=mode==="local"||role!=="viewer";
   return <>
     <PageHead eyebrow="INVENTORY / 库存管理" title="每个规格的库存，心中有数" description={mode==="local"?"库存和调整流水保存在当前设备，并包含在本地数据备份中。":"手工维护库存数量与预警线，所有调整保留历史。模拟订单不会自动扣减库存。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
@@ -74,12 +90,13 @@ export default function InventoryPage(){
     </div>
     <AiInsightPanel feature="inventory" context={{ skuCount: skus.length, trackedSkuCount: balances.length, lowStockCount: low.length, untrackedSkuCount: Math.max(0, skus.length - balances.length) }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
-      <SectionCard title="SKU 库存" sub="未设置库存的规格显示为“未录入”，不视为零库存">
-        {loading?<p className="text-sm text-muted-foreground">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-muted-foreground">暂无在售 SKU，请先到商品管理添加商品规格。</p>:<div className="space-y-2">
-          {skus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <button key={sku.id} type="button" onClick={()=>choose(sku.id)} className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors ${selected===sku.id?"border-border bg-[var(--mc-tint-blue)]":"border-border hover:bg-[var(--mc-tint-blue)]"}`}>
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">{sku.label}</span>
-            <span className={`shrink-0 text-sm font-semibold ${isLow?"text-[var(--mc-color-danger)]":"text-muted-foreground"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span>
-          </button>;})}
+      <SectionCard title="SKU 库存" sub="低库存优先排列；未设置库存的规格不视为零库存">
+        <div className="mb-3 grid gap-2 sm:grid-cols-[1fr_auto]"><label className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><Input aria-label="搜索 SKU" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索商品或规格" className="pl-9"/></label><AppSelect aria-label="筛选库存状态" value={scope} onChange={e=>setScope(e.target.value as typeof scope)} className="rounded-xl border border-border bg-card px-3 py-2 text-xs"><option value="all">全部 SKU</option><option value="low">仅低库存</option><option value="untracked">未录入库存</option></AppSelect></div>
+        {loading?<p className="text-sm text-muted-foreground">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-muted-foreground">暂无在售 SKU，请先到商品管理添加商品规格。</p>:visibleSkus.length===0?<p className="text-sm text-muted-foreground">没有符合条件的 SKU，请调整搜索或筛选条件。</p>:<div className="space-y-2">
+          {visibleSkus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <div key={sku.id} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${selected===sku.id?"border-border bg-[var(--mc-tint-blue)]":"border-border"}`}>
+            <button type="button" onClick={()=>choose(sku.id)} className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"><span className="min-w-0 truncate text-sm font-medium text-foreground">{sku.label}</span><span className={`shrink-0 text-sm font-semibold ${isLow?"text-[var(--mc-color-danger)]":"text-muted-foreground"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span></button>
+            {canEdit&&isLow&&<Button type="button" size="sm" variant="outline" className="shrink-0 px-2 text-xs" onClick={()=>prepareReplenishment(sku.id)} title={`按预警线建议补至 ${Math.max(row.low_stock_threshold*2,row.low_stock_threshold+1)} 件`}><Sparkles size={13}/><span className="hidden sm:inline">补货建议</span></Button>}
+          </div>;})}
         </div>}
       </SectionCard>
       <SectionCard title="调整库存" sub="填写调整原因，方便事后追溯">

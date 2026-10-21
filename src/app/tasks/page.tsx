@@ -2,7 +2,7 @@
 import { AppSelect } from "@/components/ui/app-select";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleAlert, Clock3, ListTodo, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { MetricCard, PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { type OperationTask, operationsRequest } from "@/lib/operations";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 type Status=OperationTask["status"];
 type Priority=OperationTask["priority"];
+type TaskRange="all"|"overdue"|"today"|"next7"|"no_due";
 const statusName:Record<Status,string>={todo:"待处理",doing:"进行中",done:"已完成"};
 const priorityName:Record<Priority,string>={low:"低",normal:"普通",high:"高"};
 const taskSourceHref=(task:OperationTask)=>{
@@ -22,6 +23,7 @@ const taskSourceHref=(task:OperationTask)=>{
   return {href:`${routes[task.source_module]}?${query}=${encodeURIComponent(task.source_id)}`,label:{notes:"运营备忘录",experiments:"运营实验",competitors:"竞品档案","service-cases":"售后工单","copilot-conversations":"AI 对话"}[task.source_module]};
 };
 const blank={title:"",detail:"",priority:"normal" as Priority,status:"todo" as Status,dueDate:""};
+function addTaskDays(day:string,count:number){const date=new Date(`${day}T12:00:00Z`);date.setUTCDate(date.getUTCDate()+count);return date.toISOString().slice(0,10);}
 const quickTasks=[
   {label:"核对库存",title:"核对热销商品库存",detail:"检查各 SKU 可售库存与预警线，确认是否需要补货。",priority:"high" as Priority},
   {label:"检查推广",title:"复盘近 7 天推广效果",detail:"核对广告消耗、归因成交与 ROAS，暂停明显低效计划并记录调整。",priority:"normal" as Priority},
@@ -33,7 +35,7 @@ export default function TasksPage(){
   const {mode,activeStoreId,role,data,update}=useApp();
   const [tasks,setTasks]=useState<OperationTask[]>([]);const [loading,setLoading]=useState(false);
   const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [feedback,setFeedback]=useState<Feedback|null>(null);
-  const [filter,setFilter]=useState<Status|"all">("all");const [editing,setEditing]=useState<string|null>(null);
+  const [filter,setFilter]=useState<Status|"all">("all");const [range,setRange]=useState<TaskRange>("all");const [query,setQuery]=useState("");const [editing,setEditing]=useState<string|null>(null);
   const [form,setForm]=useState(blank);
   const today=data?new Intl.DateTimeFormat("en-CA",{timeZone:data.settings.store.timezone,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):"";
   const load=useCallback(async():Promise<boolean>=>{
@@ -87,19 +89,33 @@ export default function TasksPage(){
   const open=tasks.filter(task=>task.status!=="done");
   const overdue=open.filter(task=>task.due_date&&task.due_date<today);
   const dueSoonLimit = today ? (() => { const date = new Date(`${today}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 3); return date.toISOString().slice(0,10); })() : "";
-  const visible=tasks.filter(task=>filter==="all"||task.status===filter);
+  const visible=tasks.filter(task=>{
+    if(filter!=="all"&&task.status!==filter)return false;
+    const text=`${task.title} ${task.detail} ${task.priority}`.toLocaleLowerCase();
+    if(query.trim()&&!text.includes(query.trim().toLocaleLowerCase()))return false;
+    if(range==="overdue")return task.status!=="done"&&!!task.due_date&&task.due_date<today;
+    if(range==="today")return task.status!=="done"&&task.due_date===today;
+    if(range==="next7")return task.status!=="done"&&!!task.due_date&&task.due_date>=today&&task.due_date<=addTaskDays(today,7);
+    if(range==="no_due")return task.status!=="done"&&!task.due_date;
+    return true;
+  }).sort((a,b)=>{
+    const urgency=(task:OperationTask)=>task.status==="done"?3:task.due_date&&task.due_date<today?0:task.priority==="high"?1:task.priority==="normal"?2:3;
+    return urgency(a)-urgency(b)||(a.due_date||"9999-99-99").localeCompare(b.due_date||"9999-99-99")||b.updated_at.localeCompare(a.updated_at);
+  });
   return <>
     <PageHead eyebrow="TASKS / 运营待办" title="让每天的运营更有条理" description={mode==="local"?"任务仅保存在当前设备，可随本地数据备份或迁移到云端。":"记录补货、推广、售后等任务，按店铺同步给团队成员。"} action={<Button variant="outline" onClick={()=>void load()} disabled={loading}><RefreshCw size={16}/>刷新</Button>}/>
     {error&&<p role="alert" className="mb-5 rounded-xl bg-[var(--mc-tint-red)] p-4 text-sm text-[var(--mc-color-danger)]">{error}</p>}
-    <div className="mb-5 grid gap-4 sm:grid-cols-3">
+    <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <MetricCard label="未完成" value={String(open.length)} icon={<ListTodo size={19}/>}/>
       <MetricCard label="已逾期" value={String(overdue.length)} tone={overdue.length?"red":"green"} icon={<Clock3 size={19}/>}/>
+      <MetricCard label="今日到期" value={String(open.filter(task=>task.due_date===today).length)} tone={open.some(task=>task.due_date===today)?"red":"blue"} icon={<Clock3 size={19}/>}/>
       <MetricCard label="已完成" value={String(tasks.length-open.length)} tone="green" icon={<CheckCircle2 size={19}/>}/>
     </div>
     <AiInsightPanel feature="tasks" context={{ totalTasks: tasks.length, openTasks: open.length, overdueTasks: overdue.length, doingTasks: tasks.filter(task=>task.status==="doing").length, highPriorityOpen: open.filter(task=>task.priority==="high").length, dueSoon: open.filter(task=>task.due_date&&task.due_date>=today&&task.due_date<=dueSoonLimit).length }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
-      <SectionCard title="任务列表" sub="按当前店铺查看，已完成任务保留记录" action={<AppSelect aria-label="筛选任务状态" value={filter} onChange={e=>setFilter(e.target.value as Status|"all")} className="rounded-xl border border-border bg-card px-3 py-2 text-xs"><option value="all">全部</option>{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect>}>
-        {loading?<p className="text-sm text-muted-foreground">正在读取云端待办…</p>:visible.length===0?<p className="text-sm text-muted-foreground">暂无任务，可在右侧创建。</p>:<div className="space-y-3">{visible.map(task=>{const late=task.status!=="done"&&!!task.due_date&&task.due_date<today;const source=taskSourceHref(task);return <div key={task.id} className="rounded-2xl border border-border p-4">
+      <SectionCard title="任务列表" sub="紧急任务优先展示；可按日期、状态和关键词快速定位" action={<div className="flex flex-wrap gap-2"><AppSelect aria-label="筛选任务状态" value={filter} onChange={e=>setFilter(e.target.value as Status|"all")} className="rounded-xl border border-border bg-card px-3 py-2 text-xs"><option value="all">全部状态</option>{Object.entries(statusName).map(([value,label])=><option key={value} value={value}>{label}</option>)}</AppSelect><AppSelect aria-label="筛选任务日期" value={range} onChange={e=>setRange(e.target.value as TaskRange)} className="rounded-xl border border-border bg-card px-3 py-2 text-xs"><option value="all">所有日期</option><option value="overdue">已逾期</option><option value="today">今日到期</option><option value="next7">未来 7 天</option><option value="no_due">未设置日期</option></AppSelect></div>}>
+        <label className="relative mb-4 block"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><Input aria-label="搜索任务" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索任务标题或说明" className="pl-9"/></label>
+        {loading?<p className="text-sm text-muted-foreground">正在读取云端待办…</p>:visible.length===0?<p className="text-sm text-muted-foreground">没有符合条件的任务。试试清除筛选，或在右侧创建任务。</p>:<div className="space-y-3">{visible.map(task=>{const late=task.status!=="done"&&!!task.due_date&&task.due_date<today;const source=taskSourceHref(task);return <div key={task.id} className="rounded-2xl border border-border p-4">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold text-foreground">{task.title}</h3><p className="mt-1 text-xs text-muted-foreground">{statusName[task.status]} · {priorityName[task.priority]}优先级 {task.due_date?`· 截止 ${task.due_date}`:""} {late&&<span className="font-semibold text-[var(--mc-color-danger)]">· 已逾期</span>} {task.recommendation_key&&<span className="font-semibold text-primary">· 智能建议跟进</span>}</p></div>{canEdit&&<div className="flex gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={()=>startEdit(task)}>编辑</Button><Button size="sm" variant="outline" disabled={busy} aria-label={`删除 ${task.title}`} onClick={()=>void remove(task)}><Trash2 size={14}/></Button></div>}</div>
           {task.detail&&<p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{task.detail}</p>}
           {source&&<Link href={source.href} className="mt-2 inline-flex text-xs font-medium text-primary hover:underline">返回来源：{source.label}</Link>}
