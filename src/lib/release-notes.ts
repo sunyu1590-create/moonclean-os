@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.30";
+export const APP_VERSION = "1.1.31";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.31",
+    date: "2026-10-21",
+    title: "通知增加轻描边",
+    changes: [
+      "在彩色光晕外加入 1px 细描边，按成功、错误和提示类型协调颜色。",
+      "描边适配深色主题，不影响通知布局和交互。",
+    ],
+  },
   {
     version: "1.1.30",
     date: "2026-10-21",
