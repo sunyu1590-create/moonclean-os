@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.0.1";
+export const APP_VERSION = "1.1.0";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.0",
+    date: "2026-10-21",
+    title: "独立动效设置模块",
+    changes: [
+      "新增独立的动效设置页面，集中管理 Max、Standard、Low 档位和页面切换方式。",
+      "展示系统减少动态效果状态，并说明其对页面过渡和滚动入场的影响。",
+      "从系统设置、桌面导航和手机“更多功能”入口均可访问；原有设备偏好继续沿用。",
+    ],
+  },
   {
     version: "1.0.1",
     date: "2026-10-21",

@@ -3,7 +3,7 @@ import { AppSelect } from "@/components/ui/app-select";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  Check as CheckIcon,
+  ArrowRight,
   Download,
   RotateCcw,
   Save,
@@ -13,11 +13,8 @@ import {
   UserRound,
   DatabaseZap,
   Sparkles,
-  Zap,
-  CircleOff,
   Activity,
   ChevronDown,
-  MoveUpRight,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -38,14 +35,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { AppData, AppSettings, Platform } from "@/lib/model";
 import { parseAppData } from "@/lib/repository";
-import { MOTION_LEVELS, useMotionPreferences, type MotionLevel, type PageTransitionStyle } from "@/components/motion-preferences";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { notifyFeedback } from "@/lib/feedback";
 import { AttachmentBackup } from "@/components/attachment-backup";
-import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const { data, update, reset, mode, role, saving, exportBackup, activeStoreId } = useApp();
-  const { level: motionLevel, ready: motionReady, setLevel: setMotionLevel, pageTransitionStyle, setPageTransitionStyle } = useMotionPreferences();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -237,37 +231,11 @@ export default function SettingsPage() {
       />
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-5">
-          <SectionCard title="全站动效风格" sub="选择后会立即应用到当前设备；偏好保存在浏览器，不同步店铺数据。" action={<Sparkles size={19} className="text-primary" />}>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
-              {MOTION_LEVELS.map((option) => {
-                const selected = motionLevel === option.id;
-                const Icon = option.id === "refined" ? Sparkles : option.id === "standard" ? Zap : CircleOff;
-                return <button key={option.id} type="button" disabled={!motionReady} aria-pressed={selected} onClick={() => setMotionLevel(option.id as MotionLevel)} className={`motion-choice-card relative min-h-[124px] rounded-xl border p-2 text-left sm:min-h-[150px] sm:rounded-2xl sm:p-4 ${selected ? "motion-choice-selected border-border bg-[var(--mc-tint-blue)] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-border bg-card hover:border-border"}`}>
-                  {selected && <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-primary text-primary-foreground sm:right-3 sm:top-3 sm:size-5"><CheckIcon size={10}/></span>}
-                  <span className={`mb-2 grid size-7 place-items-center rounded-[10px] sm:mb-3 sm:size-10 sm:rounded-[14px] ${selected ? "bg-card text-primary" : "bg-[var(--mc-tint-blue)] text-muted-foreground"}`}><Icon size={15} className="sm:size-[19px]"/></span>
-                  <strong className="block text-[11px] font-semibold text-foreground sm:text-sm">{option.label}<span className="mt-0.5 block text-[9px] font-medium text-muted-foreground sm:ml-1.5 sm:inline sm:text-[10px]">{option.short}</span></strong>
-                  <span className="mt-1 hidden text-[10px] font-medium text-primary sm:block">{option.experience}</span>
-                  <span className="mt-1 line-clamp-3 block text-[9px] leading-[1.4] text-muted-foreground sm:mt-2 sm:text-[11px] sm:leading-[1.55]">{option.detail}</span>
-                </button>;
-              })}
-            </div>
-            <div className="mt-4 border-t border-border pt-3">
-              <p className="mb-2 text-xs font-semibold text-muted-foreground">底栏页面切换</p>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { id: "blur-fade", label: "模糊渐显", description: "只淡入并清晰，不缩放展开", Icon: Sparkles },
-                  { id: "blur-lift", label: "模糊上浮", description: "轻微虚化并向上浮现", Icon: MoveUpRight },
-                ] as const).map(({ id, label, description, Icon }) => {
-                  const selected = pageTransitionStyle === id;
-                  return <button key={id} type="button" aria-pressed={selected} onClick={() => setPageTransitionStyle(id as PageTransitionStyle)} className={cn("flex min-h-14 items-center gap-2 rounded-xl border p-2.5 text-left transition-colors sm:gap-3 sm:p-3", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground hover:border-border")}>
-                    <Icon size={17} className="shrink-0"/>
-                    <span className="min-w-0 flex-1"><strong className="block text-[11px] sm:text-xs">{label}</strong><span className="mt-0.5 block truncate text-[9px] text-muted-foreground sm:text-[10px]">{description}</span></span>
-                    {selected && <CheckIcon size={14} className="shrink-0"/>}
-                  </button>;
-                })}
-              </div>
-            </div>
-            <p className="mt-2 text-[10px] leading-4 text-muted-foreground sm:mt-3 sm:text-[11px] sm:leading-5">动效偏好只保存在当前设备。简单档或系统开启“减少动态效果”时，页面切换会静态呈现。</p>
+          <SectionCard title="动效设置" sub="统一管理全站动效档位、页面切换方式及系统动态效果偏好。" action={<Sparkles size={19} className="text-primary" />}>
+            <Link href="/motion" className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 transition-colors hover:bg-card sm:p-4">
+              <span><strong className="block text-sm text-foreground">打开动效设置模块</strong><span className="mt-1 block text-xs text-muted-foreground">动效档位、页面切换和系统减少动态效果状态</span></span>
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary"><ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5"/></span>
+            </Link>
           </SectionCard>
           <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-primary" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3 sm:p-4">
