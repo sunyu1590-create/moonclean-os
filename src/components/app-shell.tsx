@@ -188,7 +188,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileMenuExpanded, setMobileMenuExpanded] = useState(false);
-  const [mobileMoreOrigin, setMobileMoreOrigin] = useState({ x: 50, y: 320 });
   const sheetDrag = useRef<{ pointerId: number; startY: number; startHeight: number } | null>(null);
   const suppressSheetHandleClick = useRef(false);
   const [sheetDragging, setSheetDragging] = useState(false);
@@ -310,15 +309,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   function clearMobileNavPointer(event: React.PointerEvent<HTMLElement>) {
     event.currentTarget.dataset.pointerActive = "false";
   }
-  function openMobileMenu(event: React.MouseEvent<HTMLButtonElement>) {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const clickX = event.detail === 0 ? bounds.left + bounds.width / 2 : event.clientX;
-    const clickY = event.detail === 0 ? bounds.top + bounds.height / 2 : event.clientY;
-    const panelHeight = window.innerHeight * 0.56;
-    setMobileMoreOrigin({
-      x: Math.max(0, Math.min(window.innerWidth, clickX)),
-      y: Math.max(0, Math.min(panelHeight, clickY - (window.innerHeight - panelHeight))),
-    });
+  function openMobileMenu() {
     setMobileMenuOpen(true);
   }
   function selectMobileRoute() {
@@ -371,7 +362,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       sheet.style.translate = "";
     } else {
       sheet.style.height = `${drag.startHeight}px`;
-      sheet.style.translate = `0 ${Math.max(0, -delta)}px`;
+      sheet.style.setProperty("--mobile-more-drag-y", `${Math.max(0, -delta)}px`);
     }
   }
   function onSheetHandlePointerEnd(event: React.PointerEvent<HTMLButtonElement>) {
@@ -386,7 +377,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       window.setTimeout(() => { suppressSheetHandleClick.current = false; }, 350);
     }
     if (sheet) {
-      sheet.style.translate = "";
+      sheet.style.removeProperty("--mobile-more-drag-y");
       window.requestAnimationFrame(() => sheet.style.removeProperty("height"));
     }
     if (mobileMenuExpanded) {
@@ -609,7 +600,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
-        <SheetContent side="bottom" style={{ "--mobile-more-origin-x": `${mobileMoreOrigin.x}px`, "--mobile-more-origin-y": `${mobileMoreOrigin.y}px` } as React.CSSProperties} className={cn("mobile-more-sheet overflow-y-auto rounded-t-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_-16px_50px_rgba(31,57,82,0.16)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
+        <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_24px_70px_rgba(31,57,82,0.20)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
           <button type="button" aria-label={mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能"} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title="上下滑动展开或收起">
             <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[var(--mc-tint-blue)]" />
           </button>

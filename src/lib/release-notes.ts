@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.7";
+export const APP_VERSION = "1.1.8";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.8",
+    date: "2026-10-21",
+    title: "更多面板与输入弹窗居中展开",
+    changes: [
+      "手机“更多”面板改为从屏幕中心柔和模糊放大展开，保留上滑扩展与下滑关闭手势。",
+      "统一输入类对话框的中心模糊缩放入场和退场，弹层动效遵循当前速度档位与减少动态效果设置。",
+    ],
+  },
   {
     version: "1.1.7",
     date: "2026-10-21",
