@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.10";
+export const APP_VERSION = "1.1.11";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.11",
+    date: "2026-10-21",
+    title: "移除 DeepSeek Key 额外加密配置",
+    changes: [
+      "取消 AES 加解密及其额外的密钥依赖；店铺 DeepSeek Key 在服务端验证后直接保存于 Supabase 服务端专用表，不会回传到页面。",
+      "Supabase 服务端访问优先复用 Vercel 集成提供的 SUPABASE_SERVICE_ROLE_KEY，并兼容 SUPABASE_SECRET_KEY。",
+    ],
+  },
   {
     version: "1.1.10",
     date: "2026-10-21",

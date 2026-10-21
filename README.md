@@ -1,12 +1,12 @@
-# MoonClean OS · 1.1.10
+# MoonClean OS · 1.1.11
 
-MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件；1.0.1 细化精致模式流光、加载反馈和滚动入场动效；1.1.0 新增独立动效设置模块；1.1.1 至 1.1.10 持续优化阶段百分比加载、页面切换、手机导航、全站通知反馈与弹层动效，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
+MoonClean OS 是面向店铺经营的 Next.js 工作台，包含经营总览、推广、商品、订单、财务与数据中心。1.0.0 统一了全站浅色与深色设计、液态玻璃材质、导航及公共控件；1.0.1 细化精致模式流光、加载反馈和滚动入场动效；1.1.0 新增独立动效设置模块；1.1.1 至 1.1.11 持续优化阶段百分比加载、页面切换、手机导航、全站通知反馈与弹层动效，同时保留 Supabase Authentication、PostgreSQL、RLS、多店铺、团队角色、跨设备同步及本地数据迁移。已授权设备读取同一店铺数据，并在窗口重新获得焦点或每 60 秒自动刷新。版本详情见 [更新日志](CHANGELOG.md)。
 
 ## DeepSeek 售后总结（可选）
 
-售后分析页提供人工问题分类和 DeepSeek 总结窗口。在系统设置的“DeepSeek API 接入”卡片中粘贴 API Key，点击“验证并保存”即可按店铺配置。密钥仅通过服务端验证，并使用 AES-256-GCM 加密后写入仅服务端可访问的表；浏览器不会收到已保存密钥。
+售后分析页提供人工问题分类和 DeepSeek 总结窗口。在系统设置的“DeepSeek API 接入”卡片中粘贴 API Key，点击“验证并保存”即可按店铺配置。密钥经服务端验证后以明文保存在 Supabase 的服务端专用表中，页面不会读回已保存密钥；数据库管理员可读取该值。
 
-首次启用设置卡片前，需要将 `SUPABASE_SECRET_KEY`（Supabase 服务端 Secret Key）作为**非公开** Vercel 环境变量，并应用 `supabase/migrations/20261018151830_store_deepseek_credentials.sql`。此密钥同时作为加密根密钥，轮换前需先替换所有已保存的店铺 DeepSeek Key。也可使用服务器环境变量 `DEEPSEEK_API_KEY` 作为所有店铺的只读备用配置；`DEEPSEEK_MODEL` 默认 `deepseek-chat`。不要添加 `NEXT_PUBLIC_` 前缀，也不要把任何密钥提交到仓库或发到浏览器。
+保存店铺密钥需要 Supabase 服务端访问权限：优先使用 Vercel Supabase 集成提供的 `SUPABASE_SERVICE_ROLE_KEY`，也兼容 `SUPABASE_SECRET_KEY`。这些变量仅用于服务器访问 Supabase，不用于额外加密；不要添加 `NEXT_PUBLIC_` 前缀。首次部署需应用 `supabase/migrations/20261018151830_store_deepseek_credentials.sql` 和 `supabase/migrations/20261021143608_remove_deepseek_encryption.sql`。也可使用服务器环境变量 `DEEPSEEK_API_KEY` 作为所有店铺的只读备用配置；`DEEPSEEK_MODEL` 默认 `deepseek-chat`。不要把任何密钥提交到仓库或发到浏览器。
 
 AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSeek 提交统计周期、订单/退款数量、金额汇总和问题类别，不提交订单号、买家信息或客服备注。未配置密钥时，分析窗口会明确提示如何启用，其他售后统计与分类照常使用。
 
@@ -18,7 +18,7 @@ AI 分析仅在用户点击“生成分析”后执行，服务端只向 DeepSee
 
 - 项目：`MoonClean OS`，组织：`m`，区域：Singapore (`ap-southeast-1`)
 - Project ID：`duolfhyodjhuatucjhtz`，URL：`https://duolfhyodjhuatucjhtz.supabase.co`
-- 原有的七个迁移已按顺序应用到该项目。新增加密 API Key 表时，还需在 SQL Editor 应用本次 `20261018151830_store_deepseek_credentials.sql` 迁移。新增业务表启用 RLS；`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的 Secret Key。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
+- 原有的七个迁移已按顺序应用到该项目。新增店铺 AI Key 表时，还需应用 `20261018151830_store_deepseek_credentials.sql`；取消额外加密后再应用 `20261021143200_remove_deepseek_encryption.sql`。新增业务表启用 RLS；`.devcontainer/cloud-config.sh` 内含公开的项目 URL 和 Publishable Key，Codespaces 自动使用；这不是拥有管理员权限的服务端密钥。若今后更换项目，可用 Codespaces Secrets 覆盖这两个变量。本地 `.env.local` 不提交到仓库。
 - **邮箱回调还需设置**：在 [Supabase Auth URL Configuration](https://supabase.com/dashboard/project/duolfhyodjhuatucjhtz/auth/url-configuration) 添加 Codespaces 端口 3000 的实际 HTTPS 转发域名，并将该域名下的 `/auth/callback` 与 `/auth/confirm` 加入 Redirect URLs。本地运行时使用 `http://localhost:3000` 对应路径。未完成前不要依赖邮件验证或密码重置流程。
 
 ## 配置与启动

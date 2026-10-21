@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseConfig } from "@/lib/supabase/config";
+import { getSupabaseServiceKey } from "@/lib/supabase/service";
 import { runMockSync } from "@/services/mock-sync";
 
 export const maxDuration = 60;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  const databaseKey = process.env.SUPABASE_SECRET_KEY;
+  const databaseKey = getSupabaseServiceKey();
   if (!secret || !databaseKey) return NextResponse.json({error:"后台调度尚未配置"},{status:503});
   if (request.headers.get("authorization") !== `Bearer ${secret}`)
     return NextResponse.json({error:"无权执行后台任务"},{status:401});

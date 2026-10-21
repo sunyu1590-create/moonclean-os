@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, rejectCrossOriginMutation, requireStore } from "@/lib/supabase/auth";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { decryptDeepSeekKey } from "@/lib/deepseek-credentials";
+import { createServiceSupabaseClient, getSupabaseServiceKey } from "@/lib/supabase/service";
 
 const inputSchema = z.object({ conversationId: z.uuid().optional(), question: z.string().trim().min(1).max(4000), productIds: z.array(z.uuid()).max(10).default([]), competitorIds: z.array(z.uuid()).max(10).default([]) });
 const recentCalls = new Map<string, number>();
@@ -29,14 +28,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   recentCalls.set(auth.user.id,Date.now());
   let key = process.env.DEEPSEEK_API_KEY || "";
   let serviceDb: ReturnType<typeof createServiceSupabaseClient> | null = null;
-  if (process.env.SUPABASE_SECRET_KEY) {
+  if (getSupabaseServiceKey()) {
     try {
       serviceDb = createServiceSupabaseClient();
-      const { data } = await serviceDb.from("store_ai_credentials").select("key_ciphertext").eq("store_id",storeId).maybeSingle();
-      if (data?.key_ciphertext) key = decryptDeepSeekKey(data.key_ciphertext);
+      const { data } = await serviceDb.from("store_ai_credentials").select("api_key").eq("store_id",storeId).maybeSingle();
+      if (data?.api_key) key = data.api_key;
     } catch { if (!key) return NextResponse.json({ error:"AI 密钥配置读取失败，请检查服务端配置或系统设置。",conversationId },{status:503}); }
   }
-  if (!serviceDb) return NextResponse.json({ error:"服务端未配置安全的数据写入密钥，暂时无法保存 AI 分析。请联系部署管理员配置 SUPABASE_SECRET_KEY。",conversationId },{status:503});
+  if (!serviceDb) return NextResponse.json({ error:"未配置 Supabase 服务端访问密钥，暂时无法记录 AI 使用情况。",conversationId },{status:503});
   if (!key) return NextResponse.json({ error:"尚未配置 DeepSeek API Key。请前往「系统设置 → AI 服务」完成配置后再使用。",conversationId },{status:503});
   const startedAt=Date.now();
   const logUsage=async(input:{outcome:"success"|"failed";status?:number;promptTokens?:number|null;completionTokens?:number|null;errorCode?:string})=>{

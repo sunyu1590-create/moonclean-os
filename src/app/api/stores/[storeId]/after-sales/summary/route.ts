@@ -3,8 +3,7 @@ import Decimal from "decimal.js";
 import { z } from "zod";
 import { requireStore, rejectCrossOriginMutation } from "@/lib/supabase/auth";
 import { refundReasonSchema, REFUND_REASONS } from "@/lib/after-sales";
-import { createServiceSupabaseClient } from "@/lib/supabase/service";
-import { decryptDeepSeekKey } from "@/lib/deepseek-credentials";
+import { createServiceSupabaseClient, getSupabaseServiceKey } from "@/lib/supabase/service";
 
 const inputSchema = z.object({ days: z.union([z.literal(7), z.literal(30), z.literal(90)]) });
 const recentRequests = new Map<string, number>();
@@ -19,12 +18,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   const parsed = inputSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "分析周期无效，请选择 7、30 或 90 天" }, { status: 400 });
   let key = process.env.DEEPSEEK_API_KEY || "";
-  if (process.env.SUPABASE_SECRET_KEY) {
+  if (getSupabaseServiceKey()) {
     try {
       const credentialDb = createServiceSupabaseClient();
-      const { data, error } = await credentialDb.from("store_ai_credentials").select("key_ciphertext").eq("store_id", storeId).maybeSingle();
+      const { data, error } = await credentialDb.from("store_ai_credentials").select("api_key").eq("store_id", storeId).maybeSingle();
       if (error) throw error;
-      if (data?.key_ciphertext) key = decryptDeepSeekKey(data.key_ciphertext);
+      if (data?.api_key) key = data.api_key;
     } catch {
       if (!key) return NextResponse.json({ error: "DeepSeek 配置存储不可用。请先在系统设置中检查数据库迁移和服务端密钥。" }, { status: 503 });
     }

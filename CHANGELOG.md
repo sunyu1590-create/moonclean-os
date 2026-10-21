@@ -1,5 +1,12 @@
 # 更新日志
 
+## 1.1.11 · 2026-10-21
+
+移除 DeepSeek Key 的额外加密配置。
+
+- 取消 AES 加解密及其额外的密钥依赖；店铺 Key 在服务端验证后保存在 Supabase 服务端专用表，不会回传到页面。
+- Supabase 服务端访问优先复用 Vercel 集成提供的 `SUPABASE_SERVICE_ROLE_KEY`，并兼容 `SUPABASE_SECRET_KEY`。
+
 ## 1.1.10 · 2026-10-21
 
 修复中心弹窗入场时位置偏移。

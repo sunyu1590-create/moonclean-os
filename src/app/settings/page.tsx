@@ -108,9 +108,9 @@ export default function SettingsPage() {
       const response = await fetch(`/api/stores/${activeStoreId}/ai/deepseek`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey: deepSeekKey.trim() }) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "DeepSeek Key 验证失败");
-      setDeepSeekKey(""); setDeepSeekMessage("验证通过，密钥已加密保存到当前店铺。");
+      setDeepSeekKey(""); setDeepSeekMessage("验证通过，密钥已保存到当前店铺。");
       setDeepSeekState({ configured: true, source: "store", canSave: true });
-      notifyFeedback({ kind: "success", title: "DeepSeek 配置已保存", description: "密钥已在服务端验证并加密保存。" });
+      notifyFeedback({ kind: "success", title: "DeepSeek 配置已保存", description: "密钥已在服务端验证并保存。" });
     } catch (cause) { const message = cause instanceof Error ? cause.message : "DeepSeek 配置失败"; setDeepSeekMessage(message); notifyFeedback({ kind: "error", title: "DeepSeek 配置失败", description: message }); }
     finally { setDeepSeekBusy(false); }
   }
@@ -253,14 +253,14 @@ export default function SettingsPage() {
               <p className="mt-2 text-[10px] leading-4 text-muted-foreground">FPS 为网页绘制估算值；Safari、手机浏览器等通常不提供硬件内存或真实刷新率。</p>
             </div>}
           </SectionCard>
-          <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端，验证后加密保存，不会回传给浏览器。" action={<Sparkles size={19} className="text-primary" />}>
+          <SectionCard title="DeepSeek API 接入" sub="为当前店铺配置售后 AI 总结。密钥只提交给服务端并保存在当前店铺，不会回传给浏览器。" action={<Sparkles size={19} className="text-primary" />}>
             {mode !== "cloud" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">切换到云端店铺后，可在这里配置 DeepSeek API Key。</p> : role === "viewer" ? <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm leading-6 text-muted-foreground">仅店铺所有者或管理员可以管理 AI API 密钥。</p> : <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--mc-tint-blue)] p-3"><span className={`size-2 rounded-full ${deepSeekState?.configured ? "bg-[var(--mc-color-success)]" : "bg-[var(--mc-tint-blue)]"}`}/><span className="text-sm font-medium text-muted-foreground">{deepSeekState?.configured ? deepSeekState.source === "environment" ? "已从服务器环境变量接入" : "当前店铺已配置" : "尚未配置"}</span>{deepSeekState?.updatedAt && <span className="text-xs text-muted-foreground">更新于 {new Date(deepSeekState.updatedAt).toLocaleString("zh-CN")}</span>}</div>
               <div><Label htmlFor="deepseek-api-key">DeepSeek API Key</Label><Input id="deepseek-api-key" type="password" autoComplete="new-password" value={deepSeekKey} onChange={(event) => setDeepSeekKey(event.target.value)} disabled={!deepSeekState?.canSave || deepSeekBusy} placeholder={deepSeekState?.configured ? "已安全保存；输入新 Key 可替换" : "粘贴 DeepSeek API Key"} className="mt-1.5"/></div>
               <div className="flex flex-wrap items-center gap-2"><Button type="button" loading={deepSeekBusy} onClick={() => void saveDeepSeekKey()} disabled={!deepSeekState?.canSave || deepSeekBusy || !deepSeekKey.trim()}>{deepSeekBusy ? "正在验证…" : "验证并保存"}</Button>{deepSeekState?.source === "store" && <Button type="button" variant="outline" disabled={deepSeekBusy} onClick={() => void deleteDeepSeekKey()}>删除已保存密钥</Button>}<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noreferrer" className="text-xs font-medium text-primary underline underline-offset-2">前往 DeepSeek 创建 API Key</a></div>
               {deepSeekState?.error && <p role="alert" className="rounded-xl bg-[var(--mc-tint-orange)] p-3 text-xs leading-5 text-[var(--mc-color-warning)]">{deepSeekState.error}</p>}
               {deepSeekMessage && <p role={deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "status" : "alert"} className={`rounded-xl p-3 text-xs leading-5 ${deepSeekMessage.includes("验证通过") || deepSeekMessage.includes("已删除") ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]"}`}>{deepSeekMessage}</p>}
-              <p className="text-[10px] leading-5 text-muted-foreground">首次使用需在 Vercel 配置服务端 <code>SUPABASE_SECRET_KEY</code> 并应用仓库的 DeepSeek 密钥表迁移。服务器使用该密钥加密店铺 Key；不要把服务端密钥添加为 NEXT_PUBLIC 变量。</p>
+              <p className="text-[10px] leading-5 text-muted-foreground">店铺 Key 保存在 Supabase，仅服务端密钥可访问。Vercel 可复用 Supabase 集成提供的 <code>SUPABASE_SERVICE_ROLE_KEY</code>；不要添加 <code>NEXT_PUBLIC_</code> 前缀。</p>
             </div>}
           </SectionCard>
           <SectionCard
