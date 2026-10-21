@@ -15,6 +15,7 @@ import {
   MOTION_LEVELS,
   useMotionPreferences,
   type MotionLevel,
+  type NotificationStyle,
   type PageTransitionStyle,
 } from "@/components/motion-preferences";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,8 @@ export default function MotionSettingsPage() {
     setLevel,
     pageTransitionStyle,
     setPageTransitionStyle,
+    notificationStyle,
+    setNotificationStyle,
     reducedMotion,
   } = useMotionPreferences();
 
@@ -120,6 +123,45 @@ export default function MotionSettingsPage() {
           <p className="mt-3 rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs leading-5 text-muted-foreground">
             页面过渡在 Low 档或系统减少动态效果开启时会静态呈现。滚动入场跟随“模糊上浮”选项生效。
           </p>
+        </SectionCard>
+
+        <SectionCard
+          title="操作通知样式"
+          sub="选择保存结果、错误和操作提示在全站的显示方式；偏好保存在当前设备。"
+          action={<Sparkles size={19} className="text-primary" />}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([
+              { id: "glass", title: "精致玻璃卡片", description: "层级清晰，标题与说明完整展示。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
+              { id: "capsule", title: "紧凑状态胶囊", description: "更轻巧的圆润提示，适合快速确认。", previewTitle: "已保存", previewDescription: "商品资料已同步。" },
+            ] as const).map((option) => {
+              const selected = notificationStyle === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={!ready}
+                  aria-pressed={selected}
+                  onClick={() => setNotificationStyle(option.id as NotificationStyle)}
+                  className={cn(
+                    "motion-choice-card relative flex min-h-36 flex-col gap-3 rounded-2xl border p-4 text-left",
+                    selected ? "motion-choice-selected border-border bg-[var(--mc-tint-blue)] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-border bg-card hover:border-border",
+                    !ready && "cursor-wait opacity-70",
+                  )}
+                >
+                  {selected && <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><Check size={12} /></span>}
+                  <span className="text-sm font-semibold text-foreground">{option.title}</span>
+                  <span className="text-xs leading-5 text-muted-foreground">{option.description}</span>
+                  <span className="feedback-toast-preview">
+                    <span className={`feedback-toast feedback-toast-success feedback-toast-${option.id}`}>
+                      <span className="feedback-toast-icon"><Check size={15} /></span>
+                      <span className="feedback-toast-copy"><strong>{option.previewTitle}</strong><small>{option.previewDescription}</small></span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </SectionCard>
 
         <SectionCard

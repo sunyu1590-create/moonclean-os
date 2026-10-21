@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { Check, CircleAlert, Info, X } from "lucide-react";
 import { FEEDBACK_EVENT, type FeedbackMessage } from "@/lib/feedback";
+import { useMotionPreferences } from "@/components/motion-preferences";
 
 type Toast = FeedbackMessage & { id: number };
 
 export function FeedbackViewport() {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const { notificationStyle } = useMotionPreferences();
 
   useEffect(() => {
     const timers = new Map<number, number>();
@@ -36,7 +38,7 @@ export function FeedbackViewport() {
   return <div className="feedback-viewport" aria-label="操作通知">
     {toasts.map((toast) => {
       const Icon = toast.kind === "success" ? Check : toast.kind === "error" ? CircleAlert : Info;
-      return <div key={toast.id} className={`feedback-toast feedback-toast-${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"}>
+      return <div key={toast.id} className={`feedback-toast feedback-toast-${toast.kind} feedback-toast-${notificationStyle}`} role={toast.kind === "error" ? "alert" : "status"}>
         <span className="feedback-toast-icon"><Icon size={17} /></span>
         <span className="feedback-toast-copy"><strong>{toast.title}</strong>{toast.description && <small>{toast.description}</small>}</span>
         <button type="button" aria-label="关闭通知" onClick={() => dismiss(toast.id)}><X size={15} /></button>
