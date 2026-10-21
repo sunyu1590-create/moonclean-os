@@ -21,6 +21,15 @@ test("AI 聊天移动端填满导航上方空间，沉浸模式实际呈现内�
   await expect(immersive).toBeVisible();
   await expect(immersive.getByRole("region", { name: "AI 聊天窗口" })).toBeVisible();
   await expect(immersive.getByRole("button", { name: "退出沉浸模式" })).toBeVisible();
+  await expect(immersive.getByRole("button", { name: "聊天历史" })).toHaveCount(0);
+  await immersive.getByRole("button", { name: "更多" }).click();
+  await expect(immersive.getByLabel("选择模型")).toBeVisible();
+  await expect(immersive.getByLabel("聊天分类")).toBeVisible();
+  const reasoning = immersive.getByRole("group", { name: "推理强度", exact: true });
+  await expect(reasoning).toBeVisible();
+  await reasoning.getByRole("button", { name: "深入" }).click();
+  await expect(reasoning).toHaveAttribute("data-effort", "max");
+  await expect(reasoning.locator(".reasoning-indicator i")).toHaveCount(3);
   await expect.poll(() => immersive.evaluate((element) => {
     const { width, height } = element.getBoundingClientRect();
     return [Math.round(width), Math.round(height)];
