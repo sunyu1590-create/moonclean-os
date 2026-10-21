@@ -1,6 +1,17 @@
-export const APP_VERSION = "1.1.20";
+export const APP_VERSION = "1.1.21";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.21",
+    date: "2026-10-21",
+    title: "AI 设置独立工作台",
+    changes: [
+      "新增独立 AI 设置模块，集中管理 DeepSeek 云端密钥、四位 PIN、重新验证频率、忘记 PIN 清除流程和当前配置状态；密钥仍使用浏览器端 AES-GCM 加密保存。",
+      "新增已接入 AI 功能目录与逐项数据范围说明，涵盖 Copilot、经营建议、备忘录 AI、售后分析和异常诊断；从系统导航、手机更多菜单及系统设置均可进入。",
+      "新增当前店铺 Copilot 调用状态、成功与失败数、Token 统计、最近成功时间及最近调用记录，并明确其他 AI 功能尚未纳入统一调用统计。",
+      "新增隐私与服务路径说明；AI 相关错误和功能入口改为引导至独立 AI 设置页面，系统设置不再承载 AI 密钥表单。",
+    ],
+  },
   {
     version: "1.1.20",
     date: "2026-10-21",

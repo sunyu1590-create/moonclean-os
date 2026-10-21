@@ -119,7 +119,7 @@ async function decryptWithKey(envelope: DeepSeekEnvelope, key: CryptoKey) {
 async function getEnvelope(storeId: string) {
   const response = await fetch(`/api/stores/${encodeURIComponent(storeId)}/ai/deepseek`, { credentials: "same-origin", cache: "no-store" });
   const data = await response.json() as { envelope?: DeepSeekEnvelope; configured?: boolean; locked?: boolean; error?: string };
-  if (!response.ok || !data.envelope) throw new Error(data.locked ? "密码已累计输错五次，密钥已销毁，请在系统设置重新保存。" : data.error || "云端尚未保存 DeepSeek 密钥。");
+  if (!response.ok || !data.envelope) throw new Error(data.locked ? "密码已累计输错五次，密钥已销毁，请在 AI 设置重新保存。" : data.error || "云端尚未保存 DeepSeek 密钥。");
   return data.envelope;
 }
 
@@ -151,7 +151,7 @@ export async function fetchDeepSeekKey(storeId: string, pin: string): Promise<{ 
     const failed = await fetch(base, { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "failed" }) });
     if (!failed.ok) throw new Error("无法记录密码错误次数，请检查网络后重试。");
     const result = await failed.json().catch(() => ({})) as { attemptsLeft?: number; destroyed?: boolean };
-    if (result.destroyed) throw new Error("密码已累计输错五次，云端密钥已销毁。请在系统设置重新保存密钥并设置新密码。");
+    if (result.destroyed) throw new Error("密码已累计输错五次，云端密钥已销毁。请在 AI 设置重新保存密钥并设置新密码。");
     throw new Error(`密码不正确，还可尝试 ${result.attemptsLeft ?? 0} 次。`);
   }
 }

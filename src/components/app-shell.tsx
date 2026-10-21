@@ -63,6 +63,7 @@ const nav = [
   { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
   { href: "/notes", label: "运营备忘录", icon: NotebookPen },
   { href: "/copilot", label: "AI 运营助手", icon: BrainCircuit },
+  { href: "/ai-settings", label: "AI 设置", icon: Sparkles },
   { href: "/experiments", label: "运营实验室", icon: FlaskConical },
   { href: "/competitors", label: "竞品情报", icon: SearchCheck },
   { href: "/service", label: "客服与售后", icon: Headset },
@@ -624,7 +625,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-muted-foreground">系统与账号</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/ai-settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
             {mode==="cloud"&&<Link href="/account" onClick={selectMobileRoute} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm font-medium text-foreground"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><CircleUserRound size={18}/></span>账号设置</Link>}
           </div>
         </SheetContent>
