@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.18";
+export const APP_VERSION = "1.1.19";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.19",
+    date: "2026-10-21",
+    title: "运营备忘录附件与 AI Markdown 优化",
+    changes: [
+      "修复笔记选择关联类型但未选择关联记录时的保存失败：切换类型会清空旧记录，缺少关联记录时显示明确提示并阻止无效保存与自动保存请求。",
+      "备忘录编辑器新增图片和 PDF 上传，使用店铺私有存储；笔记预览以限时签名链接安全显示附件。支持 JPG、PNG、WebP、PDF，单个文件最大 10 MB。",
+      "AI 润色和建议收纳到带图标的选项菜单；AI 输出统一整理为笔记支持的 Markdown，应用后自动进入预览，减少工具拥挤并便于检查格式。",
+    ],
+  },
   {
     version: "1.1.18",
     date: "2026-10-21",
