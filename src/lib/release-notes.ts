@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.8";
+export const APP_VERSION = "1.1.9";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.9",
+    date: "2026-10-21",
+    title: "下拉菜单原位柔雾展开",
+    changes: [
+      "全站下拉选项采用柔和模糊缩放入场和退场，并从控件锚点原位展开，保持菜单与输入框的空间关系。",
+      "数据存储等输入弹窗继续从屏幕中心展开，动效遵循当前档位与减少动态效果设置。",
+    ],
+  },
   {
     version: "1.1.8",
     date: "2026-10-21",
