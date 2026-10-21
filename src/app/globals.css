@@ -961,6 +961,23 @@ html .positive { color: var(--mc-color-success); }
 html .negative { color: var(--mc-color-danger); }
 html .feedback-toast { border-color: var(--border); background: var(--mc-glass-elevated); color: var(--foreground); box-shadow: var(--mc-shadow-elevated); }
 html .feedback-toast-copy small { color: var(--muted-foreground); }
+html .feedback-toast { position: relative; isolation: isolate; }
+html .feedback-toast::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -6px;
+  border-radius: inherit;
+  background: conic-gradient(from 225deg, #73dfc1, #7fc8ff, #bca4ff, #f2add7, #ffd18a, #73dfc1);
+  opacity: .36;
+  filter: blur(14px);
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+html .feedback-toast-success::before { background: conic-gradient(from 225deg, #72dfb3, #7edfd4, #9acaff, #c2b3ff, #72dfb3); }
+html .feedback-toast-error::before { background: conic-gradient(from 225deg, #ff9a9a, #ffc184, #f1a6d5, #c4a4ff, #ff9a9a); }
+html .feedback-toast-info::before { background: conic-gradient(from 225deg, #77d8ef, #83baff, #b2a5ff, #83e0d1, #77d8ef); }
+html .feedback-toast:hover::before { opacity: .54; }
 html .performance-debug-panel { border-color: var(--border); background: var(--popover); color: var(--popover-foreground); }
 html .performance-debug-metric { border-color: var(--border); background: var(--card); }
 html .performance-debug-metric strong { color: var(--foreground); }
@@ -970,6 +987,7 @@ html :is([data-slot="table"], .glass-card table) thead { color: var(--muted-fore
 html :is([data-slot="table"], .glass-card table) tbody tr { border-color: var(--border); }
 html[data-theme="night"] .motion-switch-screen,
 html[data-theme="night"] .data-transition-screen { background: radial-gradient(ellipse at 50% 32%, var(--mc-tint-blue), var(--background) 70%); color: var(--foreground); }
+@media (prefers-reduced-motion: reduce) { html .feedback-toast::before { transition: none; } }
 html[data-theme="night"] .motion-switch-panel,
 html[data-theme="night"] .data-transition-card { border-color: var(--mc-glass-edge); background: var(--mc-glass-elevated); box-shadow: var(--mc-shadow-elevated); }
 html[data-theme="night"] .motion-switch-panel h2 { color: var(--foreground); }

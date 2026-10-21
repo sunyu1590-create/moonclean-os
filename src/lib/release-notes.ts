@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.29";
+export const APP_VERSION = "1.1.30";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.30",
+    date: "2026-10-21",
+    title: "通知加入柔和彩色光晕",
+    changes: [
+      "成功、错误和提示通知分别使用协调的彩色光晕，提升提示辨识度，同时保持正文清晰。",
+      "光晕适配深色主题、桌面与手机布局，并遵循减少动态效果偏好。",
+    ],
+  },
   {
     version: "1.1.29",
     date: "2026-10-21",
