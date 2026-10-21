@@ -8,6 +8,7 @@ export type MotionLevel = "refined" | "standard" | "simple";
 export type PageTransitionStyle = "blur-fade" | "blur-lift";
 export type NotificationStyle = "glass" | "capsule" | "adaptive";
 export type NotificationMotion = "soft" | "expand" | "directional";
+export type NotificationSpeed = "fast" | "balanced" | "elegant";
 export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; detail: string; experience: string }[] = [
   { id: "refined", label: "Max", short: "丰富动效", detail: "舒展的页面过渡、流动柔光与细腻交互反馈。", experience: "丰富细腻" },
   { id: "standard", label: "Standard", short: "适中动效", detail: "适中的页面过渡与基础交互反馈。", experience: "轻盈克制" },
@@ -15,11 +16,12 @@ export const MOTION_LEVELS: { id: MotionLevel; label: string; short: string; det
 ];
 
 type MotionTransition = { id: number; to: MotionLevel };
-type MotionContextValue = { level: MotionLevel; ready: boolean; reducedMotion: boolean; pageTransitionStyle: PageTransitionStyle; notificationStyle: NotificationStyle; notificationMotion: NotificationMotion; setLevel: (level: MotionLevel) => void; setPageTransitionStyle: (style: PageTransitionStyle) => void; setNotificationStyle: (style: NotificationStyle) => void; setNotificationMotion: (motion: NotificationMotion) => void };
+type MotionContextValue = { level: MotionLevel; ready: boolean; reducedMotion: boolean; pageTransitionStyle: PageTransitionStyle; notificationStyle: NotificationStyle; notificationMotion: NotificationMotion; notificationSpeed: NotificationSpeed; setLevel: (level: MotionLevel) => void; setPageTransitionStyle: (style: PageTransitionStyle) => void; setNotificationStyle: (style: NotificationStyle) => void; setNotificationMotion: (motion: NotificationMotion) => void; setNotificationSpeed: (speed: NotificationSpeed) => void };
 const STORAGE_KEY = "moonclean-motion-level-v1";
 const PAGE_TRANSITION_STORAGE_KEY = "moonclean-page-transition-style-v1";
 const NOTIFICATION_STYLE_STORAGE_KEY = "moonclean-notification-style-v1";
 const NOTIFICATION_MOTION_STORAGE_KEY = "moonclean-notification-motion-v1";
+const NOTIFICATION_SPEED_STORAGE_KEY = "moonclean-notification-speed-v1";
 const MotionContext = createContext<MotionContextValue | null>(null);
 
 export function useMotionPreferences() {
@@ -49,6 +51,7 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
   const [pageTransitionStyle, setPageTransitionStyleState] = useState<PageTransitionStyle>("blur-lift");
   const [notificationStyle, setNotificationStyleState] = useState<NotificationStyle>("glass");
   const [notificationMotion, setNotificationMotionState] = useState<NotificationMotion>("soft");
+  const [notificationSpeed, setNotificationSpeedState] = useState<NotificationSpeed>("balanced");
   const [transition, setTransition] = useState<MotionTransition | null>(null);
   const transitionId = useRef(0);
   const timer = useRef<number | null>(null);
@@ -70,6 +73,8 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
         if (savedNotificationStyle === "glass" || savedNotificationStyle === "capsule" || savedNotificationStyle === "adaptive") setNotificationStyleState(savedNotificationStyle);
         const savedNotificationMotion = localStorage.getItem(NOTIFICATION_MOTION_STORAGE_KEY);
         if (savedNotificationMotion === "soft" || savedNotificationMotion === "expand" || savedNotificationMotion === "directional") setNotificationMotionState(savedNotificationMotion);
+        const savedNotificationSpeed = localStorage.getItem(NOTIFICATION_SPEED_STORAGE_KEY);
+        if (savedNotificationSpeed === "fast" || savedNotificationSpeed === "balanced" || savedNotificationSpeed === "elegant") setNotificationSpeedState(savedNotificationSpeed);
       } catch { /* Keep the default for private browsing modes that block storage. */ }
       setReady(true);
     });
@@ -120,7 +125,12 @@ export function MotionPreferencesProvider({ children }: { children: ReactNode })
     try { localStorage.setItem(NOTIFICATION_MOTION_STORAGE_KEY, next); } catch { /* Apply for this session if storage is unavailable. */ }
   }, []);
 
-  return <MotionContext.Provider value={{ level, ready, reducedMotion, pageTransitionStyle, notificationStyle, notificationMotion, setLevel, setPageTransitionStyle, setNotificationStyle, setNotificationMotion }}>
+  const setNotificationSpeed = useCallback((next: NotificationSpeed) => {
+    setNotificationSpeedState(next);
+    try { localStorage.setItem(NOTIFICATION_SPEED_STORAGE_KEY, next); } catch { /* Apply for this session if storage is unavailable. */ }
+  }, []);
+
+  return <MotionContext.Provider value={{ level, ready, reducedMotion, pageTransitionStyle, notificationStyle, notificationMotion, notificationSpeed, setLevel, setPageTransitionStyle, setNotificationStyle, setNotificationMotion, setNotificationSpeed }}>
     {children}
     {transition && <MotionSwitchScreen transition={transition}/>}
   </MotionContext.Provider>;

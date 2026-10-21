@@ -610,15 +610,15 @@ html[data-motion="simple"] .data-mode-particle { animation:none !important; }
 .feedback-toast-preview .feedback-toast { width: 100%; max-width: 360px; animation: none; }
 .feedback-toast-preview .feedback-toast-capsule { width: fit-content; max-width: 100%; }
 .feedback-toast-preview .feedback-toast-adaptive { width: 100%; }
-html:not([data-motion="simple"]) .feedback-toast-motion-soft:not(.is-exiting) { animation: feedback-toast-soft-enter 270ms cubic-bezier(.22,.68,.25,1) both; }
-html:not([data-motion="simple"]) .feedback-toast-motion-expand:not(.is-exiting) { animation: feedback-toast-expand-enter 290ms cubic-bezier(.2,.72,.24,1) both; }
-html:not([data-motion="simple"]) .feedback-toast-motion-directional:not(.is-exiting) { animation: feedback-toast-slide-right-enter 270ms cubic-bezier(.22,.68,.25,1) both; }
-html:not([data-motion="simple"]) .feedback-toast-motion-soft.is-exiting { animation: feedback-toast-soft-exit 180ms ease-in both; }
-html:not([data-motion="simple"]) .feedback-toast-motion-expand.is-exiting { animation: feedback-toast-expand-exit 180ms ease-in both; }
-html:not([data-motion="simple"]) .feedback-toast-motion-directional.is-exiting { animation: feedback-toast-slide-right-exit 180ms ease-in both; }
-html[data-motion="standard"] .feedback-toast-motion-soft:not(.is-exiting),
-html[data-motion="standard"] .feedback-toast-motion-expand:not(.is-exiting),
-html[data-motion="standard"] .feedback-toast-motion-directional:not(.is-exiting) { animation-duration: 210ms; }
+.feedback-toast-speed-fast { --feedback-toast-enter-duration: 160ms; --feedback-toast-exit-duration: 120ms; }
+.feedback-toast-speed-balanced { --feedback-toast-enter-duration: 270ms; --feedback-toast-exit-duration: 180ms; }
+.feedback-toast-speed-elegant { --feedback-toast-enter-duration: 390ms; --feedback-toast-exit-duration: 260ms; }
+html:not([data-motion="simple"]) .feedback-toast-motion-soft:not(.is-exiting) { animation: feedback-toast-soft-enter var(--feedback-toast-enter-duration,270ms) cubic-bezier(.22,.68,.25,1) both; }
+html:not([data-motion="simple"]) .feedback-toast-motion-expand:not(.is-exiting) { animation: feedback-toast-expand-enter var(--feedback-toast-enter-duration,270ms) cubic-bezier(.2,.72,.24,1) both; }
+html:not([data-motion="simple"]) .feedback-toast-motion-directional:not(.is-exiting) { animation: feedback-toast-slide-right-enter var(--feedback-toast-enter-duration,270ms) cubic-bezier(.22,.68,.25,1) both; }
+html:not([data-motion="simple"]) .feedback-toast-motion-soft.is-exiting { animation: feedback-toast-soft-exit var(--feedback-toast-exit-duration,180ms) ease-in both; }
+html:not([data-motion="simple"]) .feedback-toast-motion-expand.is-exiting { animation: feedback-toast-expand-exit var(--feedback-toast-exit-duration,180ms) ease-in both; }
+html:not([data-motion="simple"]) .feedback-toast-motion-directional.is-exiting { animation: feedback-toast-slide-right-exit var(--feedback-toast-exit-duration,180ms) ease-in both; }
 @keyframes feedback-toast-soft-enter { from { opacity: 0; filter: blur(7px); transform: translate3d(0,10px,0) scale(.985); } to { opacity: 1; filter: blur(0); transform: translate3d(0,0,0) scale(1); } }
 @keyframes feedback-toast-soft-exit { to { opacity: 0; filter: blur(5px); transform: translate3d(0,5px,0) scale(.99); } }
 @keyframes feedback-toast-expand-enter { from { opacity: 0; filter: blur(4px); transform: scale(.88); } to { opacity: 1; filter: blur(0); transform: scale(1); } }

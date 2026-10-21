@@ -16,6 +16,7 @@ import {
   useMotionPreferences,
   type MotionLevel,
   type NotificationMotion,
+  type NotificationSpeed,
   type NotificationStyle,
   type PageTransitionStyle,
 } from "@/components/motion-preferences";
@@ -42,6 +43,8 @@ export default function MotionSettingsPage() {
     setNotificationStyle,
     notificationMotion,
     setNotificationMotion,
+    notificationSpeed,
+    setNotificationSpeed,
     reducedMotion,
   } = useMotionPreferences();
 
@@ -209,6 +212,46 @@ export default function MotionSettingsPage() {
           <p className="mt-3 rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs leading-5 text-muted-foreground">
             系统开启“减少动态效果”或选择 Low 档时，通知会直接显示和收起。
           </p>
+        </SectionCard>
+
+        <SectionCard
+          title="通知动效速度"
+          sub="调整入场、停留结束和手动关闭时的节奏。此设置适用于当前所有通知样式与动效。"
+          action={<Zap size={19} className="text-primary" />}
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              { id: "fast", title: "快速", description: "约 160ms 入场，响应利落。" },
+              { id: "balanced", title: "均衡", description: "约 270ms 入场，轻快且舒展。" },
+              { id: "elegant", title: "优雅", description: "约 390ms 入场，节奏更从容。" },
+            ] as const).map((option) => {
+              const selected = notificationSpeed === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={!ready}
+                  aria-pressed={selected}
+                  onClick={() => setNotificationSpeed(option.id as NotificationSpeed)}
+                  className={cn(
+                    "motion-choice-card relative flex min-h-32 flex-col gap-3 rounded-2xl border p-4 text-left",
+                    selected ? "motion-choice-selected border-border bg-[var(--mc-tint-blue)] shadow-[0_5px_18px_rgba(59,145,235,.12)]" : "border-border bg-card hover:border-border",
+                    !ready && "cursor-wait opacity-70",
+                  )}
+                >
+                  {selected && <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><Check size={12} /></span>}
+                  <span className="text-sm font-semibold text-foreground">{option.title}</span>
+                  <span className="text-xs leading-5 text-muted-foreground">{option.description}</span>
+                  <span className="feedback-toast-preview">
+                    <span className={`feedback-toast feedback-toast-success feedback-toast-glass feedback-toast-motion-soft feedback-toast-speed-${option.id} feedback-toast-motion-demo`}>
+                      <span className="feedback-toast-icon"><Check size={15} /></span>
+                      <span className="feedback-toast-copy"><strong>保存成功</strong><small>商品资料已同步。</small></span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </SectionCard>
 
         <SectionCard

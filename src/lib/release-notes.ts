@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.6";
+export const APP_VERSION = "1.1.7";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.7",
+    date: "2026-10-21",
+    title: "通知动效速度可调",
+    changes: [
+      "新增快速、均衡、优雅三个通知动效速度档位，统一控制入场和退场节奏。",
+      "速度偏好保存在当前设备；Low 档和系统减少动态效果设置仍会关闭动画。",
+    ],
+  },
   {
     version: "1.1.6",
     date: "2026-10-21",
