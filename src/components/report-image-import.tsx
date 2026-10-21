@@ -26,6 +26,7 @@ export type ImageReportDraft = {
   orders: string;
   spend: string;
   attributedSales: string;
+  netAttributedSales: string;
   attributedOrders: string;
   buyers: string;
   averageOrderValue: string;
@@ -148,7 +149,7 @@ export function ReportImageImport({
 
   const fields: [EditableField, string][] = draft?.kind === "daily"
     ? [["sales", "成交金额"], ["refunds", "昨日退款金额"], ["orders", "成交订单数"], ["buyers", "成交买家数"], ["averageOrderValue", "客单价"], ["visitors", "商品访客数"], ["conversionRate", "成交转化率（%）"], ["refundOrders", "昨日退款单数"], ["visitorValue", "昨日访客价值"]]
-    : [["spend", "广告消耗"], ["attributedSales", "广告归因成交额"], ["attributedOrders", "广告归因订单数"]];
+    : [["spend", "总花费 / 成交花费（元）"], ["attributedSales", "交易额（元）"], ["netAttributedSales", "净交易额（元，可选）"], ["attributedOrders", "净成交笔数"]];
   const requiredKeys = draft?.kind === "daily"
     ? ["sales", "refunds", "orders"]
     : ["spend", "attributedSales", "attributedOrders"];
@@ -204,7 +205,7 @@ export function ReportImageImport({
         </div>
         {disabled && <p className="mt-3 text-xs text-muted-foreground">当前账号只有查看权限，无法导入数据。</p>}
         <p className="mt-3 text-xs leading-5 text-muted-foreground">
-          图片和识别内容仅在当前浏览器处理，不会上传至 MoonClean 服务器。首次使用会从 jsDelivr 下载 OCR 引擎和中文识别模型。识别到推广报表时，会读取报表内的花费、交易额和净成交笔数，并按归因交易额 ÷ 推广花费预览 ROAS；不会使用全店经营日报的成交额。
+        图片和识别内容仅在当前浏览器处理，不会上传至 MoonClean 服务器。首次使用会从 jsDelivr 下载 OCR 引擎和中文识别模型。识别到推广报表时，可核对总花费、交易额、净交易额和净成交笔数；ROAS、净 ROAS、单笔净成交花费及净交易额占比会在报表页计算。
         </p>
       </SectionCard>
 
@@ -256,8 +257,9 @@ export function ReportImageImport({
               </div>
               {draft.kind === "advertising" && (
                 <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-sm text-primary">
-                  推广 ROAS 预览：<strong className="text-foreground">{previewRoas === null ? "—" : `${previewRoas.toFixed(2)}x`}</strong>
-                  <span className="ml-1 text-xs">（归因交易额 ÷ 推广花费）</span>
+                  实际投产比预览：<strong className="text-foreground">{previewRoas === null ? "—" : `${previewRoas.toFixed(2)}x`}</strong>
+                  <span className="ml-1 text-xs">（交易额 ÷ 总花费）</span>
+                  {draft.netAttributedSales !== "" && Number(draft.spend) > 0 && <span className="ml-3">净实际投产比：<strong className="text-foreground">{(Number(draft.netAttributedSales) / Number(draft.spend)).toFixed(2)}x</strong></span>}
                 </div>
               )}
               {error && <p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]">{error}</p>}

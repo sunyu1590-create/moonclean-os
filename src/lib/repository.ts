@@ -39,6 +39,7 @@ export const advertisingSchema = z.object({
   date: z.iso.date(),
   spend: money,
   attributedSales: money,
+  netAttributedSales: money.optional(),
   attributedOrders: z.number().int().nonnegative().optional(),
   isDemo: z.boolean().optional(),
   source: z.enum(["manual", "csv_import", "image_import", "mock_pinduoduo", "official_pinduoduo"]).optional(),

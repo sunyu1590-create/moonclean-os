@@ -5,6 +5,7 @@ export interface PinduoduoReportFields {
   orders: string;
   spend: string;
   attributedSales: string;
+  netAttributedSales: string;
   attributedOrders: string;
   buyers: string;
   averageOrderValue: string;
@@ -14,11 +15,13 @@ export interface PinduoduoReportFields {
   visitorValue: string;
 }
 
-function findValue(lines: string[], labels: string[], percent = false, integer = false): string {
+function findValue(lines: string[], labels: string[], percent = false, integer = false, excludeLabels: string[] = []): string {
   const normalizedLabels = labels.map((label) => label.replace(/\s/g, ""));
+  const normalizedExclusions = excludeLabels.map((label) => label.replace(/\s/g, ""));
   const numberPattern = /(?:￥|¥)?\s*([\d,，]+(?:\.\d+)?)\s*(万)?\s*(%)?/;
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].replace(/\s/g, "");
+    if (normalizedExclusions.some((label) => line.includes(label))) continue;
     const label = normalizedLabels.find((candidate) => line.includes(candidate));
     if (!label) continue;
     const position = line.indexOf(label) + label.length;
@@ -61,13 +64,17 @@ export function parsePinduoduoReportText(
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+  const attributedSales = findValue(lines, ["广告归因成交额", "推广归因成交额", "广告成交金额", "推广成交金额", "广告成交额", "推广成交额"])
+    || findValue(lines, ["直接成交金额", "直接成交额"])
+    || findValue(lines, ["成交金额", "交易额"], false, false, ["净交易额", "店铺成交金额"]);
   return {
     date: parseDate(raw, defaultDate),
     sales: findValue(lines, ["成交金额", "店铺成交额", "成交总额", "销售额", "成交额", "支付金额"]),
     refunds: findValue(lines, ["昨日退款金额", "退款金额", "售后退款", "退款总额"]),
     orders: findValue(lines, ["成交订单数", "支付订单数", "订单数", "订单量"], false, true),
     spend: findValue(lines, ["总花费", "成交花费", "推广消耗", "广告消耗", "消耗金额", "推广花费", "广告花费"]),
-    attributedSales: findValue(lines, ["广告归因成交额", "推广归因成交额", "广告成交金额", "推广成交金额", "广告成交额", "推广成交额", "直接成交金额", "直接成交额", "净交易额", "交易额"]),
+    attributedSales,
+    netAttributedSales: findValue(lines, ["净交易额", "净成交额", "净交易金额", "净交易额(元)"]),
     attributedOrders: findValue(lines, ["净成交笔数", "净成交订单数", "推广订单数", "广告订单数", "推广成交订单数", "广告成交订单数", "直接成交订单数", "成交笔数"], false, true),
     buyers: findValue(lines, ["成交买家数"], false, true),
     averageOrderValue: findValue(lines, ["客单价"]),

@@ -63,6 +63,8 @@ export interface AdvertisingMetric {
   date: string;
   spend: Money;
   attributedSales: Money;
+  /** Net attributed revenue reported by the ad platform; absent means unknown. */
+  netAttributedSales?: Money;
   attributedOrders?: number;
   isDemo?: boolean;
   source?: "manual" | "csv_import" | "image_import" | "mock_pinduoduo" | "official_pinduoduo";

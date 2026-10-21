@@ -21,13 +21,25 @@ describe("拼多多经营日报截图字段识别", () => {
     });
   });
 
-  it("只用明确的推广字段填广告归因成交额", () => {
+  it("只用明确的推广字段填广告交易额", () => {
     const fields = parsePinduoduoReportText(
       "店铺成交金额 100\n推广消耗 10\n直接成交额 25\n推广订单数 1",
       "2026-10-18",
     );
     expect(fields.spend).toBe("10.00");
     expect(fields.attributedSales).toBe("25.00");
+    expect(fields.netAttributedSales).toBe("");
     expect(fields.attributedOrders).toBe("1");
+  });
+
+  it("分别识别交易额与净交易额，避免把净值混入毛成交额", () => {
+    const fields = parsePinduoduoReportText(
+      "总花费 48.94\n交易额 83.60\n净交易额 79.20\n净成交笔数 4",
+      "2026-10-18",
+    );
+    expect(fields.spend).toBe("48.94");
+    expect(fields.attributedSales).toBe("83.60");
+    expect(fields.netAttributedSales).toBe("79.20");
+    expect(fields.attributedOrders).toBe("4");
   });
 });

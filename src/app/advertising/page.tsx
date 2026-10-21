@@ -17,7 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addMoney, adRoas, financialSummary, formatMoney } from "@/lib/finance";
+import { addMoney, financialSummary, formatMoney } from "@/lib/finance";
+import { advertisingReportMetrics } from "@/lib/advertising-report";
 import { numeric, periodRows, storeToday } from "@/lib/analytics";
 import type { AdvertisingMetric } from "@/lib/model";
 import { ReportImageImport, type ImageReportDraft } from "@/components/report-image-import";
@@ -29,6 +30,7 @@ const schema = z.object({
   date: z.iso.date(),
   spend: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额"),
   attributedSales: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额"),
+  netAttributedSales: z.string().regex(/^\d+(\.\d{1,2})?$/, "请输入有效金额").or(z.literal("")),
   attributedOrders: z.number().int().nonnegative(),
 });
 type Form = z.infer<typeof schema>;
@@ -44,6 +46,7 @@ export default function Advertising() {
       date: "",
       spend: "0",
       attributedSales: "0",
+      netAttributedSales: "",
       attributedOrders: 0,
     },
   });
@@ -58,7 +61,8 @@ export default function Advertising() {
       days,
       storeToday(data.settings.store.timezone),
     ),
-    summary = financialSummary(rows, ads);
+    summary = financialSummary(rows, ads),
+    reportMetrics = advertisingReportMetrics(ads, rows);
   const attributed = addMoney(ads.map((a) => a.attributedSales));
   const adTrend = ads.map((ad) => ({
     date: ad.date.slice(5).replace("-", "/"),
@@ -71,6 +75,7 @@ export default function Advertising() {
       date: ad?.date || storeToday(data!.settings.store.timezone),
       spend: ad?.spend || "0",
       attributedSales: ad?.attributedSales || "0",
+      netAttributedSales: ad?.netAttributedSales || "",
       attributedOrders: ad?.attributedOrders || 0,
     });
     setOpen(true);
@@ -88,7 +93,7 @@ export default function Advertising() {
         ...current,
         advertising: [
           ...current.advertising.filter((a) => a.id !== editing),
-          { id: editing || crypto.randomUUID(), ...values, isDemo: false },
+          { id: editing || crypto.randomUUID(), ...values, netAttributedSales: values.netAttributedSales || undefined, isDemo: false },
         ].sort((a, b) => a.date.localeCompare(b.date)),
       }));
       setOpen(false);
@@ -103,8 +108,9 @@ export default function Advertising() {
     const existing=data!.advertising.find(item=>item.date===row.date);
     if(existing?.source==="mock_pinduoduo"||existing?.source==="official_pinduoduo")throw new Error("该日期已有平台同步推广数据，请勿用截图覆盖。");
     if(existing&&!window.confirm(`${row.date} 已有推广数据，确认用截图识别值替换吗？`))return false;
-    const parsed=schema.parse({date:row.date,spend:row.spend,attributedSales:row.attributedSales,attributedOrders:Number(row.attributedOrders)});
-    await update(current=>({...current,advertising:[...current.advertising.filter(item=>item.date!==row.date),{id:existing?.id||crypto.randomUUID(),...parsed,isDemo:false,source:"image_import" as const}].sort((a,b)=>a.date.localeCompare(b.date))}));
+    const parsed=schema.parse({date:row.date,spend:row.spend,attributedSales:row.attributedSales,netAttributedSales:row.netAttributedSales,attributedOrders:Number(row.attributedOrders)});
+    const { netAttributedSales, ...base } = parsed;
+    await update(current=>({...current,advertising:[...current.advertising.filter(item=>item.date!==row.date),{id:existing?.id||crypto.randomUUID(),...base,netAttributedSales:netAttributedSales||undefined,isDemo:false,source:"image_import" as const}].sort((a,b)=>a.date.localeCompare(b.date))}));
   }
   return (
     <>
@@ -172,7 +178,22 @@ export default function Advertising() {
                     </p>
                   </div>
                   <div>
-                    <Label htmlFor="ad-orders">广告归因订单量</Label>
+                    <Label htmlFor="ad-net-sales">净交易额（元）</Label>
+                    <Input
+                      id="ad-net-sales"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="mt-2"
+                      placeholder="报表未提供时可留空"
+                      {...form.register("netAttributedSales")}
+                    />
+                    <p className="text-xs text-red-500">
+                      {form.formState.errors.netAttributedSales?.message}
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="ad-orders">净成交笔数</Label>
                     <Input
                       id="ad-orders"
                       type="number"
@@ -188,7 +209,7 @@ export default function Advertising() {
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    请填写广告平台报告中的归因成交额，勿填全店成交额。
+                    按图表口径录入推广总花费、交易额、净交易额和净成交笔数。ROAS、单笔成本及净交易额占比会自动计算；未提供净交易额时会显示“待补录”。
                   </p>
                   {form.formState.errors.root?.message && (
                     <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
@@ -220,19 +241,19 @@ export default function Advertising() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="广告消耗"
+          label="成交花费 / 总花费"
           value={formatMoney(summary.adSpend)}
           icon={<Wallet size={18} />}
         />
         <MetricCard
-          label="广告归因成交额"
+          label="交易额"
           value={formatMoney(attributed)}
           icon={<TrendingUp size={18} />}
         />
         <MetricCard
-          label="广告 ROAS"
+          label="实际投产比"
           value={numeric(summary.roas, "x")}
-          sub="归因成交额 ÷ 广告消耗"
+          sub="交易额 ÷ 总花费"
           icon={<Target size={18} />}
         />
         <MetricCard
@@ -241,6 +262,11 @@ export default function Advertising() {
           sub="依据完整成本及全店贡献率估算"
           icon={<Ratio size={18} />}
         />
+        <MetricCard label="净交易额" value={reportMetrics.netAttributedSales === null ? "待补录" : formatMoney(reportMetrics.netAttributedSales)} icon={<TrendingUp size={18}/>} />
+        <MetricCard label="净实际投产比" value={numeric(reportMetrics.netActualRoas, "x")} sub="净交易额 ÷ 总花费" icon={<Target size={18}/>} />
+        <MetricCard label="净成交笔数" value={reportMetrics.netAttributedOrders === null ? "—" : String(reportMetrics.netAttributedOrders)} sub="来自推广报表" icon={<TrendingUp size={18}/>} />
+        <MetricCard label="每笔净成交花费" value={reportMetrics.spendPerNetOrder === null ? "—" : formatMoney(reportMetrics.spendPerNetOrder)} sub="总花费 ÷ 净成交笔数" icon={<Wallet size={18}/>} />
+        <MetricCard label="净交易额占比" value={reportMetrics.netRevenueShare === null ? "—" : `${reportMetrics.netRevenueShare.toFixed(2)}%`} sub="净交易额 ÷ 全店净销售额" icon={<Ratio size={18}/>} />
       </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.6fr_1fr]">
         <SectionCard
@@ -282,13 +308,18 @@ export default function Advertising() {
         sub="每个日期一条记录，点击编辑可修正数据"
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-left text-sm">
+          <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="border-b text-xs text-muted-foreground">
               <tr>
                 <th className="py-3">日期</th>
-                <th>广告消耗</th>
-                <th>归因成交额</th>
-                <th>ROAS</th>
+                <th>总花费</th>
+                <th>交易额</th>
+                <th>实际投产比</th>
+                <th>净交易额</th>
+                <th>净成交笔数</th>
+                <th>净实际投产比</th>
+                <th>单笔净成交花费</th>
+                <th>净交易额占比</th>
                 <th>来源</th>
                 <th className="text-right">操作</th>
               </tr>
@@ -302,7 +333,12 @@ export default function Advertising() {
                   <td className="py-3 font-medium">{ad.date}</td>
                   <td>{formatMoney(ad.spend)}</td>
                   <td>{formatMoney(ad.attributedSales)}</td>
-                  <td>{adRoas([ad]) !== null ? adRoas([ad]) + "x" : "—"}</td>
+                  <td>{Number(ad.spend)>0 ? `${(Number(ad.attributedSales)/Number(ad.spend)).toFixed(2)}x` : "—"}</td>
+                  <td>{ad.netAttributedSales === undefined ? "待补录" : formatMoney(ad.netAttributedSales)}</td>
+                  <td>{ad.attributedOrders ?? "—"}</td>
+                  <td>{ad.netAttributedSales !== undefined && Number(ad.spend) > 0 ? `${(Number(ad.netAttributedSales) / Number(ad.spend)).toFixed(2)}x` : "—"}</td>
+                  <td>{ad.attributedOrders && ad.attributedOrders > 0 ? formatMoney(Number(ad.spend) / ad.attributedOrders) : "—"}</td>
+                  <td>{(() => { const day = rows.find(row => row.date === ad.date); const net = Number(day?.sales || 0) - Number(day?.refunds || 0); return ad.netAttributedSales !== undefined && net > 0 ? `${(Number(ad.netAttributedSales) / net * 100).toFixed(2)}%` : "—"; })()}</td>
                   <td className="text-xs text-muted-foreground">
                     {ad.isDemo ? "模拟数据" : ad.source === "image_import" ? "截图识别" : ad.source === "csv_import" ? "CSV 导入" : "手动录入"}
                   </td>

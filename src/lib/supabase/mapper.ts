@@ -70,6 +70,7 @@ export interface CloudSnapshot {
     metric_date: string;
     advertising_spend: string;
     attributed_revenue: string;
+    net_attributed_revenue?: string | null;
     attributed_orders: number;
     is_demo?: boolean;
     data_source?: "manual" | "csv_import" | "image_import";
@@ -251,6 +252,7 @@ export function mapCloudSnapshot(snapshot: CloudSnapshot): AppData {
       date: row.metric_date,
       spend: amount(row.advertising_spend),
       attributedSales: amount(row.attributed_revenue),
+      netAttributedSales: row.net_attributed_revenue == null ? undefined : amount(row.net_attributed_revenue),
       attributedOrders: row.attributed_orders,
       isDemo: row.is_demo || false,
       source: row.data_source || "manual",
