@@ -9,6 +9,7 @@ import { financialSummary, formatMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { DeferredChart } from "@/components/charts/deferred-chart";
+import { isDailyCostComplete, summarizeDataQuality } from "@/lib/operating-review";
 
 const FinanceTrendChart = dynamic(() => import("@/components/charts/finance-charts").then((module) => module.FinanceTrendChart));
 const FinanceCostChart = dynamic(() => import("@/components/charts/finance-charts").then((module) => module.FinanceCostChart));
@@ -27,6 +28,7 @@ export default function Finance() {
       storeToday(data.settings.store.timezone),
     ),
     s = financialSummary(daily, ads);
+  const quality = summarizeDataQuality(data.daily, storeToday(data.settings.store.timezone), days);
   const cost = [
     { name: "商品成本", value: Number(s.productCost), color: "var(--chart-1)" },
     { name: "包装费用", value: Number(s.packagingCost), color: "var(--chart-3)" },
@@ -68,9 +70,10 @@ export default function Finance() {
           </div>
         }
       />
-      <AiInsightPanel feature="finance" context={{ periodDays: days, grossSales: Number(s.grossSales), refunds: Number(s.refunds), netSales: Number(s.netSales), productCost: Number(s.productCost), packagingCost: Number(s.packagingCost), logisticsCost: Number(s.logisticsCost), platformFees: Number(s.platformFees), adSpend: Number(s.adSpend), otherExpenses: Number(s.otherExpenses), estimatedProfit: Number(s.profit), profitMargin: s.margin ?? "数据不足", costIncompleteDays: daily.filter(row => row.costComplete === false).length }} />
-      {daily.some(row => row.source === "mock_pinduoduo") && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm text-primary">所选日期包含拼多多模拟同步订单。演示销售额和利润不代表真实店铺业绩。</div>}
-      {daily.some(row => row.costComplete === false) && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-orange)] p-4 text-sm text-[var(--mc-color-warning)]">部分日期缺少可靠成本版本，以下利润为不完整估算；盈亏平衡 ROAS 暂不显示。</div>}
+      <AiInsightPanel feature="finance" context={{ periodDays: days, grossSales: Number(s.grossSales), refunds: Number(s.refunds), netSales: Number(s.netSales), productCost: Number(s.productCost), packagingCost: Number(s.packagingCost), logisticsCost: Number(s.logisticsCost), platformFees: Number(s.platformFees), adSpend: Number(s.adSpend), otherExpenses: Number(s.otherExpenses), estimatedProfit: Number(s.profit), profitMargin: s.margin ?? "数据不足", costIncompleteDays: quality.incompleteCostRecords }} />
+      {quality.hasDemo && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-orange)] p-4 text-sm text-[var(--mc-color-warning)]">所选日期包含模拟平台记录。演示销售额和利润不代表真实店铺业绩。</div>}
+      {daily.some(row => !isDailyCostComplete(row)) && <div role="status" className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-orange)] p-4 text-sm text-[var(--mc-color-warning)]">所选周期有 {quality.incompleteCostRecords} 条日报成本信息不完整，以下利润为不完整估算；盈亏平衡 ROAS 暂不显示。</div>}
+      <p className="mb-5 text-xs leading-5 text-muted-foreground">本期数据来源：手工 {quality.sourceCounts.manual} 条 · 导入 {quality.sourceCounts.imported} 条 · 模拟 {quality.sourceCounts.demo} 条 · 正式同步 {quality.sourceCounts.official} 条。经营利润按净销售额扣除已录入成本、费用与推广消耗估算。</p>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="净销售额"

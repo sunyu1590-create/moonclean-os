@@ -27,21 +27,21 @@ export function DataTransitionOverlay({ transition }: { transition: Transition |
   useEffect(() => {
     if (!transition) {
       progressRef.current = 0;
-      setAnimatedProgress(0);
-      return;
+      const frame = window.requestAnimationFrame(() => setAnimatedProgress(0));
+      return () => window.cancelAnimationFrame(frame);
     }
     if (complete) {
       progressRef.current = 100;
-      setAnimatedProgress(100);
-      return;
+      const frame = window.requestAnimationFrame(() => setAnimatedProgress(100));
+      return () => window.cancelAnimationFrame(frame);
     }
     if (reducedMotion || level === "simple") {
       const staticProgress = steps.length
         ? ((completedSteps + (activeStep >= 0 ? 1 : 0)) / steps.length) * 100
         : 0;
       progressRef.current = Math.min(98, staticProgress);
-      setAnimatedProgress(progressRef.current);
-      return;
+      const frame = window.requestAnimationFrame(() => setAnimatedProgress(progressRef.current));
+      return () => window.cancelAnimationFrame(frame);
     }
 
     const startedAt = performance.now();

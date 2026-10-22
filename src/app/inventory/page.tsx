@@ -86,7 +86,7 @@ export default function InventoryPage(){
     <div className="mb-5 grid gap-4 sm:grid-cols-3">
       <MetricCard label="在售 SKU" value={String(skus.length)} icon={<Boxes size={19}/>}/>
       <MetricCard label="已设库存" value={String(balances.length)} icon={<ClipboardList size={19}/>}/>
-      <MetricCard label="低库存预警" value={String(low.length)} tone={low.length?"red":"green"} icon={<AlertTriangle size={19}/>} sub="已设库存且数量低于或等于预警线"/>
+      <MetricCard label="低库存预警" value={String(low.length)} tone={low.length?"red":"green"} icon={<AlertTriangle size={19}/>} sub="按手动预警线判断；未结合销量与在途采购"/>
     </div>
     <AiInsightPanel feature="inventory" context={{ skuCount: skus.length, trackedSkuCount: balances.length, lowStockCount: low.length, untrackedSkuCount: Math.max(0, skus.length - balances.length) }} />
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(310px,1fr)]">
@@ -95,7 +95,7 @@ export default function InventoryPage(){
         {loading?<p className="text-sm text-muted-foreground">正在读取{mode==="local"?"本机":"云端"}库存…</p>:skus.length===0?<p className="text-sm text-muted-foreground">暂无在售 SKU，请先到商品管理添加商品规格。</p>:visibleSkus.length===0?<p className="text-sm text-muted-foreground">没有符合条件的 SKU，请调整搜索或筛选条件。</p>:<div className="space-y-2">
           {visibleSkus.map(sku=>{const row=balances.find(item=>item.sku_id===sku.id);const isLow=row&&row.quantity<=row.low_stock_threshold;return <div key={sku.id} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${selected===sku.id?"border-border bg-[var(--mc-tint-blue)]":"border-border"}`}>
             <button type="button" onClick={()=>choose(sku.id)} className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"><span className="min-w-0 truncate text-sm font-medium text-foreground">{sku.label}</span><span className={`shrink-0 text-sm font-semibold ${isLow?"text-[var(--mc-color-danger)]":"text-muted-foreground"}`}>{row?`${row.quantity} 件${isLow?" · 低库存":""}`:"未录入"}</span></button>
-            {canEdit&&isLow&&<Button type="button" size="sm" variant="outline" className="shrink-0 px-2 text-xs" onClick={()=>prepareReplenishment(sku.id)} title={`按预警线建议补至 ${Math.max(row.low_stock_threshold*2,row.low_stock_threshold+1)} 件`}><Sparkles size={13}/><span className="hidden sm:inline">补货建议</span></Button>}
+            {canEdit&&isLow&&<Button type="button" size="sm" variant="outline" className="shrink-0 px-2 text-xs" onClick={()=>prepareReplenishment(sku.id)} title={`按预警线估算补至 ${Math.max(row.low_stock_threshold*2,row.low_stock_threshold+1)} 件`}><Sparkles size={13}/><span className="hidden sm:inline">按预警线预估</span></Button>}
           </div>;})}
         </div>}
       </SectionCard>

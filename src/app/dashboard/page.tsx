@@ -27,6 +27,7 @@ import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
 import { DeferredChart } from "@/components/charts/deferred-chart";
+import { compareValues, dailySourceGroup, isDailyCostComplete, previousPeriodEnd } from "@/lib/operating-review";
 
 const DashboardTrendChart = dynamic(() => import("@/components/charts/dashboard-trend-chart"));
 export default function Dashboard() {
@@ -37,6 +38,11 @@ export default function Dashboard() {
   const rows = periodRows(data.daily, days, currentDate),
     ads = periodRows(data.advertising, days, currentDate);
   const summary = financialSummary(rows, ads);
+  const comparisonEnd = previousPeriodEnd(currentDate, days);
+  const previousRows = periodRows(data.daily, days, comparisonEnd);
+  const previousAds = periodRows(data.advertising, days, comparisonEnd);
+  const previousSummary = financialSummary(previousRows, previousAds);
+  const comparisonCostIncompleteDays = [...rows, ...previousRows].filter(row => !isDailyCostComplete(row)).length;
   const todayRows = data.daily.filter((r) => r.date === currentDate),
     todayAds = data.advertising.filter((r) => r.date === currentDate);
   const current = financialSummary(todayRows, todayAds);
@@ -54,6 +60,22 @@ export default function Dashboard() {
   const target = new Decimal(data.settings.salesTarget);
   const targetPercent = target.gt(0) ? new Decimal(monthSales).div(target).mul(100) : null;
   const targetProgress = targetPercent ? Decimal.min(targetPercent, 100).toNumber() : 0;
+  const comparisonStart = new Date(`${comparisonEnd}T12:00:00Z`);
+  comparisonStart.setUTCDate(comparisonStart.getUTCDate() - (days - 1));
+  const previousLabel = `${comparisonStart.toISOString().slice(0, 10)} 至 ${comparisonEnd}`;
+  const currentStart = new Date(`${currentDate}T12:00:00Z`);
+  currentStart.setUTCDate(currentStart.getUTCDate() - (days - 1));
+  const currentLabel = `${currentStart.toISOString().slice(0, 10)} 至 ${currentDate}`;
+  const formatComparison = (currentValue: number | null, previousValue: number | null, money = false) => {
+    if (currentValue === null || previousValue === null) return "数据不足，无法比较";
+    if (previousRows.length === 0) return "上一周期暂无经营日报";
+    const comparison = compareValues(currentValue, previousValue);
+    if (comparison.delta === 0) return "与上一周期持平";
+    const direction = comparison.delta > 0 ? "上升" : "下降";
+    const amount = money ? formatMoney(Math.abs(comparison.delta)) : `${Math.abs(comparison.delta).toFixed(2)}x`;
+    const rate = comparison.percent === null ? "" : `（${comparison.percent > 0 ? "+" : ""}${comparison.percent.toFixed(1)}%）`;
+    return `较前期${direction} ${amount}${rate}`;
+  };
   return (
     <>
       <PageHead
@@ -94,7 +116,7 @@ export default function Dashboard() {
         </div>
       </section>
       <div className="mb-5 px-1">
-        <DemoNote hasDemo={data.daily.some((r) => r.isDemo)} />
+        <DemoNote hasDemo={data.daily.some((row) => dailySourceGroup(row) === "demo")} />
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-3 2xl:grid-cols-6">
         <MetricCard
@@ -135,8 +157,21 @@ export default function Dashboard() {
           icon={<ChartNoAxesCombined size={18} />}
         />
       </div>
+      <section aria-label="经营周期对比" className="mt-4 rounded-2xl border border-border bg-card px-4 py-3 md:mt-5 md:px-5">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-1">
+          <h2 className="text-xs font-semibold text-foreground md:text-sm">经营周期对比</h2>
+          <p className="text-[10px] text-muted-foreground md:text-xs">当前 {currentLabel} · 对比 {previousLabel} · 两期按相同天数计算</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          <div><p className="text-[10px] text-muted-foreground">净销售额</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.netSales), Number(previousSummary.netSales), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">估算经营利润</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.profit), Number(previousSummary.profit), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">推广消耗</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.adSpend), Number(previousSummary.adSpend), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">广告 ROAS</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(summary.roas, previousSummary.roas)}</p></div>
+        </div>
+        <p className="mt-3 border-t border-border pt-2 text-[10px] leading-4 text-muted-foreground">利润为基于已录入收入、成本与推广数据的估算；{comparisonCostIncompleteDays>0?`当前及对比周期有 ${comparisonCostIncompleteDays} 条日报成本不完整，利润变化不宜直接用于判断业绩改善。`:`成本字段已完整，仍应结合两期数据覆盖情况解读。`}{previousRows.length===0?"上一周期没有日报记录，不能据此判断趋势。":""}</p>
+      </section>
       <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} />
-      <AiInsightPanel feature="dashboard" autoRefresh context={{ periodDays: 7, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => row.costComplete === false).length }} />
+      <AiInsightPanel feature="dashboard" autoRefresh context={{ periodDays: days, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => !isDailyCostComplete(row)).length }} />
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
           <DeferredChart label="经营趋势图表">

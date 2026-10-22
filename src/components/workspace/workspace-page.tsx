@@ -138,6 +138,13 @@ function ExperimentsModule({initialRecordId=""}:{initialRecordId?:string}){
   };
   return <>
     <PageHead eyebrow={meta.experiments.eyebrow} title={meta.experiments.title} description={meta.experiments.description} action={<Button onClick={()=>open()}><Plus size={16}/>新建实验</Button>}/>
+    <section aria-labelledby="experiment-review-flow" className="mb-5 rounded-2xl border border-border bg-[linear-gradient(135deg,var(--card),var(--mc-tint-blue))] p-4 md:p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="experiment-review-flow" className="text-sm font-semibold text-foreground">一条实验记录的完整路径</h2><span className="text-[10px] text-muted-foreground">把策略变化变成可复查的经营证据</span></div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {[["01","提出假设","问题、调整动作与预期影响"],["02","记录基准","明确比较指标和观察周期"],["03","执行观察","记录开始、结束时间及实际变化"],["04","审慎结论","区分同期变化与因果证据"],["05","沉淀行动","归档经验或转为后续待办"]].map(([number,title,detail])=><div key={number} className="rounded-xl border border-border bg-card/75 p-3"><p className="text-[10px] font-semibold tracking-wide text-primary">{number}</p><h3 className="mt-1 text-xs font-semibold text-foreground">{title}</h3><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{detail}</p></div>)}
+      </div>
+      <p className="mt-3 text-[10px] leading-4 text-muted-foreground">当前支持随机 A/B 与前后对比。只有设计、分流和样本条件可靠时才讨论因果；普通前后对比仅说明同期观察到的变化。</p>
+    </section>
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">
       <SectionCard title="实验记录" sub="前后对比只表示同期变化，不证明策略因果" action={<div className="relative"><Search size={14} className="absolute left-3 top-3 text-muted-foreground"/><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜索实验" className="pl-8"/></div>}>
         {exp.loading?<p className="text-sm text-muted-foreground">正在读取实验…</p>:exp.error?<p role="alert" className="text-sm text-[var(--mc-color-danger)]">{exp.error}<Button size="sm" onClick={()=>void exp.refresh()}>重试</Button></p>:exp.rows.filter(row=>`${row.name} ${row.hypothesis}`.toLowerCase().includes(search.toLowerCase())).length===0?<Empty title="还没有实验" detail="从主图、标题、价格或推广策略开始记录一次实验。"/>:<div className="space-y-3">{exp.rows.filter(row=>`${row.name} ${row.hypothesis}`.toLowerCase().includes(search.toLowerCase())).map(row=>{

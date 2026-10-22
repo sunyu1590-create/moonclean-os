@@ -13,7 +13,10 @@ export function FeedbackViewport() {
   const timers = useRef(new Map<number, number>());
   const exitTimers = useRef(new Map<number, number>());
   const motionState = useRef({ level, reducedMotion, notificationSpeed });
-  motionState.current = { level, reducedMotion, notificationSpeed };
+
+  useEffect(() => {
+    motionState.current = { level, reducedMotion, notificationSpeed };
+  }, [level, reducedMotion, notificationSpeed]);
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id);
@@ -32,6 +35,8 @@ export function FeedbackViewport() {
   }, []);
 
   useEffect(() => {
+    const activeTimers = timers.current;
+    const activeExitTimers = exitTimers.current;
     const receive = (event: Event) => {
       const message = (event as CustomEvent<FeedbackMessage>).detail;
       if (!message?.title) return;
@@ -42,10 +47,10 @@ export function FeedbackViewport() {
     window.addEventListener(FEEDBACK_EVENT, receive);
     return () => {
       window.removeEventListener(FEEDBACK_EVENT, receive);
-      timers.current.forEach(window.clearTimeout);
-      exitTimers.current.forEach(window.clearTimeout);
-      timers.current.clear();
-      exitTimers.current.clear();
+      activeTimers.forEach(window.clearTimeout);
+      activeExitTimers.forEach(window.clearTimeout);
+      activeTimers.clear();
+      activeExitTimers.clear();
     };
   }, [dismiss]);
 

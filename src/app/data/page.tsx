@@ -34,6 +34,7 @@ import { ReportImageImport, type ImageReportDraft } from "@/components/report-im
 import { QuickMetricEntry, type QuickDailyRow } from "@/components/quick-metric-entry";
 import type { DailyMetric } from "@/lib/model";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
+import { dailySourceLabel, isDailyCostComplete, summarizeDataQuality } from "@/lib/operating-review";
 const empty = (date: string): DailyMetric => ({
   id: crypto.randomUUID(),
   date,
@@ -60,7 +61,7 @@ export default function DataPage() {
   const { data, update, role, saving, mode } = useApp();
   const canEdit = role !== "viewer";
   const [query, setQuery] = useState("");
-  const [dataFilter,setDataFilter]=useState<"all"|"incomplete_cost"|"no_product_split"|"last7"|"last30">("all");
+  const [dataFilter,setDataFilter]=useState<"all"|"incomplete_cost"|"no_product_split"|"last7"|"last30"|"last30_incomplete_cost"|"last30_no_product_split">("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DailyMetric | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -186,16 +187,18 @@ export default function DataPage() {
     await update(current=>({...current,daily:[...current.daily.filter(item=>!byDate.has(item.date)),...parsedRows].sort((a,b)=>a.date.localeCompare(b.date))}));
     return true;
   }
-  const incompleteCostCount=data.daily.filter(row=>row.costComplete===false).length;
+  const incompleteCostCount=data.daily.filter(row=>!isDailyCostComplete(row)).length;
   const noProductSplitCount=data.daily.filter(row=>!Object.values(row.productSales||{}).some(value=>Number(value)>0)).length;
   const today=storeToday(data.settings.store.timezone);
+  const quality=summarizeDataQuality(data.daily,today);
   const daysAgo=(count:number)=>{const date=new Date(`${today}T12:00:00Z`);date.setUTCDate(date.getUTCDate()-count+1);return date.toISOString().slice(0,10);};
   const filtered = [...data.daily]
     .filter((r) => !query || r.date.includes(query.trim()))
-    .filter(r=>dataFilter!=="incomplete_cost"||r.costComplete===false)
-    .filter(r=>dataFilter!=="no_product_split"||!Object.values(r.productSales||{}).some(value=>Number(value)>0))
+    .filter(r=>(dataFilter!=="incomplete_cost"&&dataFilter!=="last30_incomplete_cost")||!isDailyCostComplete(r))
+    .filter(r=>(dataFilter!=="no_product_split"&&dataFilter!=="last30_no_product_split")||!Object.values(r.productSales||{}).some(value=>Number(value)>0))
     .filter(r=>dataFilter!=="last7"||(r.date>=daysAgo(7)&&r.date<=today))
     .filter(r=>dataFilter!=="last30"||(r.date>=daysAgo(30)&&r.date<=today))
+    .filter(r=>(dataFilter!=="last30_incomplete_cost"&&dataFilter!=="last30_no_product_split")||(r.date>=daysAgo(30)&&r.date<=today))
     .sort((a,b)=>b.date.localeCompare(a.date));
   return (
     <>
@@ -241,7 +244,23 @@ export default function DataPage() {
           </div>
         }
       />
-      <AiInsightPanel feature="data" context={{ recordCount: data.daily.length, daysMissingCosts: data.daily.filter(row => row.costComplete === false).length, daysWithProductSales: data.daily.filter(row => Object.keys(row.productSales || {}).length > 0).length, latest7DaysSales: data.daily.slice(-7).reduce((sum, row) => sum + Number(row.sales || 0), 0), latest7DaysOrders: data.daily.slice(-7).reduce((sum, row) => sum + row.orders, 0) }} />
+      <AiInsightPanel feature="data" context={{ recordCount: data.daily.length, daysMissingCosts: data.daily.filter(row => !isDailyCostComplete(row)).length, daysWithProductSales: data.daily.filter(row => Object.keys(row.productSales || {}).length > 0).length, latest7DaysSales: data.daily.slice(-7).reduce((sum, row) => sum + Number(row.sales || 0), 0), latest7DaysOrders: data.daily.slice(-7).reduce((sum, row) => sum + row.orders, 0) }} />
+      <SectionCard title="近 30 天数据质量与来源" sub={`${quality.startDate} 至 ${quality.endDate} · 按已有日报检查，不补造缺失数据`}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3"><p className="text-[10px] text-muted-foreground">日报覆盖</p><p className="number mt-1 text-lg font-semibold text-foreground">{quality.coveredDays}<span className="ml-1 text-xs font-medium text-muted-foreground">/ 30 天</span></p></div>
+          <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3"><p className="text-[10px] text-muted-foreground">成本信息完整</p><p className="number mt-1 text-lg font-semibold text-foreground">{quality.rows.length-quality.incompleteCostRecords}<span className="ml-1 text-xs font-medium text-muted-foreground">/ {quality.rows.length} 条</span></p></div>
+          <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3"><p className="text-[10px] text-muted-foreground">已分配商品销售</p><p className="number mt-1 text-lg font-semibold text-foreground">{quality.productAllocatedRecords}<span className="ml-1 text-xs font-medium text-muted-foreground">/ {quality.rows.length} 条</span></p><p className="mt-1 text-[10px] text-muted-foreground">商品分摊为可选项</p></div>
+          <div className="rounded-xl bg-[var(--mc-tint-blue)] p-3"><p className="text-[10px] text-muted-foreground">记录来源</p><p className="mt-1 text-xs font-semibold text-foreground">日报 {quality.rows.length} 条</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">手工 {quality.sourceCounts.manual} · 导入 {quality.sourceCounts.imported} · 模拟 {quality.sourceCounts.demo} · 正式同步 {quality.sourceCounts.official}</p></div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
+          {quality.incompleteCostRecords>0&&<Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={()=>setDataFilter("last30_incomplete_cost")}>查看成本缺失记录 {quality.incompleteCostRecords}</Button>}
+          {quality.rows.length-quality.productAllocatedRecords>0&&<Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" onClick={()=>setDataFilter("last30_no_product_split")}>查看未分摊记录 {quality.rows.length-quality.productAllocatedRecords}</Button>}
+          {!quality.rows.length&&<span>近 30 天暂无日报。录入或导入后，这里会展示覆盖、成本与来源情况。</span>}
+          {quality.hasDemo&&<span className="rounded-full bg-[var(--mc-tint-orange)] px-2 py-1 text-[var(--mc-color-warning)]">包含模拟平台数据，不能作为真实业绩</span>}
+          {!quality.hasDemo&&quality.sourceCounts.official===0&&quality.rows.length>0&&<span>当前周期没有平台正式同步记录；请按来源标识解读手工与导入数据。</span>}
+          {quality.sourceCounts.official>0&&<span>包含 {quality.sourceCounts.official} 条拼多多正式同步记录。</span>}
+        </div>
+      </SectionCard>
       <div className="mb-5">
         <ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/>
       </div>
@@ -256,7 +275,7 @@ export default function DataPage() {
         title="历史经营数据"
         sub={`共 ${data.daily.length} 条日记录 · 当前显示 ${filtered.length} 条`}
         action={
-          <div className="flex flex-wrap gap-2"><AppSelect aria-label="按数据质量和日期筛选" value={dataFilter} onChange={event=>setDataFilter(event.target.value as typeof dataFilter)} className="h-9 rounded-xl border border-border bg-card px-3 text-xs"><option value="all">全部日期</option><option value="incomplete_cost">成本待补齐（{incompleteCostCount}）</option><option value="no_product_split">商品未分配（{noProductSplitCount}）</option><option value="last7">近 7 天</option><option value="last30">近 30 天</option></AppSelect><div className="relative">
+          <div className="flex flex-wrap gap-2"><AppSelect aria-label="按数据质量和日期筛选" value={dataFilter} onChange={event=>setDataFilter(event.target.value as typeof dataFilter)} className="h-9 rounded-xl border border-border bg-card px-3 text-xs"><option value="all">全部日期</option><option value="incomplete_cost">成本待补齐（{incompleteCostCount}）</option><option value="no_product_split">商品未分配（{noProductSplitCount}）</option><option value="last7">近 7 天</option><option value="last30">近 30 天</option><option value="last30_incomplete_cost">近 30 天 · 成本缺失（{quality.incompleteCostRecords}）</option><option value="last30_no_product_split">近 30 天 · 未分摊（{quality.rows.length-quality.productAllocatedRecords}）</option></AppSelect><div className="relative">
             <Search
               className="absolute left-3 top-2.5 text-muted-foreground"
               size={15}
@@ -305,10 +324,10 @@ export default function DataPage() {
                   </td>
                   <td>{formatMoney(row.otherExpenses)}</td>
                   <td className="text-xs text-muted-foreground">
-                    <span className="flex flex-wrap gap-1.5">{row.costComplete===false&&<span className="rounded-full bg-[var(--mc-tint-orange)] px-2 py-1 text-[var(--mc-color-warning)]">成本待补</span>}{!Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="rounded-full bg-[var(--mc-tint-blue)] px-2 py-1 text-primary">未分摊（可选）</span>}{row.costComplete!==false&&Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="text-[var(--mc-color-success)]">成本完整</span>}</span>
+                    <span className="flex flex-wrap gap-1.5">{!isDailyCostComplete(row)&&<span className="rounded-full bg-[var(--mc-tint-orange)] px-2 py-1 text-[var(--mc-color-warning)]">成本待补</span>}{!Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="rounded-full bg-[var(--mc-tint-blue)] px-2 py-1 text-primary">未分摊（可选）</span>}{isDailyCostComplete(row)&&Object.values(row.productSales||{}).some(value=>Number(value)>0)&&<span className="text-[var(--mc-color-success)]">成本完整</span>}</span>
                   </td>
                   <td className="text-xs text-muted-foreground">
-                    {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : row.source === "image_import" ? "截图识别" : row.source === "csv_import" ? "CSV 导入" : row.isDemo ? "模拟数据" : "手工录入"}
+                    {row.source === "mock_pinduoduo" ? "拼多多模拟同步" : dailySourceLabel(row)}
                   </td>
                   <td className="text-right">
                     <Button

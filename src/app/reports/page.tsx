@@ -20,6 +20,7 @@ import { periodRows, storeToday } from "@/lib/analytics";
 import { weeklyReportInsights } from "@/lib/report-insights";
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { DeferredChart } from "@/components/charts/deferred-chart";
+import { isDailyCostComplete, summarizeDataQuality } from "@/lib/operating-review";
 
 const ReportTrendChart = dynamic(() => import("@/components/charts/report-trend-chart"));
 
@@ -33,7 +34,8 @@ export default function ReportsPage() {
   const ads = periodRows(data.advertising, days, today);
   const summary = financialSummary(daily, ads);
   const dateRows = daily.map((row) => ({ row, ad: ads.find((ad) => ad.date === row.date) }));
-  const costIncomplete = daily.some((row) => row.costComplete === false);
+  const quality = summarizeDataQuality(data.daily, today, days);
+  const costIncomplete = quality.incompleteCostRecords > 0;
   const reportTitle = `${data.settings.store.name} · 近 ${days} 天经营报告`;
 
   const weekDaily = periodRows(data.daily, 7, today);
@@ -75,7 +77,7 @@ export default function ReportsPage() {
         return [
           row.date, row.sales, row.refunds, net.toFixed(2), row.orders,
           ad?.spend || "0", ad?.attributedSales || "0", roas, profit,
-          row.costComplete === false ? "不完整" : "完整",
+          isDailyCostComplete(row) ? "完整" : "不完整",
         ].map(cell).join(",");
       }),
     ];
@@ -133,9 +135,9 @@ export default function ReportsPage() {
         <div className="mb-4 hidden print:block"><h1 className="text-2xl font-bold">{reportTitle}</h1><p className="mt-1 text-sm">报告日期：{today}</p></div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard label="全店销售额" value={formatMoney(summary.grossSales)} sub={`退款调整 ${formatMoney(summary.refunds)}`} /><MetricCard label="净销售额" value={formatMoney(summary.netSales)} /><MetricCard label="广告 ROAS" value={summary.roas === null ? "无法计算" : `${summary.roas.toFixed(2)}x`} sub="广告归因成交额 ÷ 广告消耗" /><MetricCard label="估算经营利润" value={formatMoney(summary.profit)} tone={Number(summary.profit) < 0 ? "red" : "green"} sub={costIncomplete ? "成本不完整" : "基于已录入费用"} /></div>
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
-          <SectionCard title="经营结论" sub={`过去 ${days} 天的数据摘要`}><div className="space-y-3 text-sm leading-6 text-muted-foreground"><p>共录入 {daily.length} 天经营数据，净销售额 {formatMoney(summary.netSales)}，估算经营利润 {formatMoney(summary.profit)}。</p><p>广告消耗 {formatMoney(summary.adSpend)}，广告归因成交额 {formatMoney(ads.reduce((sum, row) => sum + Number(row.attributedSales), 0))}。全店销售额与广告归因成交额分别计算。</p><p>{summary.margin === null ? "利润率无法计算。" : `估算经营利润率为 ${summary.margin.toFixed(2)}%。`}{costIncomplete ? " 当前周期有成本数据不完整的日期。" : ""}</p></div></SectionCard>
+          <SectionCard title="经营结论" sub={`${quality.startDate} 至 ${quality.endDate} · ${quality.coveredDays}/${days} 天有日报`}><div className="space-y-3 text-sm leading-6 text-muted-foreground"><p>共录入 {daily.length} 条日报，覆盖 {quality.coveredDays} 个自然日；净销售额 {formatMoney(summary.netSales)}，估算经营利润 {formatMoney(summary.profit)}。</p><p>广告消耗 {formatMoney(summary.adSpend)}，广告归因成交额 {formatMoney(ads.reduce((sum, row) => sum + Number(row.attributedSales), 0))}。全店销售额与广告归因成交额分别计算，归因成交额不会重复计入全店销售额。</p><p>{summary.margin === null ? "利润率无法计算。" : `估算经营利润率为 ${summary.margin.toFixed(2)}%。`}{costIncomplete ? ` 当前有 ${quality.incompleteCostRecords} 条日报的成本信息不完整，利润只能作为未完整估算。` : " 本期日报成本信息完整。"}</p><p className="border-t border-border pt-3 text-xs leading-5">利润口径：净销售额减去商品、包装、物流、平台、其他经营费用与推广消耗。数据来源：手工 {quality.sourceCounts.manual} 条、导入 {quality.sourceCounts.imported} 条、模拟 {quality.sourceCounts.demo} 条、平台正式同步 {quality.sourceCounts.official} 条。{quality.hasDemo?"本报告包含模拟数据，请勿作为真实业绩使用。":""}</p></div></SectionCard>
           <SectionCard title="每日明细" sub="可导出 CSV 进一步筛选">
-            {!dateRows.length ? <p className="text-sm text-muted-foreground">当前周期暂无经营数据。</p> : <div className="max-h-[420px] overflow-auto"><table className="w-full min-w-[640px] text-left text-xs"><thead className="sticky top-0 bg-card text-muted-foreground"><tr><th className="py-2">日期</th><th>销售额</th><th>广告消耗</th><th>归因成交</th><th>经营利润</th></tr></thead><tbody>{dateRows.map(({ row, ad }) => <tr key={row.id} className="border-t border-border"><td className="py-2.5">{row.date}</td><td>{formatMoney(row.sales)}</td><td>{formatMoney(ad?.spend || "0")}</td><td>{formatMoney(ad?.attributedSales || "0")}</td><td className={row.costComplete === false ? "text-[var(--mc-color-warning)]" : ""}>{row.costComplete === false ? "不完整 · " : ""}{formatMoney(financialSummary([row], ad ? [ad] : []).profit)}</td></tr>)}</tbody></table></div>}
+            {!dateRows.length ? <p className="text-sm text-muted-foreground">当前周期暂无经营数据。</p> : <div className="max-h-[420px] overflow-auto"><table className="w-full min-w-[640px] text-left text-xs"><thead className="sticky top-0 bg-card text-muted-foreground"><tr><th className="py-2">日期</th><th>销售额</th><th>广告消耗</th><th>归因成交</th><th>经营利润</th></tr></thead><tbody>{dateRows.map(({ row, ad }) => <tr key={row.id} className="border-t border-border"><td className="py-2.5">{row.date}</td><td>{formatMoney(row.sales)}</td><td>{formatMoney(ad?.spend || "0")}</td><td>{formatMoney(ad?.attributedSales || "0")}</td><td className={!isDailyCostComplete(row) ? "text-[var(--mc-color-warning)]" : ""}>{!isDailyCostComplete(row) ? "不完整 · " : ""}{formatMoney(financialSummary([row], ad ? [ad] : []).profit)}</td></tr>)}</tbody></table></div>}
           </SectionCard>
         </div>
       </section>
