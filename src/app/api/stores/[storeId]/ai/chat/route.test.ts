@@ -61,4 +61,50 @@ describe("自由 AI 聊天 API", () => {
     }), { params: Promise.resolve({ storeId }) });
     expect(response.status).toBe(400);
   });
+
+  it("启用联网搜索时检索来源、注入安全上下文并把来源返回给界面", async () => {
+    state.logs.length = 0;
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      if (String(url).endsWith("/v1/tools/search")) {
+        return Response.json({ results: [{ title: "官方更新", url: "https://example.com/news", summary: "本周发布了新版本" }] });
+      }
+      return new Response('data: {"choices":[{"delta":{"content":"根据最新来源"}}]}\n\ndata: [DONE]\n\n', { headers: { "Content-Type": "text/event-stream" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await POST(makeRequest({
+      apiKey: "sk-test-secret-key-value",
+      model: "deepseek-flash",
+      reasoningEffort: "high",
+      webSearch: true,
+      messages: [{ role: "user", content: "最近有什么更新？" }],
+    }), { params: Promise.resolve({ storeId }) });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.deepseek.com/v1/tools/search");
+    const chatBody = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string) as { messages: { role: string; content: string }[] };
+    expect(chatBody.messages[1]?.content).toContain("不可信资料");
+    expect(chatBody.messages[1]?.content).toContain("https://example.com/news");
+    expect(JSON.parse(decodeURIComponent(response.headers.get("X-Web-Search-Sources") || "[]"))).toEqual([{ title: "官方更新", url: "https://example.com/news" }]);
+    expect(await response.text()).toContain("根据最新来源");
+  });
+
+  it("联网搜索失败时明确报错，不退化成普通模型回答", async () => {
+    state.logs.length = 0;
+    const fetchMock = vi.fn(async () => Response.json({ error: "insufficient balance" }, { status: 402 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await POST(makeRequest({
+      apiKey: "sk-test-secret-key-value",
+      model: "deepseek-flash",
+      reasoningEffort: "high",
+      webSearch: true,
+      messages: [{ role: "user", content: "今天有什么新闻？" }],
+    }), { params: Promise.resolve({ storeId }) });
+
+    expect(response.status).toBe(502);
+    expect((await response.json()).error).toContain("额度不足");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(state.logs[0]).toMatchObject({ outcome: "failed", error_code: "search_insufficient_balance" });
+  });
 });

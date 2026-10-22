@@ -63,6 +63,19 @@ test("AI 聊天输入框内收纳更多设置并播放模糊放大动画", async
   await expect(panel).toHaveCSS("animation-name", "ai-chat-more-enter");
   await expect(panel.getByLabel("选择模型")).toBeVisible();
   await expect(panel.getByLabel("聊天分类")).toBeVisible();
+  const webSearch = panel.getByRole("checkbox", { name: "启用联网搜索" });
+  await expect(webSearch).toBeVisible();
+  await webSearch.check();
+  await expect(webSearch).toBeChecked();
+  await page.getByRole("button", { name: "聊天历史" }).click();
+  const history = page.getByRole("dialog");
+  await expect(history.getByRole("heading", { name: "聊天历史" })).toBeVisible();
+  await expect(history.getByRole("textbox", { name: "搜索聊天历史" })).toBeVisible();
+  await expect(history.getByRole("button", { name: /当前对话/ })).toBeVisible();
+  await expect(history.getByRole("button", { name: /已归档/ })).toBeVisible();
+  const historyBounds = await history.boundingBox();
+  expect(historyBounds).not.toBeNull();
+  expect(historyBounds!.width).toBeLessThanOrEqual(390);
 });
 
 test("标准通知显示在顶栏下方，设备适配通知显示在底栏上方", async ({ page }) => {

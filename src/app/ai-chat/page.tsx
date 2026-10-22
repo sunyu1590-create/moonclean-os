@@ -3,7 +3,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Bot, Check, ChevronDown, CircleAlert, Copy, Eraser, History, KeyRound, LoaderCircle, Maximize2, MessageCircle, Minimize2, Plus, Send, Settings2, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Archive, ArchiveRestore, Bot, Check, ChevronDown, CircleAlert, Copy, Eraser, History, KeyRound, LoaderCircle, Maximize2, MessageCircle, Minimize2, Pin, Plus, Search, Send, Settings2, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { MarkdownContent } from "@/components/markdown-content";
@@ -29,10 +29,11 @@ const efforts = [
 type ModelId = typeof models[number]["id"];
 type Effort = typeof efforts[number]["id"];
 const effortTextTone: Record<Effort, string> = { none: "text-slate-600", low: "text-teal-700", high: "text-blue-700", max: "text-violet-700" };
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string; createdAt: string; model?: string };
+type ChatSource = { title: string; url: string };
+type ChatMessage = { id: string; role: "user" | "assistant"; content: string; createdAt: string; model?: string; sources?: ChatSource[] };
 const chatCategories = ["未分类", "随便聊聊", "学习", "创作", "灵感", "工作"] as const;
 type ChatCategory = typeof chatCategories[number];
-type ChatConversation = { id: string; title: string; category: ChatCategory; createdAt: string; updatedAt: string; messages: ChatMessage[] };
+type ChatConversation = { id: string; title: string; category: ChatCategory; createdAt: string; updatedAt: string; messages: ChatMessage[]; pinned?: boolean; archivedAt?: string | null };
 const chatKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-v1:${userId}:${storeId}`;
 const historyKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-history-v1:${userId}:${storeId}`;
 const preferenceKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-preferences-v1:${userId}:${storeId}`;
@@ -48,7 +49,7 @@ function readMessages(key: string): ChatMessage[] {
 function readHistory(key: string, legacyKey: string): ChatConversation[] {
   try {
     const rows: unknown = JSON.parse(localStorage.getItem(key) || "null");
-    if (Array.isArray(rows)) return rows.filter((row): row is ChatConversation => Boolean(row) && typeof row === "object" && typeof (row as ChatConversation).id === "string" && typeof (row as ChatConversation).title === "string" && Array.isArray((row as ChatConversation).messages));
+  if (Array.isArray(rows)) return rows.filter((row): row is ChatConversation => Boolean(row) && typeof row === "object" && typeof (row as ChatConversation).id === "string" && typeof (row as ChatConversation).title === "string" && Array.isArray((row as ChatConversation).messages)).map((row) => ({ ...row, pinned: Boolean(row.pinned), archivedAt: typeof row.archivedAt === "string" ? row.archivedAt : null }));
   } catch { /* Migrate the previous single-thread chat below. */ }
   const legacyMessages = readMessages(legacyKey);
   if (!legacyMessages.length) return [];
@@ -58,7 +59,8 @@ function readHistory(key: string, legacyKey: string): ChatConversation[] {
 }
 
 function upsertConversation(rows: ChatConversation[], conversation: ChatConversation): ChatConversation[] {
-  return [conversation, ...rows.filter((row) => row.id !== conversation.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const existing = rows.find((row) => row.id === conversation.id);
+  return [{ ...existing, ...conversation }, ...rows.filter((row) => row.id !== conversation.id)].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export default function AiChatPage() {
@@ -75,9 +77,13 @@ export default function AiChatPage() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  const [deleteHistoryId, setDeleteHistoryId] = useState("");
   const [sending, setSending] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyView, setHistoryView] = useState<"active" | "archived">("active");
+  const [historySearch, setHistorySearch] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
   const [immersive, setImmersive] = useState(false);
   const [immersiveClosing, setImmersiveClosing] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -98,9 +104,10 @@ export default function AiChatPage() {
       setCategory("随便聊聊");
       setMessages([]);
       try {
-        const saved = JSON.parse(localStorage.getItem(preferenceKey(activeStoreId, userId)) || "null") as { model?: string; effort?: string } | null;
+        const saved = JSON.parse(localStorage.getItem(preferenceKey(activeStoreId, userId)) || "null") as { model?: string; effort?: string; webSearch?: boolean } | null;
         if (models.some((item) => item.id === saved?.model)) setModel(saved!.model as ModelId);
         if (efforts.some((item) => item.id === saved?.effort)) setEffort(saved!.effort as Effort);
+        setWebSearch(Boolean(saved?.webSearch));
       } catch { /* Keep the defaults when local preferences cannot be read. */ }
       setLoadedStoreId(activeStoreId);
     });
@@ -138,12 +145,16 @@ export default function AiChatPage() {
 
   useEffect(() => {
     if (!activeStoreId || loadedStoreId !== activeStoreId) return;
-    try { localStorage.setItem(preferenceKey(activeStoreId, userId), JSON.stringify({ model, effort })); } catch { /* Preferences remain active for this session. */ }
-  }, [activeStoreId, effort, loadedStoreId, model, userId]);
+    try { localStorage.setItem(preferenceKey(activeStoreId, userId), JSON.stringify({ model, effort, webSearch })); } catch { /* Preferences remain active for this session. */ }
+  }, [activeStoreId, effort, loadedStoreId, model, userId, webSearch]);
 
   const currentModel = useMemo(() => models.find((item) => item.id === model) || models[0], [model]);
   const effortIndex = Math.max(0, efforts.findIndex((item) => item.id === effort));
   const busy = sending || preparing;
+  const visibleHistory = useMemo(() => {
+    const query = historySearch.trim().toLocaleLowerCase();
+    return history.filter((conversation) => Boolean(conversation.archivedAt) === (historyView === "archived") && (!query || conversation.title.toLocaleLowerCase().includes(query) || conversation.messages.some((message) => message.content.toLocaleLowerCase().includes(query))));
+  }, [history, historySearch, historyView]);
 
   useEffect(() => {
     if (!immersive) return;
@@ -187,6 +198,28 @@ export default function AiChatPage() {
     });
   }
 
+  function persistHistory(next: ChatConversation[]) {
+    setHistory(next);
+    if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory when local storage is full. */ }
+  }
+
+  function togglePinnedConversation(id: string) {
+    persistHistory(history.map((conversation) => conversation.id === id ? { ...conversation, pinned: !conversation.pinned } : conversation).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt)));
+  }
+
+  function toggleArchivedConversation(id: string) {
+    persistHistory(history.map((conversation) => conversation.id === id ? { ...conversation, archivedAt: conversation.archivedAt ? null : new Date().toISOString() } : conversation));
+  }
+
+  function deleteHistoryConversation() {
+    if (!deleteHistoryId) return;
+    persistHistory(history.filter((conversation) => conversation.id !== deleteHistoryId));
+    if (activeConversationId === deleteHistoryId) {
+      setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError("");
+    }
+    setDeleteHistoryId("");
+  }
+
   function startNewChat() {
     saveCurrentConversation();
     setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setMessages([]); setDraft(""); setError("");
@@ -198,11 +231,7 @@ export default function AiChatPage() {
   }
 
   function changeConversationCategory(id: string, nextCategory: ChatCategory) {
-    setHistory((current) => {
-      const next = current.map((item) => item.id === id ? { ...item, category: nextCategory } : item);
-      if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Retain the update for this session. */ }
-      return next;
-    });
+    persistHistory(history.map((item) => item.id === id ? { ...item, category: nextCategory } : item));
     if (id === activeConversationId) setCategory(nextCategory);
   }
 
@@ -217,7 +246,7 @@ export default function AiChatPage() {
     try {
       const response = await fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/ai/chat`, {
         method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey, model, reasoningEffort: effort, messages: [...messages, userMessage].map(({ role, content: messageContent }) => ({ role, content: messageContent })) }),
+        body: JSON.stringify({ apiKey, model, reasoningEffort: effort, webSearch, messages: [...messages, userMessage].map(({ role, content: messageContent }) => ({ role, content: messageContent })) }),
       });
       if (!response.ok) {
         const result = await response.json().catch(() => ({})) as { error?: string };
@@ -255,6 +284,15 @@ export default function AiChatPage() {
         }
       }
       if (!answer.trim()) throw new Error("模型没有返回文本内容，请检查所选模型和账号权限。");
+      let sources: ChatSource[] = [];
+      try {
+        const encodedSources = response.headers.get("X-Web-Search-Sources");
+        if (encodedSources) {
+          const decoded: unknown = JSON.parse(decodeURIComponent(encodedSources));
+          if (Array.isArray(decoded)) sources = decoded.filter((source): source is ChatSource => Boolean(source) && typeof source.title === "string" && typeof source.url === "string" && ["http:", "https:"].includes(new URL(source.url).protocol));
+        }
+      } catch { /* A malformed optional citations header does not discard the answer. */ }
+      setMessages([...nextMessages.slice(0, -1), { ...assistantMessage, content: answer, ...(sources.length ? { sources } : {}) }]);
       setConfigured(true);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "AI 回复失败，请重试。";
@@ -269,7 +307,7 @@ export default function AiChatPage() {
     if (!draft.trim() || busy) return;
     if (mode !== "cloud" || !activeStoreId) { setError("AI 聊天需要先切换到云端店铺。"); return; }
     setPreparing(true); setError("");
-    notifyFeedback({ kind: "info", title: "正在发送", description: "正在安全连接 AI 服务…" });
+    notifyFeedback({ kind: "info", title: webSearch ? "正在联网搜索" : "正在发送", description: webSearch ? "正在检索网页并安全连接 AI 服务…" : "正在安全连接 AI 服务…" });
     try {
       const key = await getCachedDeepSeekKey(activeStoreId);
       if (key) await sendWithKey(key);
@@ -317,7 +355,7 @@ export default function AiChatPage() {
         </div>
       </header>
       <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 md:py-6">
-        {mode === "cloud" && activeStoreId && loadedStoreId !== activeStoreId ? <p role="status" className="py-12 text-center text-xs text-muted-foreground">正在读取这台设备的聊天内容…</p> : mode !== "cloud" ? <div className="mx-auto max-w-md rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-5 text-center"><KeyRound size={23} className="mx-auto text-primary"/><h3 className="mt-3 text-sm font-semibold">先切换到云端店铺</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">自由聊天使用当前店铺保存的 DeepSeek 密钥；不会读取店铺经营数据。</p></div> : !configured && messages.length === 0 ? <div className="mx-auto max-w-xl py-12 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">想聊点什么？</h3><p className="mt-1 text-xs text-muted-foreground">先到 AI 设置保存 DeepSeek Key，就可以开始自由对话。</p><Link href="/ai-settings" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"><KeyRound size={15}/>配置 AI 密钥</Link></div> : messages.length === 0 ? <div className="mx-auto max-w-2xl py-10 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">随心开始一段对话</h3><p className="mt-1 text-xs text-muted-foreground">可以问问题、聊兴趣、写故事、头脑风暴，或试试不同模型与推理强度。</p><div className="mt-5 flex flex-wrap justify-center gap-2">{["讲个短一点的科幻故事", "给我设计一个周末小游戏", "解释一下为什么天空是蓝色的", "来一轮脑筋急转弯"].map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)} className="rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-[var(--mc-tint-blue)] hover:text-primary">{prompt}</button>)}</div></div> : messages.map((message) => <article key={message.id} className={`group flex gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`${message.role === "user" ? "max-w-[92%]" : "w-full max-w-full sm:w-auto sm:max-w-[82%]"} min-w-0 rounded-2xl px-3.5 py-3 sm:px-4 ${message.role === "user" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md border border-border bg-[var(--mc-tint-blue)]/45 text-foreground"}`}>{message.role === "assistant" && <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground"><Bot size={12}/>DeepSeek · {message.model || model}</div>}{message.role === "assistant" ? message.content ? <MarkdownContent content={message.content} className="text-base leading-7"/>: sending ? <span className="py-1"><AiStreamStatus active hasText={false}/></span> : <p className="text-xs text-muted-foreground">暂无回复内容</p> : <p className="whitespace-pre-wrap break-words text-base leading-7">{message.content}</p>}{message.role === "assistant" && message.content && <button type="button" onClick={() => void copyMessage(message)} className="mt-2 flex min-h-7 items-center gap-1 text-[10px] text-muted-foreground opacity-70 transition-opacity hover:text-primary group-hover:opacity-100">{copiedId === message.id ? <Check size={12}/> : <Copy size={12}/>}{copiedId === message.id ? "已复制" : "复制回复"}</button>}</div></article>)}
+        {mode === "cloud" && activeStoreId && loadedStoreId !== activeStoreId ? <p role="status" className="py-12 text-center text-xs text-muted-foreground">正在读取这台设备的聊天内容…</p> : mode !== "cloud" ? <div className="mx-auto max-w-md rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-5 text-center"><KeyRound size={23} className="mx-auto text-primary"/><h3 className="mt-3 text-sm font-semibold">先切换到云端店铺</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">自由聊天使用当前店铺保存的 DeepSeek 密钥；不会读取店铺经营数据。</p></div> : !configured && messages.length === 0 ? <div className="mx-auto max-w-xl py-12 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">想聊点什么？</h3><p className="mt-1 text-xs text-muted-foreground">先到 AI 设置保存 DeepSeek Key，就可以开始自由对话。</p><Link href="/ai-settings" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"><KeyRound size={15}/>配置 AI 密钥</Link></div> : messages.length === 0 ? <div className="mx-auto max-w-2xl py-10 text-center"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={24}/></span><h3 className="mt-4 text-base font-semibold">随心开始一段对话</h3><p className="mt-1 text-xs text-muted-foreground">可以问问题、聊兴趣、写故事、头脑风暴，或试试不同模型与推理强度。</p><div className="mt-5 flex flex-wrap justify-center gap-2">{["讲个短一点的科幻故事", "给我设计一个周末小游戏", "解释一下为什么天空是蓝色的", "来一轮脑筋急转弯"].map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)} className="rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-[var(--mc-tint-blue)] hover:text-primary">{prompt}</button>)}</div></div> : messages.map((message) => <article key={message.id} className={`group flex gap-2.5 ${message.role === "user" ? "justify-end" : "justify-start"}`}><div className={`${message.role === "user" ? "max-w-[92%]" : "w-full max-w-full sm:w-auto sm:max-w-[82%]"} min-w-0 rounded-2xl px-3.5 py-3 sm:px-4 ${message.role === "user" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md border border-border bg-[var(--mc-tint-blue)]/45 text-foreground"}`}>{message.role === "assistant" && <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground"><Bot size={12}/>DeepSeek · {message.model || model}</div>}{message.role === "assistant" ? message.content ? <MarkdownContent content={message.content} className="text-base leading-7"/>: sending ? <span className="py-1"><AiStreamStatus active hasText={false}/></span> : <p className="text-xs text-muted-foreground">暂无回复内容</p> : <p className="whitespace-pre-wrap break-words text-base leading-7">{message.content}</p>}{message.sources && message.sources.length > 0 && <div className="mt-3 border-t border-border/70 pt-2"><p className="mb-1.5 text-[10px] font-semibold text-muted-foreground">联网参考来源</p><div className="space-y-1">{message.sources.map((source, index) => <a key={`${source.url}-${index}`} href={source.url} target="_blank" rel="noreferrer" className="block truncate text-[11px] text-primary hover:underline">[{index + 1}] {source.title}</a>)}</div></div>}{message.role === "assistant" && message.content && <button type="button" onClick={() => void copyMessage(message)} className="mt-2 flex min-h-7 items-center gap-1 text-[10px] text-muted-foreground opacity-70 transition-opacity hover:text-primary group-hover:opacity-100">{copiedId === message.id ? <Check size={12}/> : <Copy size={12}/>}{copiedId === message.id ? "已复制" : "复制回复"}</button>}</div></article>)}
         {error && <p role="alert" className="mx-auto flex max-w-2xl items-start gap-2 rounded-xl bg-[var(--mc-tint-red)] p-3 text-xs leading-5 text-[var(--mc-color-danger)]"><CircleAlert size={15} className="mt-0.5 shrink-0"/>{error}</p>}
         <div ref={endRef}/>
       </div>
@@ -326,7 +364,7 @@ export default function AiChatPage() {
           <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleInputKeyDown} disabled={busy || mode !== "cloud"} rows={2} placeholder={mode !== "cloud" ? "切换到云端店铺后开始聊天…" : "发消息给 DeepSeek…"} className="min-h-[112px] max-h-40 resize-none rounded-2xl border-border bg-background py-3 pb-14 pr-3 text-sm leading-6"/>
           <div className="ai-chat-composer-footer absolute bottom-2 left-3 right-3 z-20 flex min-w-0 items-center gap-2">
             <span className="shrink-0 text-[10px] text-muted-foreground">Enter 发送</span>
-            <span className="ai-chat-composer-mode min-w-0 flex-1 truncate text-[10px] text-muted-foreground" title={`${currentModel.name} · ${category} · ${efforts.find((item) => item.id === effort)?.label}`}>{currentModel.name.replace("DeepSeek ", "")} · {efforts.find((item) => item.id === effort)?.label}</span>
+            <span className="ai-chat-composer-mode min-w-0 flex-1 truncate text-[10px] text-muted-foreground" title={`${currentModel.name} · ${category} · ${efforts.find((item) => item.id === effort)?.label} · ${webSearch ? "联网搜索已开启" : "联网搜索已关闭"}`}>{currentModel.name.replace("DeepSeek ", "")} · {efforts.find((item) => item.id === effort)?.label}{webSearch ? " · 联网" : ""}</span>
             <Button type="button" variant="outline" aria-label="更多聊天设置" aria-expanded={moreOpen} aria-controls="ai-chat-more-settings" onClick={() => setMoreOpen((open) => !open)} className="h-8 shrink-0 whitespace-nowrap rounded-xl px-2.5 text-[11px]"><SlidersHorizontal size={14}/>更多<ChevronDown size={13} className={`transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`}/></Button>
             <Button type="submit" aria-label={busy ? "正在发送消息" : "发送消息"} disabled={busy || !draft.trim() || mode !== "cloud"} className="size-10 shrink-0 rounded-xl p-0 transition-all duration-200 active:scale-90 disabled:opacity-60">{busy ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={16} className="transition-transform duration-200 group-hover:translate-x-0.5"/>}</Button>
             {moreOpen && <div id="ai-chat-more-settings" className="ai-chat-more-panel space-y-3 rounded-2xl border border-border bg-[var(--mc-tint-blue)]/80 p-3 shadow-[0_18px_46px_rgba(31,57,82,.18)] backdrop-blur-2xl" aria-label="更多聊天设置">
@@ -334,6 +372,10 @@ export default function AiChatPage() {
                 <AppSelect aria-label="选择模型" value={model} disabled={busy} onChange={(event) => setModel(event.target.value as ModelId)} className="h-9 min-w-0 rounded-xl border border-border bg-background px-2.5 text-xs font-medium sm:px-3 sm:text-sm"><option value="deepseek-flash">V4.1 Flash</option><option value="deepseek-v4-pro">V4 Pro</option></AppSelect>
                 <AppSelect aria-label="聊天分类" value={category} disabled={busy} onChange={(event) => setCategory(event.target.value as ChatCategory)} className="h-9 min-w-0 rounded-xl border border-border bg-background px-2.5 text-xs font-medium"><option value="未分类">未分类</option>{chatCategories.filter((item) => item !== "未分类").map((item) => <option key={item} value={item}>{item}</option>)}</AppSelect>
               </div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-2">
+                <input aria-label="启用联网搜索" type="checkbox" checked={webSearch} disabled={busy} onChange={(event) => setWebSearch(event.target.checked)} className="size-4 accent-primary"/>
+                <span className="min-w-0 flex-1"><span className="block text-xs font-medium">联网搜索</span><span className="block text-[10px] leading-4 text-muted-foreground">检索实时网页并附来源；DeepSeek Search 可能产生额外费用</span></span>
+              </label>
               <fieldset disabled={busy}>
                 <legend className="mb-1.5 flex w-full items-center justify-between text-[10px] font-medium text-muted-foreground"><span>推理强度</span><span>{efforts.find((item) => item.id === effort)?.detail}</span></legend>
                 <div className="reasoning-control relative grid grid-cols-4 rounded-xl border border-border bg-background/80 p-1" data-effort={effort} role="group" aria-label="推理强度">
@@ -349,8 +391,45 @@ export default function AiChatPage() {
         </div>
       </form>
     </section>
-    <Dialog open={historyOpen} onOpenChange={setHistoryOpen}><DialogContent className="max-h-[min(82dvh,720px)] overflow-hidden rounded-[24px] border border-border bg-card p-0 sm:max-w-xl"><DialogHeader className="border-b border-border px-5 py-4"><DialogTitle>聊天历史</DialogTitle><DialogDescription>每次进入聊天都会开启新对话，历史记录仅保存在这台设备和当前店铺。</DialogDescription></DialogHeader><div className="max-h-[60dvh] space-y-2 overflow-y-auto p-3 sm:p-4">{history.length === 0 ? <div className="py-12 text-center text-sm text-muted-foreground">还没有保存的聊天记录</div> : history.map((conversation) => <div key={conversation.id} className="flex items-center gap-2 rounded-2xl border border-border bg-background p-3"><button type="button" onClick={() => openConversation(conversation)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-medium">{conversation.title}</span><span className="mt-1 block text-xs text-muted-foreground">{conversation.category} · {new Date(conversation.updatedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · {conversation.messages.filter((message) => message.role === "user").length} 条消息</span></button><AppSelect aria-label={`更改“${conversation.title}”分类`} value={conversation.category} onChange={(event) => changeConversationCategory(conversation.id, event.target.value as ChatCategory)} className="h-9 w-24 shrink-0 rounded-xl border border-border bg-card px-2 text-xs">{chatCategories.map((item) => <option key={item} value={item}>{item}</option>)}</AppSelect></div>)}</div><div className="flex justify-end border-t border-border p-3"><Button onClick={() => { setHistoryOpen(false); startNewChat(); }}><Plus size={16}/>新建聊天</Button></div></DialogContent></Dialog>
+    <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+      <DialogContent className="max-h-[min(86dvh,760px)] overflow-hidden rounded-[24px] border border-border bg-card p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b border-border px-5 py-4">
+          <DialogTitle>聊天历史</DialogTitle>
+          <DialogDescription>记录仅保存在这台设备和当前店铺。置顶、归档和删除会立即保存。</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 border-b border-border p-3 sm:p-4">
+          <label className="relative block">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
+            <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="搜索标题或聊天内容" aria-label="搜索聊天历史" className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary"/>
+          </label>
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1">
+            <button type="button" aria-pressed={historyView === "active"} onClick={() => setHistoryView("active")} className={`min-h-9 rounded-lg px-3 text-xs font-medium ${historyView === "active" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>当前对话 · {history.filter((item) => !item.archivedAt).length}</button>
+            <button type="button" aria-pressed={historyView === "archived"} onClick={() => setHistoryView("archived")} className={`min-h-9 rounded-lg px-3 text-xs font-medium ${historyView === "archived" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>已归档 · {history.filter((item) => Boolean(item.archivedAt)).length}</button>
+          </div>
+        </div>
+        <div className="max-h-[52dvh] space-y-2 overflow-y-auto p-3 sm:p-4">
+          {visibleHistory.length === 0 ? <div className="py-12 text-center text-sm text-muted-foreground">{history.length === 0 ? "还没有保存的聊天记录" : historyView === "archived" ? "没有匹配的归档对话" : "没有匹配的当前对话"}</div> : visibleHistory.map((conversation) => (
+            <article key={conversation.id} className="rounded-2xl border border-border bg-background p-3">
+              <div className="flex items-start gap-2">
+                <button type="button" onClick={() => openConversation(conversation)} className="min-w-0 flex-1 text-left">
+                  <span className="flex items-center gap-1.5 truncate text-sm font-medium">{conversation.pinned && <Pin size={13} className="shrink-0 text-primary"/>}{conversation.title}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">{conversation.category} · {new Date(conversation.updatedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · {conversation.messages.filter((message) => message.role === "user").length} 条消息</span>
+                </button>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <Button variant="ghost" size="icon-sm" aria-label={conversation.pinned ? "取消置顶" : "置顶对话"} title={conversation.pinned ? "取消置顶" : "置顶对话"} onClick={() => togglePinnedConversation(conversation.id)} className={conversation.pinned ? "text-primary" : "text-muted-foreground"}><Pin size={15}/></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={conversation.archivedAt ? "恢复对话" : "归档对话"} title={conversation.archivedAt ? "恢复对话" : "归档对话"} onClick={() => toggleArchivedConversation(conversation.id)} className="text-muted-foreground">{conversation.archivedAt ? <ArchiveRestore size={15}/> : <Archive size={15}/>}</Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="删除对话" title="删除对话" onClick={() => setDeleteHistoryId(conversation.id)} className="text-muted-foreground hover:text-[var(--mc-color-danger)]"><Trash2 size={15}/></Button>
+                </div>
+              </div>
+              <AppSelect aria-label={`更改“${conversation.title}”分类`} value={conversation.category} onChange={(event) => changeConversationCategory(conversation.id, event.target.value as ChatCategory)} className="mt-2 h-8 w-full rounded-xl border border-border bg-card px-2 text-xs sm:w-40">{chatCategories.map((item) => <option key={item} value={item}>{item}</option>)}</AppSelect>
+            </article>
+          ))}
+        </div>
+        <div className="flex justify-end border-t border-border p-3"><Button onClick={() => { setHistoryOpen(false); startNewChat(); }}><Plus size={16}/>新建聊天</Button></div>
+      </DialogContent>
+    </Dialog>
     {activeStoreId && <DeepSeekUnlockDialog storeId={activeStoreId} open={unlockOpen} onOpenChange={setUnlockOpen} onUnlock={(apiKey) => sendWithKey(apiKey)}/>}
+    <AlertDialog open={Boolean(deleteHistoryId)} onOpenChange={(open) => { if (!open) setDeleteHistoryId(""); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除这段历史对话？</AlertDialogTitle><AlertDialogDescription>这会从当前设备和店铺的本地历史中永久删除，无法撤销。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); deleteHistoryConversation(); }}>删除对话</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     <AlertDialog open={clearOpen} onOpenChange={setClearOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>清空这段聊天？</AlertDialogTitle><AlertDialogDescription>当前浏览器保存的聊天内容会被删除，不能撤回。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); clearChat(); }}>清空聊天</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
   return immersive ? createPortal(page, document.body) : page;
