@@ -139,9 +139,9 @@ export default function MotionSettingsPage() {
         >
           <div className="grid gap-3 sm:grid-cols-2">
             {([
-              { id: "glass", title: "凝态玻璃通知", description: "图标、标题与时间、正文按层次清晰展示。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
-              { id: "capsule", title: "紧凑玻璃通知", description: "沿用相同信息排版，缩小卡片与图标。", previewTitle: "已保存", previewDescription: "商品资料已同步。" },
-              { id: "adaptive", title: "设备适配玻璃通知", description: "桌面与手机自动适配卡片宽度。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
+              { id: "glass", title: "凝态玻璃通知", description: "完整展示图标、标题、时间和正文。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
+              { id: "capsule", title: "紧凑玻璃通知", description: "缩小图标和卡片高度，正文单行收纳。", previewTitle: "已保存", previewDescription: "商品资料已同步。" },
+              { id: "adaptive", title: "设备适配玻璃通知", description: "通知从屏幕下方出现；手机位于底栏上方，桌面停靠右下角。", previewTitle: "保存成功", previewDescription: "商品资料已同步到云端。" },
             ] as const).map((option) => {
               const selected = notificationStyle === option.id;
               return (
@@ -160,7 +160,7 @@ export default function MotionSettingsPage() {
                   {selected && <span className="absolute right-3 top-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground"><Check size={12} /></span>}
                   <span className="text-sm font-semibold text-foreground">{option.title}</span>
                   <span className="text-xs leading-5 text-muted-foreground">{option.description}</span>
-                  <span className="feedback-toast-preview">
+                  <span className={`feedback-toast-preview${option.id === "adaptive" ? " feedback-toast-preview-adaptive" : ""}`}>
                     <span className={`feedback-toast feedback-toast-success feedback-toast-${option.id}`}>
                       <span className="feedback-toast-icon"><Check size={15} /></span>
                       <span className="feedback-toast-copy">

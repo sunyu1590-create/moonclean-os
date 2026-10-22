@@ -40,15 +40,15 @@ test("AI 聊天移动端填满导航上方空间，沉浸模式实际呈现内�
   await expect(chat).toBeVisible();
 });
 
-test("移动端和桌面通知都从应用顶栏下方出现", async ({ page }) => {
+test("标准通知显示在顶栏下方，设备适配通知显示在底栏上方", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
-  await page.addInitScript(() => localStorage.setItem("moonclean-notification-style-v1", "adaptive"));
+  await page.addInitScript(() => localStorage.setItem("moonclean-notification-style-v1", "glass"));
   await page.goto("/settings");
   await page.waitForTimeout(200); // Let the feedback event listener subscribe after hydration.
 
   for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
     await page.setViewportSize(viewport);
-    const title = `通知定位 ${viewport.width}`;
+    const title = `顶部通知 ${viewport.width}`;
     await page.evaluate((toastTitle) => window.dispatchEvent(new CustomEvent("moonclean:feedback", { detail: { kind: "info", title: toastTitle } })), title);
     const toast = page.locator(".feedback-toast").filter({ hasText: title });
     const toolbar = page.locator(".mc-toolbar");
@@ -58,6 +58,27 @@ test("移动端和桌面通知都从应用顶栏下方出现", async ({ page }) 
       const toolbarBounds = await toolbar.boundingBox();
       return toastBounds && toolbarBounds ? Math.round(toastBounds.y - toolbarBounds.y - toolbarBounds.height) : -1000;
     }).toBeGreaterThanOrEqual(10);
+    await toast.getByRole("button", { name: "关闭通知" }).click();
+  }
+
+  await page.evaluate(() => localStorage.setItem("moonclean-notification-style-v1", "adaptive"));
+  await page.reload();
+  await page.waitForTimeout(200);
+  for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    const title = `底部通知 ${viewport.width}`;
+    await page.evaluate((toastTitle) => window.dispatchEvent(new CustomEvent("moonclean:feedback", { detail: { kind: "success", title: toastTitle } })), title);
+    const toast = page.locator(".feedback-toast").filter({ hasText: title });
+    await expect(toast).toBeVisible();
+    const toastBounds = await toast.boundingBox();
+    expect(toastBounds).not.toBeNull();
+    if (viewport.width < 768) {
+      const navBounds = await page.locator(".mobile-primary-nav").boundingBox();
+      expect(navBounds).not.toBeNull();
+      expect(toastBounds!.y + toastBounds!.height).toBeLessThan(navBounds!.y - 4);
+    } else {
+      expect(toastBounds!.y + toastBounds!.height).toBeLessThan(viewport.height - 12);
+    }
     await toast.getByRole("button", { name: "关闭通知" }).click();
   }
 });
