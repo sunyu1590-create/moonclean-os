@@ -65,6 +65,7 @@ import { PerformanceDebugCapsule } from "@/components/performance-debug-capsule"
 import { FeedbackViewport } from "@/components/feedback-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMotionPreferences } from "@/components/motion-preferences";
+import { isRestorableAppRoute, LAST_VISITED_ROUTE_COOKIE } from "@/lib/last-visited-route";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
@@ -230,6 +231,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.theme = nightMode ? "night" : "day";
     document.documentElement.style.colorScheme = nightMode ? "dark" : "light";
   }, [nightMode, themeReady]);
+  useEffect(() => {
+    if (!isRestorableAppRoute(pathname)) return;
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    try {
+      document.cookie = `${LAST_VISITED_ROUTE_COOKIE}=${encodeURIComponent(pathname)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+    } catch {
+      // Keep navigation working if browser cookie storage is unavailable.
+    }
+  }, [pathname]);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
     try {
