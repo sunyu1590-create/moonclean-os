@@ -28,7 +28,7 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
   const [error, setError] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
   const contextKey = JSON.stringify(context);
-  const cacheKey = activeStoreId ? `moonclean-ai-insight-v1:${activeStoreId}:${feature}` : "";
+  const cacheKey = activeStoreId ? `moonclean-ai-insight-v2:${activeStoreId}:${feature}` : "";
 
   async function generate(apiKey?: string) {
     if (mode !== "cloud" || !activeStoreId || busy) return;

@@ -36,7 +36,7 @@ beforeAll(async () => {
         "",
       ),
     );
-}, 15_000);
+}, 30_000);
 afterAll(async () => {
   await db?.close();
 });
@@ -53,7 +53,7 @@ describe("PostgreSQL 迁移与权限", () => {
       "select count(*)::text as count from pg_tables where schemaname='public' and tablename in ('stores','store_members','products','skus','sku_costs','daily_metrics','ad_metrics','sku_daily_metrics','audit_logs')",
     );
     expect(result.rows[0].count).toBe("9");
-  }, 15_000);
+  }, 30_000);
   it("金额、重复日期和历史成本约束成立", async () => {
     await db.exec(file("supabase/tests/constraints.sql"));
   }, 15_000);

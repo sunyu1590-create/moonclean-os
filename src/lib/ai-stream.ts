@@ -12,6 +12,7 @@ export function streamDeepSeekText(
   upstream: Response,
   onComplete?: (result: StreamCompletion) => Record<string, unknown> | void | Promise<Record<string, unknown> | void>,
   onError?: (error: unknown) => Promise<void>,
+  finalizeContent?: (content: string) => string,
 ) {
   let readerRef: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let cancelled = false;
@@ -43,7 +44,7 @@ export function streamDeepSeekText(
                   const event = JSON.parse(data) as { choices?: { delta?: { content?: unknown } }[]; usage?: DeepSeekUsage; error?: { message?: string } };
                   if (event.error?.message) throw new Error(event.error.message);
                   const delta = event.choices?.[0]?.delta?.content;
-                  if (typeof delta === "string" && delta) { content += delta; emit({ delta }); }
+                  if (typeof delta === "string" && delta) { content += delta; if (!finalizeContent) emit({ delta }); }
                   if (event.usage) usage = event.usage;
                 } catch (cause) {
                   if (cause instanceof SyntaxError) continue;
@@ -54,8 +55,10 @@ export function streamDeepSeekText(
             if (done) ended = true;
           }
           if (cancelled) return;
-          if (!content.trim()) throw new Error("AI 未返回有效内容，请稍后重试。");
-          const meta = await onComplete?.({ content: content.trim(), usage });
+          const finalContent = finalizeContent ? finalizeContent(content.trim()) : content.trim();
+          if (!finalContent) throw new Error("AI 未返回有效内容，请稍后重试。");
+          if (finalizeContent) emit({ delta: finalContent });
+          const meta = await onComplete?.({ content: finalContent, usage });
           emit({ done: true, ...meta });
         } catch (cause) {
           if (!cancelled) {
