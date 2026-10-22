@@ -34,4 +34,38 @@ describe("云端 Repository", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("并发保存多条日数据时将请求限制在四个以内", async () => {
+    const original = demoData();
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const fetchMock = vi.fn(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const next = {
+      ...original,
+      daily: [
+        ...original.daily,
+        ...Array.from({ length: 8 }, (_, index) => ({
+          ...original.daily[0],
+          id: `added-row-${index}`,
+          date: `2026-08-${String(index + 1).padStart(2, "0")}`,
+        })),
+      ],
+    };
+
+    await new SupabaseRepository().save(next, original);
+
+    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(maxInFlight).toBeGreaterThan(1);
+    expect(maxInFlight).toBeLessThanOrEqual(4);
+  });
 });

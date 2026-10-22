@@ -23,18 +23,23 @@ export async function POST(request: Request, context: Context) {
   try {
     const row = taskSchema.parse(await request.json());
     const sourceTables = { notes:"operation_notes", experiments:"operation_experiments", competitors:"competitors", "service-cases":"service_cases", "copilot-conversations":"copilot_conversations" } as const;
-    if (row.sourceModule && row.sourceId) {
-      const { data: source, error: sourceError } = await result.auth!.supabase.from(sourceTables[row.sourceModule]).select("id").eq("store_id",result.storeId!).eq("id",row.sourceId).maybeSingle();
-      if (sourceError) throw sourceError;
-      if (!source) return NextResponse.json({error:"关联来源不存在或不属于当前店铺"},{status:400});
-    }
-    if (row.recommendationKey) {
-      const { data: existing, error: lookupError } = await result.auth!.supabase.from("operation_tasks")
+    const sourcePromise = row.sourceModule && row.sourceId
+      ? result.auth!.supabase.from(sourceTables[row.sourceModule]).select("id").eq("store_id",result.storeId!).eq("id",row.sourceId).maybeSingle()
+      : null;
+    const recommendationPromise = row.recommendationKey
+      ? result.auth!.supabase.from("operation_tasks")
         .select("id,title,detail,priority,status,due_date,created_at,updated_at,completed_at,recommendation_key,recommendation_baseline,source_module,source_id")
-        .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle();
-      if (lookupError) throw lookupError;
-      if (existing) return NextResponse.json(existing, { status: 200 });
-    }
+        .eq("store_id", result.storeId!).eq("recommendation_key", row.recommendationKey).in("status", ["todo", "doing"]).maybeSingle()
+      : null;
+    const [sourceResult, recommendationResult] = await Promise.all([
+      sourcePromise,
+      recommendationPromise,
+    ]);
+    if (sourceResult?.error) throw sourceResult.error;
+    if (sourcePromise && !sourceResult?.data)
+      return NextResponse.json({error:"关联来源不存在或不属于当前店铺"},{status:400});
+    if (recommendationResult?.error) throw recommendationResult.error;
+    if (recommendationResult?.data) return NextResponse.json(recommendationResult.data, { status: 200 });
     const { data, error } = await result.auth!.supabase.from("operation_tasks").insert({
       store_id:result.storeId!,created_by:result.auth!.user.id,title:row.title,
       detail:row.detail,priority:row.priority,status:row.status,due_date:row.dueDate,

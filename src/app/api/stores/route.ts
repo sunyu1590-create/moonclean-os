@@ -10,16 +10,20 @@ const storeSchema = z.object({
 export async function GET() {
   const auth = await requireUser();
   if (!auth.ok) return auth.error;
-  const { data: stores, error } = await auth.supabase
-    .from("stores")
-    .select("id,name,platform,currency,timezone,status,created_at")
-    .eq("status", "active")
-    .order("created_at");
+  const [storesResult, membersResult] = await Promise.all([
+    auth.supabase
+      .from("stores")
+      .select("id,name,platform,currency,timezone,status,created_at")
+      .eq("status", "active")
+      .order("created_at"),
+    auth.supabase
+      .from("store_members")
+      .select("store_id,role")
+      .eq("user_id", auth.user.id),
+  ]);
+  const { data: stores, error } = storesResult;
   if (error) return apiError(error);
-  const { data: members, error: memberError } = await auth.supabase
-    .from("store_members")
-    .select("store_id,role")
-    .eq("user_id", auth.user.id);
+  const { data: members, error: memberError } = membersResult;
   if (memberError) return apiError(memberError);
   const roles = new Map((members || []).map((m) => [m.store_id, m.role]));
   return NextResponse.json({

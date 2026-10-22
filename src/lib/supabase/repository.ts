@@ -59,29 +59,43 @@ export class SupabaseRepository implements DataRepository {
     const endpoint = `/api/stores/${id}/mutate`;
     const send = (input: unknown) =>
       request(endpoint, { method: "POST", body: JSON.stringify(input) });
+    const sendMany = async (inputs: unknown[]) => {
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < inputs.length) {
+          const index = cursor++;
+          await send(inputs[index]);
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(4, inputs.length) }, () => worker()),
+      );
+    };
     const oldProducts = new Map(previous.products.map((p) => [p.id, p]));
     const newProducts = new Map(data.products.map((p) => [p.id, p]));
-    for (const old of previous.products) {
-      if (!newProducts.has(old.id))
-        await send({ kind: "archiveProduct", productId: old.id });
-    }
-    for (const product of data.products) {
+    await sendMany(previous.products
+      .filter((old) => !newProducts.has(old.id))
+      .map((old) => ({ kind: "archiveProduct", productId: old.id })));
+    await sendMany(data.products.flatMap((product) => {
       const old = oldProducts.get(product.id);
-      if (!old || productChanged(old, product))
-        await send({ kind: "saveProduct", product });
-    }
+      return !old || productChanged(old, product)
+        ? [{ kind: "saveProduct", product }]
+        : [];
+    }));
     const oldDaily = new Map(previous.daily.map((r) => [r.id, r]));
-    for (const row of data.daily) {
+    await sendMany(data.daily.flatMap((row) => {
       const old = oldDaily.get(row.id);
-      if (!old || JSON.stringify(old) !== JSON.stringify(row))
-        await send({ kind: "saveDaily", row, originalDate: old?.date });
-    }
+      return !old || JSON.stringify(old) !== JSON.stringify(row)
+        ? [{ kind: "saveDaily", row, originalDate: old?.date }]
+        : [];
+    }));
     const oldAds = new Map(previous.advertising.map((r) => [r.id, r]));
-    for (const row of data.advertising) {
+    await sendMany(data.advertising.flatMap((row) => {
       const old = oldAds.get(row.id);
-      if (!old || JSON.stringify(old) !== JSON.stringify(row))
-        await send({ kind: "saveAd", row, originalDate: old?.date });
-    }
+      return !old || JSON.stringify(old) !== JSON.stringify(row)
+        ? [{ kind: "saveAd", row, originalDate: old?.date }]
+        : [];
+    }));
     if (settingsChanged(previous, data))
       await send({
         kind: "saveSettings",

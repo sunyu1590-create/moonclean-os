@@ -47,9 +47,18 @@ export async function GET(
       "sku_daily_metrics",
       "product_daily_sales",
     ] as const;
-    const [storeResult, results] = await Promise.all([
+    const externalPromise = Promise.all([
+      loadRows<Parameters<typeof mergeExternalDaily>[1][number]>("external_orders", "id,connection_id,placed_at,gross_sales,status,is_demo"),
+      loadRows<Parameters<typeof mergeExternalDaily>[2][number]>("external_refunds", "id,order_id,amount,status"),
+      loadRows<{ id:string; name:string; is_demo:boolean }>("external_products", "id,name,is_demo"),
+      loadRows<ExternalCostContext["externalSkus"][number] & {product_id:string;name:string;sku_code:string|null;selling_price:string}>("external_skus", "id,connection_id,external_id,product_id,name,sku_code,selling_price"),
+      loadRows<ExternalCostContext["mappings"][number]>("platform_sku_mappings", "id,external_sku_id,sku_id"),
+      loadRows<ExternalCostContext["items"][number]>("external_order_items", "id,order_id,external_sku_id,quantity,gross_sales"),
+    ] as const);
+    const [storeResult, results, externalResults] = await Promise.all([
       storePromise,
       Promise.all(names.map((name) => loadRows(name, "*"))),
+      externalPromise,
     ]);
     if (storeResult.error) throw storeResult.error;
     const store = storeResult.data;
@@ -64,14 +73,7 @@ export async function GET(
       skuDaily: results[5],
       productSales: results[6],
     } as CloudSnapshot;
-    const [orders, refunds, externalProducts, externalSkus, mappings, externalItems] = await Promise.all([
-      loadRows<Parameters<typeof mergeExternalDaily>[1][number]>("external_orders", "id,connection_id,placed_at,gross_sales,status,is_demo"),
-      loadRows<Parameters<typeof mergeExternalDaily>[2][number]>("external_refunds", "id,order_id,amount,status"),
-      loadRows<{ id:string; name:string; is_demo:boolean }>("external_products", "id,name,is_demo"),
-      loadRows<ExternalCostContext["externalSkus"][number] & {product_id:string;name:string;sku_code:string|null;selling_price:string}>("external_skus", "id,connection_id,external_id,product_id,name,sku_code,selling_price"),
-      loadRows<ExternalCostContext["mappings"][number]>("platform_sku_mappings", "id,external_sku_id,sku_id"),
-      loadRows<ExternalCostContext["items"][number]>("external_order_items", "id,order_id,external_sku_id,quantity,gross_sales"),
-    ]);
+    const [orders, refunds, externalProducts, externalSkus, mappings, externalItems] = externalResults;
     const result = mapCloudSnapshot(snapshot);
     result.daily = mergeExternalDaily(result.daily, orders, refunds, store.timezone,{
       items:externalItems,externalSkus,mappings,
