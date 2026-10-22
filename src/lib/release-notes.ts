@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.31";
+export const APP_VERSION = "1.1.32";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.32",
+    date: "2026-10-22",
+    title: "通知改为凝态玻璃卡片",
+    changes: [
+      "通知采用左侧图标、标题与时间并列、正文在下的卡片排版，并使用柔和半透明玻璃材质。",
+      "移除彩色光晕和外描边；手机、桌面、浅色与深色主题统一适配。",
+    ],
+  },
   {
     version: "1.1.31",
     date: "2026-10-21",

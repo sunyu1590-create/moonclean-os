@@ -55,7 +55,10 @@ export function FeedbackViewport() {
       const Icon = toast.kind === "success" ? Check : toast.kind === "error" ? CircleAlert : Info;
       return <div key={toast.id} className={`feedback-toast feedback-toast-${toast.kind} feedback-toast-${notificationStyle} feedback-toast-motion-${notificationMotion} feedback-toast-speed-${notificationSpeed}${toast.exiting ? " is-exiting" : ""}`} role={toast.kind === "error" ? "alert" : "status"}>
         <span className="feedback-toast-icon"><Icon size={17} /></span>
-        <span className="feedback-toast-copy"><strong>{toast.title}</strong>{toast.description && <small>{toast.description}</small>}</span>
+        <span className="feedback-toast-copy">
+          <span className="feedback-toast-heading"><strong>{toast.title}</strong><time>刚刚</time></span>
+          {toast.description && <small>{toast.description}</small>}
+        </span>
         <button type="button" aria-label="关闭通知" onClick={() => dismiss(toast.id)}><X size={15} /></button>
       </div>;
     })}
