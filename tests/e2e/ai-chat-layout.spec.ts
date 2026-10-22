@@ -40,6 +40,31 @@ test("AI 聊天移动端填满导航上方空间，沉浸模式实际呈现内�
   await expect(chat).toBeVisible();
 });
 
+test("AI 聊天输入框内收纳更多设置并播放模糊放大动画", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("moonclean-motion-level-v1", "standard"));
+  await page.goto("/ai-chat");
+
+  const composerFooter = page.locator(".ai-chat-composer-footer");
+  const more = composerFooter.getByRole("button", { name: "更多聊天设置" });
+  await expect(composerFooter.getByText("Enter 发送")).toBeVisible();
+  await expect(more).toBeVisible();
+  const send = page.getByRole("button", { name: "发送消息" });
+  const moreBounds = await more.boundingBox();
+  const sendBounds = await send.boundingBox();
+  expect(moreBounds).not.toBeNull();
+  expect(sendBounds).not.toBeNull();
+  expect(moreBounds!.x + moreBounds!.width).toBeLessThan(sendBounds!.x);
+
+  await more.click();
+  const panel = page.locator("#ai-chat-more-settings");
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveCSS("animation-name", "ai-chat-more-enter");
+  await expect(panel.getByLabel("选择模型")).toBeVisible();
+  await expect(panel.getByLabel("聊天分类")).toBeVisible();
+});
+
 test("标准通知显示在顶栏下方，设备适配通知显示在底栏上方", async ({ page }) => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "仅在显式本地演示模式运行");
   await page.addInitScript(() => localStorage.setItem("moonclean-notification-style-v1", "glass"));

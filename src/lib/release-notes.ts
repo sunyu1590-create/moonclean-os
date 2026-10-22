@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.33";
+export const APP_VERSION = "1.1.34";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.34",
+    date: "2026-10-22",
+    title: "AI 聊天输入框整合更多设置",
+    changes: [
+      "将发送提示、模型与推理摘要、“更多”和发送键整合到输入框底部一行。",
+      "更多设置面板从输入框右侧模糊放大展开，仍可选择模型、聊天分类和推理强度。",
+      "保留手机与沉浸模式布局，并为设置面板动画和控件位置新增端到端检查。",
+    ],
+  },
   {
     version: "1.1.33",
     date: "2026-10-22",
