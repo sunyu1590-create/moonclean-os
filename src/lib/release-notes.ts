@@ -1,6 +1,17 @@
-export const APP_VERSION = "1.1.36";
+export const APP_VERSION = "1.1.37";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.37",
+    date: "2026-10-22",
+    title: "账号管理与团队成员体验完善",
+    changes: [
+      "账号资料支持直接上传 JPG、PNG、WebP 头像，展示邮箱验证状态，并支持在账号页申请更换登录邮箱。",
+      "增加站内修改密码和邮件重置入口；头像文件限制为 2 MB，并限制上传、删除到当前用户目录。",
+      "团队成员添加流程区分未注册与尚未验证的邮箱，提交时自动清理空格；更新既有成员角色仍走原权限校验。",
+      "新增 Supabase Storage 头像桶与成员账号诊断迁移，不更改业务表结构。",
+    ],
+  },
   {
     version: "1.1.36",
     date: "2026-10-22",

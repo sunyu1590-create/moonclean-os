@@ -14,7 +14,12 @@ export async function GET() {
     .eq("id", auth.user.id)
     .single();
   if (error) return apiError(error);
-  return NextResponse.json({ email: auth.user.email, profile: data });
+  return NextResponse.json({
+    userId: auth.user.id,
+    email: auth.user.email,
+    emailConfirmed: Boolean(auth.user.email_confirmed_at),
+    profile: data,
+  });
 }
 export async function PATCH(request: Request) {
   const crossOrigin=rejectCrossOriginMutation(request);if(crossOrigin)return crossOrigin;

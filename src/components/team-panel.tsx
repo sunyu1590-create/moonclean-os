@@ -103,7 +103,7 @@ export function TeamPanel() {
         <div className="mb-5 grid gap-2 sm:grid-cols-[1fr_130px_auto]">
           <Input
             type="email"
-            placeholder="已验证邮箱的团队成员"
+            placeholder="输入成员注册并验证过的邮箱"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -126,7 +126,7 @@ export function TeamPanel() {
           </Button>
         </div>
         <p className="mb-4 text-xs text-muted-foreground">
-          成员需先注册并验证邮箱。管理员仅能管理编辑者和查看者。
+          成员需先注册并验证邮箱；已添加的成员再次提交会更新其角色。管理员仅能管理编辑者和查看者。
         </p>
         <div className="space-y-2">
           {members.map((member) => (

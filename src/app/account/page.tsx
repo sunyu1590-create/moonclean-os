@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
-import { UserRound, LockKeyhole } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { BadgeCheck, Camera, KeyRound, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +9,38 @@ import { Label } from "@/components/ui/label";
 import { useApp } from "@/components/app-provider";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { notifyFeedback } from "@/lib/feedback";
+
+const AVATAR_BUCKET = "moonclean-avatars";
+
+function avatarObjectPath(url: string, userId: string) {
+  try {
+    const parsed = new URL(url);
+    const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
+    const index = parsed.pathname.indexOf(marker);
+    if (index < 0) return null;
+    const path = decodeURIComponent(parsed.pathname.slice(index + marker.length));
+    return path.startsWith(`${userId}/`) ? path : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AccountPage() {
   const { mode } = useApp();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
+  const [emailConfirmed, setEmailConfirmed] = useState(false);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [nextEmail, setNextEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
   useEffect(() => {
     if (mode !== "cloud") return;
     let active = true;
@@ -24,7 +49,9 @@ export default function AccountPage() {
         const body = await r.json();
         if (!r.ok) throw new Error(body.error);
         if (active) {
+          setUserId(body.userId || "");
           setEmail(body.email || "");
+          setEmailConfirmed(Boolean(body.emailConfirmed));
           setName(body.profile.display_name || "");
           setAvatar(body.profile.avatar_url || "");
         }
@@ -36,105 +63,193 @@ export default function AccountPage() {
       active = false;
     };
   }, [mode]);
+
+  async function saveProfile(nextAvatar = avatar) {
+    const r = await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName: name, avatarUrl: nextAvatar }),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error);
+  }
+
   async function save() {
     setBusy(true);
     setError("");
+    setMessage("");
     try {
-      const r = await fetch("/api/account", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName: name, avatarUrl: avatar }),
-      });
-      const body = await r.json();
-      if (!r.ok) throw new Error(body.error);
-      setMessage("账号资料已保存");
-      notifyFeedback({ kind: "success", title: "账号资料已保存" });
+      await saveProfile();
+      setMessage("个人资料已保存");
+      notifyFeedback({ kind: "success", title: "个人资料已保存" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存失败");
-      notifyFeedback({ kind: "error", title: "账号资料保存失败", description: e instanceof Error ? e.message : "请重试。" });
+      notifyFeedback({ kind: "error", title: "资料保存失败", description: e instanceof Error ? e.message : "请重试。" });
     } finally {
       setBusy(false);
     }
   }
+
+  async function uploadAvatar(file?: File) {
+    if (!file) return;
+    setError("");
+    setMessage("");
+    if (!userId) return setError("账号信息尚未加载完成，请稍后重试。");
+    if (!("image/jpeg" === file.type || "image/png" === file.type || "image/webp" === file.type)) {
+      return setError("头像仅支持 JPG、PNG 或 WebP 格式。");
+    }
+    if (file.size > 2 * 1024 * 1024) return setError("头像文件不能超过 2 MB。");
+
+    setUploading(true);
+    const supabase = createBrowserSupabaseClient();
+    const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+    const path = `${userId}/avatar-${crypto.randomUUID()}.${extension}`;
+    try {
+      const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+      await saveProfile(data.publicUrl);
+      const oldPath = avatarObjectPath(avatar, userId);
+      if (oldPath) await supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
+      setAvatar(data.publicUrl);
+      setMessage("头像已上传并保存");
+      notifyFeedback({ kind: "success", title: "头像已更新" });
+    } catch (cause) {
+      await supabase.storage.from(AVATAR_BUCKET).remove([path]);
+      setError(cause instanceof Error ? cause.message : "头像上传失败，请重试。");
+      notifyFeedback({ kind: "error", title: "头像上传失败", description: cause instanceof Error ? cause.message : "请重试。" });
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
+
+  async function changePassword() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      if (password.length < 8) throw new Error("新密码至少需要 8 位。");
+      if (password !== confirmPassword) throw new Error("两次输入的新密码不一致。");
+      const { error: updateError } = await createBrowserSupabaseClient().auth.updateUser({ password });
+      if (updateError) throw updateError;
+      setPassword("");
+      setConfirmPassword("");
+      setMessage("登录密码已更新。请妥善保管新密码。");
+      notifyFeedback({ kind: "success", title: "登录密码已更新" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "密码更新失败");
+      notifyFeedback({ kind: "error", title: "密码更新失败", description: cause instanceof Error ? cause.message : "请重试。" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function requestEmailChange() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const requested = nextEmail.trim();
+      if (!requested || requested.toLowerCase() === email.toLowerCase()) throw new Error("请输入与当前邮箱不同的新邮箱。");
+      const { error: updateError } = await createBrowserSupabaseClient().auth.updateUser({ email: requested });
+      if (updateError) throw updateError;
+      setNextEmail("");
+      setMessage("邮箱更换验证邮件已发送，请按邮件提示完成确认。");
+      notifyFeedback({ kind: "success", title: "邮箱更换申请已提交", description: "请检查新邮箱中的验证邮件。" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "邮箱更换申请失败");
+      notifyFeedback({ kind: "error", title: "邮箱更换申请失败", description: cause instanceof Error ? cause.message : "请检查邮箱后重试。" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function resetPassword() {
     setBusy(true);
     setError("");
+    setMessage("");
     try {
-      const { error } =
-        await createBrowserSupabaseClient().auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        });
-      if (error) throw error;
+      const { error: resetError } = await createBrowserSupabaseClient().auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      if (resetError) throw resetError;
       setMessage("密码重置邮件已发送，请检查邮箱。");
       notifyFeedback({ kind: "success", title: "重置邮件已发送", description: "请前往邮箱打开密码重置链接。" });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "发送失败");
-      notifyFeedback({ kind: "error", title: "发送失败", description: e instanceof Error ? e.message : "请检查邮箱后重试。" });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "发送失败");
+      notifyFeedback({ kind: "error", title: "发送失败", description: cause instanceof Error ? cause.message : "请检查邮箱后重试。" });
     } finally {
       setBusy(false);
     }
   }
+
   if (mode === "local") return <p>本地演示模式没有云端账号。</p>;
   return (
     <>
-      <PageHead
-        eyebrow="ACCOUNT / 当前账号"
-        title="管理你的账号"
-        description="更新个人资料与登录密码。"
-      />
+      <PageHead eyebrow="ACCOUNT / 当前账号" title="管理你的账号" description="个人资料、登录邮箱与账号安全设置。" />
       <div className="grid max-w-3xl gap-5">
-        <SectionCard
-          title="个人资料"
-          sub={email}
-          action={<UserRound size={19} className="text-primary" />}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
+        <SectionCard title="个人资料" sub="头像与昵称会展示给你所在店铺的团队成员" action={<UserRound size={19} className="text-primary" />}>
+          <div className="mb-5 flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-muted/25 p-4">
+            <div className="relative grid size-[72px] shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-[var(--mc-tint-blue)] text-primary">
+              {avatar ? <Image src={avatar} alt="当前头像" fill unoptimized sizes="72px" className="object-cover" /> : <UserRound size={28} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">账号头像</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">JPG、PNG 或 WebP，最大 2 MB。头像仅用于识别团队成员。</p>
+            </div>
+            <input ref={fileInput} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadAvatar(event.target.files?.[0])} />
+            <Button type="button" variant="outline" disabled={uploading || !userId} onClick={() => fileInput.current?.click()}>
+              <Camera size={15} />{uploading ? "正在上传…" : avatar ? "更换头像" : "上传头像"}
+            </Button>
+          </div>
+          <div className="grid gap-4">
             <div>
-              <Label>昵称</Label>
-              <Input
-                className="mt-2"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <Label htmlFor="account-name">昵称</Label>
+              <Input id="account-name" className="mt-2" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="团队成员看到的称呼" />
             </div>
             <div>
-              <Label>头像 URL</Label>
-              <Input
-                className="mt-2"
-                type="url"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://..."
-              />
+              <Label htmlFor="account-email">登录邮箱</Label>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Input id="account-email" value={email} readOnly className="min-w-0 flex-1 bg-muted/30" />
+                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs ${emailConfirmed ? "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]" : "bg-[var(--mc-tint-amber)] text-amber-700 dark:text-amber-300"}`}>
+                  <BadgeCheck size={14} />{emailConfirmed ? "已验证" : "待验证"}
+                </span>
+              </div>
             </div>
           </div>
-          <Button className="mt-5" disabled={busy} onClick={() => void save()}>
-            保存资料
-          </Button>
+          <Button className="mt-5" disabled={busy || uploading} onClick={() => void save()}>保存资料</Button>
         </SectionCard>
-        <SectionCard
-          title="账号安全"
-          sub="通过已验证邮箱重置密码"
-          action={<LockKeyhole size={19} className="text-primary" />}
-        >
-          <Button
-            variant="outline"
-            disabled={busy || !email}
-            onClick={() => void resetPassword()}
-          >
-            发送密码重置邮件
-          </Button>
+
+        <SectionCard title="登录与安全" sub="更换邮箱、更新密码或通过邮箱重置" action={<LockKeyhole size={19} className="text-primary" />}>
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium"><Mail size={16} className="text-primary" />更换登录邮箱</div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input type="email" autoComplete="email" value={nextEmail} onChange={(e) => setNextEmail(e.target.value)} placeholder="输入新的登录邮箱" />
+                <Button variant="outline" disabled={busy || !nextEmail.trim()} onClick={() => void requestEmailChange()}>发送验证邮件</Button>
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">邮箱更换需要完成邮件验证；验证完成前仍使用当前邮箱登录。</p>
+            </div>
+            <div className="border-t border-border pt-5">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium"><KeyRound size={16} className="text-primary" />直接更新密码</div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="新密码（至少 8 位）" />
+                <Input type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="再次输入新密码" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button disabled={busy || !password || !confirmPassword} onClick={() => void changePassword()}>更新密码</Button>
+                <Button variant="outline" disabled={busy || !email} onClick={() => void resetPassword()}>发送密码重置邮件</Button>
+              </div>
+            </div>
+          </div>
         </SectionCard>
-        {error && (
-          <p role="alert" className="text-sm text-[var(--mc-color-danger)]">
-            {error}
-          </p>
-        )}
-        {message && (
-          <p role="status" className="text-sm text-[var(--mc-color-success)]">
-            {message}
-          </p>
-        )}
+
+        {error && <p role="alert" className="text-sm text-[var(--mc-color-danger)]">{error}</p>}
+        {message && <p role="status" className="text-sm text-[var(--mc-color-success)]">{message}</p>}
       </div>
     </>
   );

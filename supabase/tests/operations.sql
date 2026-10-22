@@ -4,13 +4,30 @@ insert into auth.users(id,email,email_confirmed_at) values
  ('50000000-0000-4000-8000-000000000001','ops-owner@example.test',now()),
  ('50000000-0000-4000-8000-000000000002','ops-editor@example.test',now()),
  ('50000000-0000-4000-8000-000000000003','ops-viewer@example.test',now()),
- ('50000000-0000-4000-8000-000000000004','ops-other@example.test',now());
+ ('50000000-0000-4000-8000-000000000004','ops-other@example.test',now()),
+ ('50000000-0000-4000-8000-000000000005','ops-pending@example.test',null);
 set local role authenticated;
 select set_config('request.jwt.claim.sub','50000000-0000-4000-8000-000000000001',true);
 insert into public.stores(id,created_by,name,platform)
  values('60000000-0000-4000-8000-000000000001',auth.uid(),'Operations A','pinduoduo');
 select public.manage_store_member('60000000-0000-4000-8000-000000000001','ops-editor@example.test','editor','upsert');
 select public.manage_store_member('60000000-0000-4000-8000-000000000001','ops-viewer@example.test','viewer','upsert');
+do $$ begin
+ begin
+  perform public.manage_store_member('60000000-0000-4000-8000-000000000001','ops-pending@example.test','editor','upsert');
+  raise exception 'unverified member was accepted';
+ exception when raise_exception then
+  if sqlerrm='unverified member was accepted' then raise; end if;
+  if sqlerrm<>'member email not confirmed' then raise; end if;
+ end;
+ begin
+  perform public.manage_store_member('60000000-0000-4000-8000-000000000001','missing@example.test','editor','upsert');
+  raise exception 'unknown member was accepted';
+ exception when raise_exception then
+  if sqlerrm='unknown member was accepted' then raise; end if;
+  if sqlerrm<>'member account not found' then raise; end if;
+ end;
+end $$;
 insert into public.products(id,store_id,name,category)
  values('70000000-0000-4000-8000-000000000001','60000000-0000-4000-8000-000000000001','Product','清洁');
 insert into public.skus(id,store_id,product_id,sku_name,selling_price)
