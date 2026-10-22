@@ -7,18 +7,31 @@ const source = (text: string) => new Response(
 );
 
 describe("AI 流式回复校验", () => {
-  it("应用最终校验结果后才向页面输出内容", async () => {
+  it("逐句输出已通过检查的内容，并在结束时用校验结果修正草稿", async () => {
     const completed = vi.fn();
     const response = streamDeepSeekText(
-      source("missingCostDays: 2"),
+      source("当前日报有完整覆盖。missingCostDays: 2"),
       completed,
       undefined,
       (content) => content.includes("missingCostDays") ? "成本记录有缺失，请先补齐后再评估利润。" : content,
     );
     const body = await response.text();
     expect(body).not.toContain("missingCostDays");
+    expect(body).toContain('"delta":"当前日报有完整覆盖。"');
+    expect(body).toContain('"replace":"成本记录有缺失，请先补齐后再评估利润。"');
     expect(body).toContain("成本记录有缺失");
     expect(completed).toHaveBeenCalledWith(expect.objectContaining({ content: "成本记录有缺失，请先补齐后再评估利润。" }));
+  });
+
+  it("句子通过校验后立即产生增量事件", async () => {
+    const body = await streamDeepSeekText(
+      source("建议先补齐缺失日报。"),
+      undefined,
+      undefined,
+      (content) => content,
+    ).text();
+    expect(body).toContain('"delta":"建议先补齐缺失日报。"');
+    expect(body).not.toContain('"replace":');
   });
 
   it("未启用校验时仍保留原有增量输出", async () => {

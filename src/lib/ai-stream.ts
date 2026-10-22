@@ -1,5 +1,16 @@
 const encoder = new TextEncoder();
 
+function lastCompleteSentenceBoundary(text: string) {
+  let boundary = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (character === "\n" || "。！？!?".includes(character)) boundary = index + 1;
+    else if (character === "." && (index + 1 === text.length || /\s/.test(text[index + 1] || ""))
+      && !(index > 0 && index + 1 < text.length && /\d/.test(text[index - 1]) && /\d/.test(text[index + 1]))) boundary = index + 1;
+  }
+  return boundary;
+}
+
 export type DeepSeekUsage = { prompt_tokens?: number; completion_tokens?: number };
 export type StreamCompletion = { content: string; usage?: DeepSeekUsage };
 
@@ -26,8 +37,19 @@ export function streamDeepSeekText(
         const decoder = new TextDecoder();
         let buffer = "";
         let content = "";
+        let emittedContent = "";
         let usage: DeepSeekUsage | undefined;
         let ended = false;
+        const emitValidatedSentences = () => {
+          if (!finalizeContent) return;
+          const boundary = lastCompleteSentenceBoundary(content);
+          if (boundary <= emittedContent.length) return;
+          const candidate = content.slice(0, boundary).trim();
+          if (!candidate || !candidate.startsWith(emittedContent)) return;
+          if (finalizeContent(candidate) !== candidate) return;
+          const delta = candidate.slice(emittedContent.length);
+          if (delta) { emittedContent = candidate; emit({ delta }); }
+        };
         try {
           while (!ended && !cancelled) {
             const { value, done } = await reader.read();
@@ -44,7 +66,11 @@ export function streamDeepSeekText(
                   const event = JSON.parse(data) as { choices?: { delta?: { content?: unknown } }[]; usage?: DeepSeekUsage; error?: { message?: string } };
                   if (event.error?.message) throw new Error(event.error.message);
                   const delta = event.choices?.[0]?.delta?.content;
-                  if (typeof delta === "string" && delta) { content += delta; if (!finalizeContent) emit({ delta }); }
+                  if (typeof delta === "string" && delta) {
+                    content += delta;
+                    if (finalizeContent) emitValidatedSentences();
+                    else { emittedContent += delta; emit({ delta }); }
+                  }
                   if (event.usage) usage = event.usage;
                 } catch (cause) {
                   if (cause instanceof SyntaxError) continue;
@@ -57,7 +83,12 @@ export function streamDeepSeekText(
           if (cancelled) return;
           const finalContent = finalizeContent ? finalizeContent(content.trim()) : content.trim();
           if (!finalContent) throw new Error("AI 未返回有效内容，请稍后重试。");
-          if (finalizeContent) emit({ delta: finalContent });
+          if (finalizeContent) {
+            if (finalContent.startsWith(emittedContent)) {
+              const remainder = finalContent.slice(emittedContent.length);
+              if (remainder) emit({ delta: remainder });
+            } else emit({ replace: finalContent });
+          }
           const meta = await onComplete?.({ content: finalContent, usage });
           emit({ done: true, ...meta });
         } catch (cause) {

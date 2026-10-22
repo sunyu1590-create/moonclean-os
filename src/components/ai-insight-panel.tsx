@@ -51,7 +51,11 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
         cache: "no-store",
       });
       let streamed = "";
-      const result = await readAiTextStream(response, (delta) => { streamed += delta; setSuggestion(streamed); });
+      const result = await readAiTextStream(
+        response,
+        (delta) => { streamed += delta; setSuggestion(streamed); },
+        (replacement) => { streamed = replacement; setSuggestion(replacement); },
+      );
       if (!streamed.trim() || typeof result?.generatedAt !== "string") throw new Error("AI 建议生成失败，请稍后重试。");
       setGeneratedAt(result.generatedAt);
       if (cacheKey) {
