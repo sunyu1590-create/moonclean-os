@@ -28,14 +28,16 @@ export async function GET(
       }
       return rows;
     }
-    const { data: store, error: storeError } = await auth.supabase
+    // Start the store lookup before loading the table snapshots. The store
+    // query is independent of the row queries, so awaiting it first adds a
+    // full network round trip to every cold load.
+    const storePromise = auth.supabase
       .from("stores")
       .select(
         "id,name,platform,currency,timezone,sales_target,margin_alert,created_at",
       )
       .eq("id", storeId)
       .single();
-    if (storeError) throw storeError;
     const names = [
       "products",
       "skus",
@@ -45,7 +47,12 @@ export async function GET(
       "sku_daily_metrics",
       "product_daily_sales",
     ] as const;
-    const results = await Promise.all(names.map((name) => loadRows(name, "*")));
+    const [storeResult, results] = await Promise.all([
+      storePromise,
+      Promise.all(names.map((name) => loadRows(name, "*"))),
+    ]);
+    if (storeResult.error) throw storeResult.error;
+    const store = storeResult.data;
     const snapshot = {
       store,
       role: auth.role,

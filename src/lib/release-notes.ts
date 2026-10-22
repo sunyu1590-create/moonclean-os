@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.39";
+export const APP_VERSION = "1.1.40";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.40",
+    date: "2026-10-22",
+    title: "云端数据加载并行优化",
+    changes: [
+      "云端经营数据加载时，店铺信息与首批业务数据并行读取，减少冷加载中的串行网络等待。",
+      "保留现有数据接口、分页方式、响应结构、业务逻辑和店铺权限校验；未添加缺少实际负载依据的数据库索引。",
+    ],
+  },
   {
     version: "1.1.39",
     date: "2026-10-22",
