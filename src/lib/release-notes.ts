@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.46";
+export const APP_VERSION = "1.1.47";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.47",
+    date: "2026-10-23",
+    title: "AI 情报助手聊天式排版与推理稳定性修复",
+    changes: [
+      "模型和推理强度移入输入框底部的紧凑设置栏，支持 Enter 发送、Shift + Enter 换行；手机和桌面使用同一聊天式布局。",
+      "Flash 深入模式显式启用 thinking，移除过低的 1100 token 输出上限，并将推理请求超时调整为与 AI 聊天一致的 180 秒。",
+      "DeepSeek 参数错误、余额不足和频率限制返回对应的中文提示，便于排查未生成有效回答的原因。",
+    ],
+  },
   {
     version: "1.1.46",
     date: "2026-10-23",
