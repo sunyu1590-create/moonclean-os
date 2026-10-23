@@ -14,7 +14,7 @@ describe("full cloud backup coverage", () => {
       [...migrations.matchAll(/create\s+table(?:\s+if\s+not\s+exists)?\s+public\.(\w+)/gi)]
         .map((match) => match[1])
       // Service-only credentials are deliberately excluded from portable business backups.
-      .filter((name) => !["stores", "store_members", "profiles", "store_ai_credentials"].includes(name)),
+      .filter((name) => !["stores", "store_members", "profiles", "store_ai_credentials", "user_device_sessions"].includes(name)),
     );
 
     expect(new Set(BACKUP_STORE_TABLES)).toEqual(publicTables);

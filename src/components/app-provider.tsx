@@ -249,6 +249,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     queueMicrotask(() => void refresh());
   }, [isAuthRoute, modeReady, mode, refresh]);
   useEffect(() => {
+    if (mode !== "cloud" || !user?.id || isAuthRoute) return;
+    const register = () => void fetch("/api/account/sessions", { cache: "no-store" }).catch(() => undefined);
+    register();
+    const timer = window.setInterval(register, 5 * 60_000);
+    window.addEventListener("focus", register);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", register); };
+  }, [mode, user?.id, isAuthRoute]);
+  useEffect(() => {
     if (mode !== "cloud" || !activeStoreId || isAuthRoute) return;
     let active = true;
     const sync = async () => {

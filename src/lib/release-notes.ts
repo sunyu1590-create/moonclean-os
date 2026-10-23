@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.45";
+export const APP_VERSION = "1.1.46";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.46",
+    date: "2026-10-23",
+    title: "运营助手模型选项与登录设备管理",
+    changes: [
+      "AI 运营助手支持选择 DeepSeek Flash / V4 Pro 和关闭、轻量、深入、Ultra 推理档位；请求按选择调用并记录实际模型。",
+      "账号页新增已登录设备列表，可查看当前设备并移除其他设备；撤销状态会由应用 API 与业务表 RLS 同时校验。",
+    ],
+  },
   {
     version: "1.1.45",
     date: "2026-10-23",

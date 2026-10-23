@@ -20,6 +20,15 @@ export async function requireUser(): Promise<Denied | Authorized> {
         { status: 401 },
       ),
     };
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const sessionId = typeof claimsData?.claims?.session_id === "string" ? claimsData.claims.session_id : null;
+  if (sessionId) {
+    const { data: deviceSession } = await supabase.from("user_device_sessions").select("revoked_at").eq("session_id", sessionId).maybeSingle();
+    if (deviceSession?.revoked_at) {
+      await supabase.auth.signOut({ scope: "local" });
+      return { ok: false, error: NextResponse.json({ error: "此设备已从账号中移除，请重新登录。" }, { status: 401 }) };
+    }
+  }
   return { ok: true, supabase, user };
 }
 export async function requireStore(

@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { BadgeCheck, Camera, KeyRound, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { BadgeCheck, Camera, KeyRound, LockKeyhole, Mail, Smartphone, UserRound } from "lucide-react";
 import { PageHead, SectionCard } from "@/components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,30 @@ export default function AccountPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [sessions, setSessions] = useState<Array<{session_id:string;device_label:string;created_at:string;last_seen_at:string;revoked_at:string|null;current:boolean}>>([]);
+  const [sessionsError, setSessionsError] = useState("");
+  const [revokingSession, setRevokingSession] = useState("");
+
+  async function loadSessions() {
+    const response = await fetch("/api/account/sessions", { cache: "no-store" });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "设备列表加载失败");
+    setSessions(body.sessions || []);
+  }
+
+  async function revokeSession(sessionId: string) {
+    if (!window.confirm("移除此设备后，它将无法继续访问账号数据。确定继续吗？")) return;
+    setRevokingSession(sessionId);
+    try {
+      const response = await fetch("/api/account/sessions", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "移除设备失败");
+      await loadSessions();
+      notifyFeedback({ kind: "success", title: "已移除登录设备", description: "该设备的后续应用请求将被拒绝。" });
+    } catch (cause) {
+      setSessionsError(cause instanceof Error ? cause.message : "移除设备失败");
+    } finally { setRevokingSession(""); }
+  }
 
   useEffect(() => {
     if (mode !== "cloud") return;
@@ -62,6 +86,19 @@ export default function AccountPage() {
     return () => {
       active = false;
     };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "cloud") return;
+    let active = true;
+    fetch("/api/account/sessions", { cache: "no-store" }).then(async (response) => {
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "设备列表加载失败");
+      if (active) setSessions(body.sessions || []);
+    }).catch((cause) => {
+      if (active) setSessionsError(cause instanceof Error ? cause.message : "设备列表加载失败");
+    });
+    return () => { active = false; };
   }, [mode]);
 
   async function saveProfile(nextAvatar = avatar) {
@@ -222,6 +259,16 @@ export default function AccountPage() {
             </div>
           </div>
           <Button className="mt-5" disabled={busy || uploading} onClick={() => void save()}>保存资料</Button>
+        </SectionCard>
+
+        <SectionCard title="已登录设备" sub="查看曾登录此账号的设备，并移除不再使用的会话" action={<Smartphone size={19} className="text-primary" />}>
+          {sessionsError && <p role="alert" className="mb-3 text-sm text-[var(--mc-color-danger)]">{sessionsError}</p>}
+          {sessions.length ? <div className="space-y-2">{sessions.map((session) => <div key={session.session_id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/20 p-3">
+            <span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Smartphone size={17}/></span>
+            <div className="min-w-0 flex-1"><p className="text-sm font-medium">{session.device_label}{session.current && <span className="ml-2 rounded-full bg-[var(--mc-tint-green)] px-2 py-0.5 text-[10px] text-[var(--mc-color-success)]">当前设备</span>}</p><p className="mt-1 text-[11px] text-muted-foreground">最近活动：{new Date(session.last_seen_at).toLocaleString("zh-CN")}</p></div>
+            {!session.current && <Button size="sm" variant="outline" disabled={revokingSession===session.session_id} onClick={()=>void revokeSession(session.session_id)}>{revokingSession===session.session_id?"处理中…":"移除此设备"}</Button>}
+          </div>)}</div> : <p className="text-sm text-muted-foreground">加载设备列表中…</p>}
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">移除后，该设备的应用接口将拒绝后续请求；设备可能需要刷新页面才能显示已退出。</p>
         </SectionCard>
 
         <SectionCard title="登录与安全" sub="更换邮箱、更新密码或通过邮箱重置" action={<LockKeyhole size={19} className="text-primary" />}>
