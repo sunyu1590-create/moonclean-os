@@ -372,17 +372,18 @@ export default function AiChatPage() {
                 <AppSelect aria-label="选择模型" value={model} disabled={busy} onChange={(event) => setModel(event.target.value as ModelId)} className="h-9 min-w-0 rounded-xl border border-border bg-background px-2.5 text-xs font-medium sm:px-3 sm:text-sm"><option value="deepseek-flash">V4.1 Flash</option><option value="deepseek-v4-pro">V4 Pro</option></AppSelect>
                 <AppSelect aria-label="聊天分类" value={category} disabled={busy} onChange={(event) => setCategory(event.target.value as ChatCategory)} className="h-9 min-w-0 rounded-xl border border-border bg-background px-2.5 text-xs font-medium"><option value="未分类">未分类</option>{chatCategories.filter((item) => item !== "未分类").map((item) => <option key={item} value={item}>{item}</option>)}</AppSelect>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-background/80 px-3 py-2">
-                <input aria-label="启用联网搜索" type="checkbox" checked={webSearch} disabled={busy} onChange={(event) => setWebSearch(event.target.checked)} className="size-4 accent-primary"/>
-                <span className="min-w-0 flex-1"><span className="block text-xs font-medium">联网搜索</span><span className="block text-[10px] leading-4 text-muted-foreground">检索实时网页并附来源；DeepSeek Search 可能产生额外费用</span></span>
-              </label>
+              <div className={`web-search-setting ${webSearch ? "is-enabled" : ""}`} data-enabled={webSearch}>
+                <span className="web-search-icon" aria-hidden="true"><Search size={16}/><i/></span>
+                <span className="min-w-0 flex-1"><span className="flex items-center gap-1.5 text-xs font-semibold">联网搜索{webSearch && <span className="web-search-live">实时</span>}</span><span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">检索最新网页并附上来源 · 可能产生额外费用</span></span>
+                <button type="button" role="switch" aria-label="联网搜索" aria-checked={webSearch} disabled={busy} onClick={() => setWebSearch((enabled) => !enabled)} className="web-search-switch" data-state={webSearch ? "on" : "off"}><span/></button>
+              </div>
               <fieldset disabled={busy}>
                 <legend className="mb-1.5 flex w-full items-center justify-between text-[10px] font-medium text-muted-foreground"><span>推理强度</span><span>{efforts.find((item) => item.id === effort)?.detail}</span></legend>
                 <div className="reasoning-control relative grid grid-cols-4 rounded-xl border border-border bg-background/80 p-1" data-effort={effort} role="group" aria-label="推理强度">
                   <span aria-hidden="true" className="reasoning-indicator pointer-events-none absolute inset-y-1 left-1 w-[calc(25%-2px)] rounded-lg shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(${effortIndex * 100}%)` }}>
                     {effort !== "none" && <><i/><i/><i/></>}
                   </span>
-                  {efforts.map((item) => <button key={item.id} type="button" aria-pressed={effort === item.id} onClick={() => setEffort(item.id)} className={`relative z-10 min-h-9 rounded-lg px-1 text-[10px] font-medium transition-colors duration-200 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${effort === item.id ? effortTextTone[item.id] : "text-muted-foreground hover:text-foreground"}`}>{item.label}</button>)}
+                  {efforts.map((item) => <button key={item.id} type="button" aria-pressed={effort === item.id} onClick={() => setEffort(item.id)} className={`reasoning-choice relative z-10 min-h-9 rounded-lg px-1 text-[10px] font-medium transition-colors duration-200 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${effort === item.id ? effortTextTone[item.id] : "text-muted-foreground hover:text-foreground"}`}><span key={effort === item.id ? effort : "idle"} className={effort === item.id ? "reasoning-choice-label" : ""}>{item.label}</span></button>)}
                 </div>
               </fieldset>
               <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{currentModel.note}</span>{immersive && <div className="flex gap-2"><button type="button" onClick={() => { saveCurrentConversation(); setHistoryOpen(true); }} className="font-medium text-primary">聊天历史</button><button type="button" onClick={startNewChat} disabled={busy} className="font-medium text-primary disabled:opacity-50">新建聊天</button></div>}</div>
@@ -409,16 +410,16 @@ export default function AiChatPage() {
         </div>
         <div className="max-h-[52dvh] space-y-2 overflow-y-auto p-3 sm:p-4">
           {visibleHistory.length === 0 ? <div className="py-12 text-center text-sm text-muted-foreground">{history.length === 0 ? "还没有保存的聊天记录" : historyView === "archived" ? "没有匹配的归档对话" : "没有匹配的当前对话"}</div> : visibleHistory.map((conversation) => (
-            <article key={conversation.id} className="rounded-2xl border border-border bg-background p-3">
+                <article key={conversation.id} className="ai-chat-history-item rounded-2xl border border-border bg-background p-3">
               <div className="flex items-start gap-2">
                 <button type="button" onClick={() => openConversation(conversation)} className="min-w-0 flex-1 text-left">
                   <span className="flex items-center gap-1.5 truncate text-sm font-medium">{conversation.pinned && <Pin size={13} className="shrink-0 text-primary"/>}{conversation.title}</span>
                   <span className="mt-1 block text-xs text-muted-foreground">{conversation.category} · {new Date(conversation.updatedAt).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} · {conversation.messages.filter((message) => message.role === "user").length} 条消息</span>
                 </button>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  <Button variant="ghost" size="icon-sm" aria-label={conversation.pinned ? "取消置顶" : "置顶对话"} title={conversation.pinned ? "取消置顶" : "置顶对话"} onClick={() => togglePinnedConversation(conversation.id)} className={conversation.pinned ? "text-primary" : "text-muted-foreground"}><Pin size={15}/></Button>
-                  <Button variant="ghost" size="icon-sm" aria-label={conversation.archivedAt ? "恢复对话" : "归档对话"} title={conversation.archivedAt ? "恢复对话" : "归档对话"} onClick={() => toggleArchivedConversation(conversation.id)} className="text-muted-foreground">{conversation.archivedAt ? <ArchiveRestore size={15}/> : <Archive size={15}/>}</Button>
-                  <Button variant="ghost" size="icon-sm" aria-label="删除对话" title="删除对话" onClick={() => setDeleteHistoryId(conversation.id)} className="text-muted-foreground hover:text-[var(--mc-color-danger)]"><Trash2 size={15}/></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={conversation.pinned ? "取消置顶" : "置顶对话"} title={conversation.pinned ? "取消置顶" : "置顶对话"} aria-pressed={Boolean(conversation.pinned)} onClick={() => togglePinnedConversation(conversation.id)} className={`history-action-button history-pin-button ${conversation.pinned ? "text-primary" : "text-muted-foreground"}`}><Pin size={15}/></Button>
+                  <Button variant="ghost" size="icon-sm" aria-label={conversation.archivedAt ? "恢复对话" : "归档对话"} title={conversation.archivedAt ? "恢复对话" : "归档对话"} data-archived={Boolean(conversation.archivedAt)} onClick={() => toggleArchivedConversation(conversation.id)} className="history-action-button history-archive-button text-muted-foreground">{conversation.archivedAt ? <ArchiveRestore size={15}/> : <Archive size={15}/>}</Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="删除对话" title="删除对话" onClick={() => setDeleteHistoryId(conversation.id)} className="history-action-button history-delete-button text-muted-foreground hover:text-[var(--mc-color-danger)]"><Trash2 size={15}/></Button>
                 </div>
               </div>
               <AppSelect aria-label={`更改“${conversation.title}”分类`} value={conversation.category} onChange={(event) => changeConversationCategory(conversation.id, event.target.value as ChatCategory)} className="mt-2 h-8 w-full rounded-xl border border-border bg-card px-2 text-xs sm:w-40">{chatCategories.map((item) => <option key={item} value={item}>{item}</option>)}</AppSelect>
