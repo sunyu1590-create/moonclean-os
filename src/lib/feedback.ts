@@ -4,6 +4,7 @@ export type FeedbackMessage = {
   kind: FeedbackKind;
   title: string;
   description?: string;
+  action?: { label: string; onClick: () => void };
 };
 
 export const FEEDBACK_EVENT = "moonclean:feedback";

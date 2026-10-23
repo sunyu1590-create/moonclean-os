@@ -87,10 +87,20 @@ export default function AiChatPage() {
   const [immersive, setImmersive] = useState(false);
   const [immersiveClosing, setImmersiveClosing] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [effortPulse, setEffortPulse] = useState(0);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const immersiveTimerRef = useRef<number | null>(null);
+  const historyRef = useRef<ChatConversation[]>([]);
+  const historyScope = `${userId}:${activeStoreId || ""}`;
+  const historyScopeRef = useRef(historyScope);
+  historyScopeRef.current = historyScope;
+
+  useEffect(() => {
+    historyScopeRef.current = historyScope;
+    return () => { if (historyScopeRef.current === historyScope) historyScopeRef.current = ""; };
+  }, [historyScope]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -99,6 +109,7 @@ export default function AiChatPage() {
       }
       setLoadedStoreId("");
       const conversations = readHistory(historyKey(activeStoreId, userId), chatKey(activeStoreId, userId));
+      historyRef.current = conversations;
       setHistory(conversations);
       setActiveConversationId(crypto.randomUUID());
       setCategory("随便聊聊");
@@ -121,6 +132,7 @@ export default function AiChatPage() {
     const timer = window.setTimeout(() => {
       setHistory((current) => {
         const next = upsertConversation(current, conversation);
+        historyRef.current = next;
         try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory if storage is full. */ }
         return next;
       });
@@ -193,31 +205,53 @@ export default function AiChatPage() {
     const current: ChatConversation = { id: activeConversationId, title: title.slice(0, 60), category, createdAt: messages[0]?.createdAt || new Date().toISOString(), updatedAt: messages.at(-1)?.createdAt || new Date().toISOString(), messages };
     setHistory((rows) => {
       const next = upsertConversation(rows, current);
+      historyRef.current = next;
       if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep the active conversation in memory. */ }
       return next;
     });
   }
 
   function persistHistory(next: ChatConversation[]) {
+    historyRef.current = next;
     setHistory(next);
     if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory when local storage is full. */ }
   }
 
   function togglePinnedConversation(id: string) {
-    persistHistory(history.map((conversation) => conversation.id === id ? { ...conversation, pinned: !conversation.pinned } : conversation).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt)));
+    persistHistory(historyRef.current.map((conversation) => conversation.id === id ? { ...conversation, pinned: !conversation.pinned } : conversation).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.updatedAt.localeCompare(a.updatedAt)));
   }
 
   function toggleArchivedConversation(id: string) {
-    persistHistory(history.map((conversation) => conversation.id === id ? { ...conversation, archivedAt: conversation.archivedAt ? null : new Date().toISOString() } : conversation));
+    const conversation = historyRef.current.find((item) => item.id === id);
+    if (!conversation) return;
+    const previousArchivedAt = conversation.archivedAt || null;
+    const nextArchivedAt = previousArchivedAt ? null : new Date().toISOString();
+    const scopeAtArchive = historyScope;
+    persistHistory(historyRef.current.map((item) => item.id === id ? { ...item, archivedAt: nextArchivedAt } : item));
+    notifyFeedback({
+      kind: "success",
+      title: nextArchivedAt ? "对话已归档" : "对话已恢复",
+      description: nextArchivedAt ? "已移入归档，可在短时间内撤销。" : "已回到当前对话列表。",
+      action: {
+        label: "撤销",
+        onClick: () => {
+          if (historyScopeRef.current !== scopeAtArchive) return;
+          persistHistory(historyRef.current.map((item) => item.id === id ? { ...item, archivedAt: previousArchivedAt } : item));
+          notifyFeedback({ kind: "success", title: nextArchivedAt ? "已撤销归档" : "已撤销恢复" });
+        },
+      },
+    });
   }
 
   function deleteHistoryConversation() {
     if (!deleteHistoryId) return;
-    persistHistory(history.filter((conversation) => conversation.id !== deleteHistoryId));
+    const deletedConversation = historyRef.current.find((conversation) => conversation.id === deleteHistoryId);
+    persistHistory(historyRef.current.filter((conversation) => conversation.id !== deleteHistoryId));
     if (activeConversationId === deleteHistoryId) {
       setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError("");
     }
     setDeleteHistoryId("");
+    notifyFeedback({ kind: "success", title: "对话已删除", description: deletedConversation ? `“${deletedConversation.title}”已从本设备移除。` : "聊天记录已从本设备移除。" });
   }
 
   function startNewChat() {
@@ -327,8 +361,9 @@ export default function AiChatPage() {
 
   function clearChat() {
     const nextHistory = history.filter((conversation) => conversation.id !== activeConversationId);
-    setHistory(nextHistory); setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError(""); setClearOpen(false);
-    if (activeStoreId) { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(nextHistory)); localStorage.removeItem(chatKey(activeStoreId, userId)); }
+    persistHistory(nextHistory); setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError(""); setClearOpen(false);
+    if (activeStoreId) localStorage.removeItem(chatKey(activeStoreId, userId));
+    notifyFeedback({ kind: "success", title: "当前聊天已清空" });
   }
 
   async function copyMessage(message: ChatMessage) {
@@ -374,16 +409,17 @@ export default function AiChatPage() {
               </div>
               <div className={`web-search-setting ${webSearch ? "is-enabled" : ""}`} data-enabled={webSearch}>
                 <span className="web-search-icon" aria-hidden="true"><Search size={16}/><i/></span>
-                <span className="min-w-0 flex-1"><span className="flex items-center gap-1.5 text-xs font-semibold">联网搜索{webSearch && <span className="web-search-live">实时</span>}</span><span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">检索最新网页并附上来源 · 可能产生额外费用</span></span>
+                <span className="min-w-0 flex-1"><span className="flex items-center gap-1.5 text-xs font-semibold">联网搜索{webSearch && <span className="web-search-live">实时</span>}</span><span className="mt-0.5 block truncate text-[10px] leading-4 text-muted-foreground">搜索网页并附来源 · 可能产生额外费用</span></span>
                 <button type="button" role="switch" aria-label="联网搜索" aria-checked={webSearch} disabled={busy} onClick={() => setWebSearch((enabled) => !enabled)} className="web-search-switch" data-state={webSearch ? "on" : "off"}><span/></button>
               </div>
               <fieldset disabled={busy}>
                 <legend className="mb-1.5 flex w-full items-center justify-between text-[10px] font-medium text-muted-foreground"><span>推理强度</span><span>{efforts.find((item) => item.id === effort)?.detail}</span></legend>
                 <div className="reasoning-control relative grid grid-cols-4 rounded-xl border border-border bg-background/80 p-1" data-effort={effort} role="group" aria-label="推理强度">
                   <span aria-hidden="true" className="reasoning-indicator pointer-events-none absolute inset-y-1 left-1 w-[calc(25%-2px)] rounded-lg shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none" style={{ transform: `translateX(${effortIndex * 100}%)` }}>
+                    <span key={effortPulse} className="reasoning-sheen"/>
                     {effort !== "none" && <><i/><i/><i/></>}
                   </span>
-                  {efforts.map((item) => <button key={item.id} type="button" aria-pressed={effort === item.id} onClick={() => setEffort(item.id)} className={`reasoning-choice relative z-10 min-h-9 rounded-lg px-1 text-[10px] font-medium transition-colors duration-200 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${effort === item.id ? effortTextTone[item.id] : "text-muted-foreground hover:text-foreground"}`}><span key={effort === item.id ? effort : "idle"} className={effort === item.id ? "reasoning-choice-label" : ""}>{item.label}</span></button>)}
+                  {efforts.map((item) => <button key={item.id} type="button" aria-pressed={effort === item.id} onClick={() => { setEffort(item.id); setEffortPulse((pulse) => pulse + 1); }} className={`reasoning-choice relative z-10 min-h-9 rounded-lg px-1 text-[10px] font-medium transition-colors duration-200 active:scale-[.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${effort === item.id ? effortTextTone[item.id] : "text-muted-foreground hover:text-foreground"}`}><span key={effort === item.id ? effort : "idle"} className={effort === item.id ? "reasoning-choice-label" : ""}>{item.label}</span></button>)}
                 </div>
               </fieldset>
               <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground"><span>{currentModel.note}</span>{immersive && <div className="flex gap-2"><button type="button" onClick={() => { saveCurrentConversation(); setHistoryOpen(true); }} className="font-medium text-primary">聊天历史</button><button type="button" onClick={startNewChat} disabled={busy} className="font-medium text-primary disabled:opacity-50">新建聊天</button></div>}</div>
@@ -396,7 +432,7 @@ export default function AiChatPage() {
       <DialogContent className="max-h-[min(86dvh,760px)] overflow-hidden rounded-[24px] border border-border bg-card p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle>聊天历史</DialogTitle>
-          <DialogDescription>记录仅保存在这台设备和当前店铺。置顶、归档和删除会立即保存。</DialogDescription>
+          <DialogDescription>记录仅保存在这台设备和当前店铺。归档可撤销；删除前会二次确认，删除后无法恢复。</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 border-b border-border p-3 sm:p-4">
           <label className="relative block">
@@ -430,7 +466,7 @@ export default function AiChatPage() {
       </DialogContent>
     </Dialog>
     {activeStoreId && <DeepSeekUnlockDialog storeId={activeStoreId} open={unlockOpen} onOpenChange={setUnlockOpen} onUnlock={(apiKey) => sendWithKey(apiKey)}/>}
-    <AlertDialog open={Boolean(deleteHistoryId)} onOpenChange={(open) => { if (!open) setDeleteHistoryId(""); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除这段历史对话？</AlertDialogTitle><AlertDialogDescription>这会从当前设备和店铺的本地历史中永久删除，无法撤销。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); deleteHistoryConversation(); }}>删除对话</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={Boolean(deleteHistoryId)} onOpenChange={(open) => { if (!open) setDeleteHistoryId(""); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除“{history.find((conversation) => conversation.id === deleteHistoryId)?.title || "这段历史对话"}”？</AlertDialogTitle><AlertDialogDescription>删除后将从当前设备和店铺的本地历史中永久移除，无法撤销。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); deleteHistoryConversation(); }}>确认删除</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     <AlertDialog open={clearOpen} onOpenChange={setClearOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>清空这段聊天？</AlertDialogTitle><AlertDialogDescription>当前浏览器保存的聊天内容会被删除，不能撤回。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>返回</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); clearChat(); }}>清空聊天</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </div>;
   return immersive ? createPortal(page, document.body) : page;

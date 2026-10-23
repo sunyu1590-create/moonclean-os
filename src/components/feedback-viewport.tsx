@@ -63,6 +63,7 @@ export function FeedbackViewport() {
         <span className="feedback-toast-copy">
           <span className="feedback-toast-heading"><strong>{toast.title}</strong><time>刚刚</time></span>
           {toast.description && <small>{toast.description}</small>}
+          {toast.action && <button type="button" className="feedback-toast-action" onClick={() => { toast.action?.onClick(); dismiss(toast.id); }}>{toast.action.label}</button>}
         </span>
         <button type="button" aria-label="关闭通知" onClick={() => dismiss(toast.id)}><X size={15} /></button>
       </div>;
