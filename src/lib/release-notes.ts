@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.51";
+export const APP_VERSION = "1.1.52";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.52",
+    date: "2026-10-24",
+    title: "修复笔记 AI 按钮移动端溢出",
+    changes: [
+      "将笔记编辑器模糊渐显动画移到标题栏和正文滚动区，避免动画滤镜影响固定底栏定位；打开 AI 助手后，AI 按钮仍保持在手机可视区域。",
+      "增加手机端回归检查，验证 AI 面板展开后底栏固定定位及按钮边界。",
+    ],
+  },
   {
     version: "1.1.51",
     date: "2026-10-24",

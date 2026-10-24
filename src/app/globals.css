@@ -260,10 +260,10 @@ select:focus-visible {
   .note-editor-placeholder { max-width: 90%; }
 }
 @keyframes notes-editor-blur-reveal { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
-html[data-motion="refined"] .notes-editor-shell { animation: notes-editor-blur-reveal 520ms cubic-bezier(.2,.72,.25,1) backwards; }
-html[data-motion="standard"] .notes-editor-shell { animation: notes-editor-blur-reveal 360ms cubic-bezier(.2,.72,.25,1) backwards; }
-html[data-motion="simple"] .notes-editor-shell { animation: none; }
-@media (prefers-reduced-motion: reduce) { .notes-row-menu, .notes-list-menu, .notes-editor-menu, .notes-format-menu, .notes-editor-shell { animation: none !important; } }
+html[data-motion="refined"] :is(.notes-editor-header, .notes-editor-scroll) { animation: notes-editor-blur-reveal 520ms cubic-bezier(.2,.72,.25,1) backwards; }
+html[data-motion="standard"] :is(.notes-editor-header, .notes-editor-scroll) { animation: notes-editor-blur-reveal 360ms cubic-bezier(.2,.72,.25,1) backwards; }
+html[data-motion="simple"] :is(.notes-editor-header, .notes-editor-scroll) { animation: none; }
+@media (prefers-reduced-motion: reduce) { .notes-row-menu, .notes-list-menu, .notes-editor-menu, .notes-format-menu, .notes-editor-header, .notes-editor-scroll { animation: none !important; } }
 .app-shell-root { position: relative; isolation: isolate; }
 .app-shell-root::before,
 .app-shell-root::after { position: fixed; z-index: -1; inset: 0; content: ""; pointer-events: none; opacity: 0; }
