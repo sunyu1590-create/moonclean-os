@@ -35,8 +35,15 @@ test.describe("运营功能工作台（本机模式）", () => {
   test("手机笔记编辑器全屏工作且隐藏全局底部导航", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/notes");
+    await expect.poll(async () => (await page.locator(".notes-fab").boundingBox())?.y ?? -1).toBeGreaterThan(600);
     await page.getByRole("button", { name: "新建笔记" }).click();
     await expect(page.getByRole("region", { name: "笔记编辑器" })).toBeVisible();
+    const editorBox = await page.locator(".notes-editor-shell").boundingBox();
+    expect(await page.locator(".notes-editor-shell").evaluate(element => getComputedStyle(element).animationName)).toBe("notes-editor-blur-reveal");
+    expect(editorBox?.x).toBe(0);
+    expect(editorBox?.y).toBe(0);
+    expect(editorBox?.width).toBe(390);
+    expect(editorBox?.height).toBe(844);
     await expect(page.getByRole("navigation", { name: "主导航" })).toBeHidden();
     await expect(page.getByRole("textbox", { name: "笔记正文" })).toBeVisible();
   });

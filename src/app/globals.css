@@ -259,7 +259,11 @@ select:focus-visible {
   .note-tiptap-content, .note-editor-canvas { min-height: calc(100dvh - 245px); }
   .note-editor-placeholder { max-width: 90%; }
 }
-@media (prefers-reduced-motion: reduce) { .notes-row-menu, .notes-list-menu, .notes-editor-menu, .notes-format-menu { animation: none; } }
+@keyframes notes-editor-blur-reveal { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
+html[data-motion="refined"] .notes-editor-shell { animation: notes-editor-blur-reveal 520ms cubic-bezier(.2,.72,.25,1) backwards; }
+html[data-motion="standard"] .notes-editor-shell { animation: notes-editor-blur-reveal 360ms cubic-bezier(.2,.72,.25,1) backwards; }
+html[data-motion="simple"] .notes-editor-shell { animation: none; }
+@media (prefers-reduced-motion: reduce) { .notes-row-menu, .notes-list-menu, .notes-editor-menu, .notes-format-menu, .notes-editor-shell { animation: none !important; } }
 .app-shell-root { position: relative; isolation: isolate; }
 .app-shell-root::before,
 .app-shell-root::after { position: fixed; z-index: -1; inset: 0; content: ""; pointer-events: none; opacity: 0; }
@@ -279,14 +283,14 @@ select:focus-visible {
 .mobile-primary-nav a,
 .mobile-primary-nav button { -webkit-user-drag: none; user-select: none; }
 html[data-motion="refined"] .app-page-transition {
-  animation: premium-page-enter-refined var(--mc-motion-emphasis) var(--mc-ease-emphasis) both;
+  animation: premium-page-enter-refined var(--mc-motion-emphasis) var(--mc-ease-emphasis) backwards;
 }
-html[data-motion="standard"] .app-page-transition { animation: premium-page-enter 220ms var(--mc-ease-standard) both; }
+html[data-motion="standard"] .app-page-transition { animation: premium-page-enter 220ms var(--mc-ease-standard) backwards; }
 .app-shell-root.page-transition-blur-fade .app-page-transition {
-  animation: page-enter-blur-fade 760ms cubic-bezier(.16,1,.3,1) both;
+  animation: page-enter-blur-fade 760ms cubic-bezier(.16,1,.3,1) backwards;
 }
 .app-shell-root.page-transition-blur-lift .app-page-transition {
-  animation: page-enter-blur-lift 820ms cubic-bezier(.2,.75,.25,1) both;
+  animation: page-enter-blur-lift 820ms cubic-bezier(.2,.75,.25,1) backwards;
 }
 .app-shell-root.motion-level-standard.page-transition-blur-fade .app-page-transition { animation-duration: 320ms; }
 .app-shell-root.motion-level-standard.page-transition-blur-lift .app-page-transition {
