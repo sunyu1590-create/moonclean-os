@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppProvider } from "@/components/app-provider";
 import { AppShell } from "@/components/app-shell";
 import { MotionPreferencesProvider } from "@/components/motion-preferences";
+import { LanguageProvider } from "@/components/language-provider";
 export const metadata: Metadata = {
   title: "MoonClean OS · 月明净智能经营",
   description: "月明净智能电商运营管理系统",
@@ -19,9 +20,11 @@ export default function RootLayout({
       </head>
       <body>
         <AppProvider>
-          <MotionPreferencesProvider>
-            <AppShell>{children}</AppShell>
-          </MotionPreferencesProvider>
+          <LanguageProvider>
+            <MotionPreferencesProvider>
+              <AppShell>{children}</AppShell>
+            </MotionPreferencesProvider>
+          </LanguageProvider>
         </AppProvider>
       </body>
     </html>

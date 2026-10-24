@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.53";
+export const APP_VERSION = "1.1.54";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.54",
+    date: "2026-10-24",
+    title: "新增 English 界面模式",
+    changes: [
+      "新增中英文切换入口，支持桌面顶栏和手机更多菜单；语言偏好保存在当前浏览器，刷新后保持选择，并同步更新页面语言与标题。",
+      "英文模式覆盖主导航、数据源与外观控件、登录注册表单、共享页面标题/卡片/指标和经营总览主要摘要；数据记录和用户输入保持原文。",
+    ],
+  },
   {
     version: "1.1.53",
     date: "2026-10-24",

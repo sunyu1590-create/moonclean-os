@@ -3,6 +3,23 @@ import { expect, test } from "@playwright/test";
 test.describe("运营功能工作台（本机模式）", () => {
   test.skip(process.env.NEXT_PUBLIC_DATA_MODE !== "local", "需要显式开启本机演示数据模式");
 
+  test("可切换并记住英文界面", async ({ page }) => {
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: "Switch to English" }).click();
+    await expect(page.getByRole("heading", { name: "Good morning. See how your business is doing." })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en-US");
+    await expect(page.getByRole("link", { name: "Overview" }).first()).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Good morning. See how your business is doing." })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const languageToggle = page.getByRole("button", { name: "切换为中文" });
+    const toggleBox = await languageToggle.boundingBox();
+    expect(toggleBox?.x).toBeGreaterThanOrEqual(0);
+    expect((toggleBox?.x || 0) + (toggleBox?.width || 0)).toBeLessThanOrEqual(390);
+    await languageToggle.click();
+    await expect(page.getByRole("heading", { name: "早上好，今天的生意一目了然" })).toBeVisible();
+  });
+
   test("笔记中心自动保存后刷新仍可检索并能转为待办", async ({ page }) => {
     await page.goto("/notes");
     await page.getByRole("button", { name: "新建笔记" }).click();

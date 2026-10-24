@@ -40,6 +40,7 @@ import {
   SearchCheck,
   Headset,
   MessageCircle,
+  Languages,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -50,15 +51,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "./app-provider";
 import { getMobileNavigationSlot } from "@/lib/mobile-navigation";
+import { useLanguage } from "@/components/language-provider";
 
 function LoadingElapsed() {
+  const { t } = useLanguage();
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     const startedAt = Date.now();
     const timer = window.setInterval(() => setSeconds((Date.now() - startedAt) / 1000), 100);
     return () => window.clearInterval(timer);
   }, []);
-  return <p className="mt-3 text-center text-[11px] tabular-nums text-muted-foreground">正在加载店铺数据 · {seconds.toFixed(1)} 秒</p>;
+  return <p className="mt-3 text-center text-[11px] tabular-nums text-muted-foreground">{t("正在加载店铺数据")} · {seconds.toFixed(1)}s</p>;
 }
 import { DataTransitionOverlay } from "@/components/data-transition-overlay";
 import { PerformanceDebugCapsule } from "@/components/performance-debug-capsule";
@@ -102,6 +105,7 @@ const roleLabels = {
   viewer: "查看者",
 };
 function StoreOnboarding() {
+  const { language, t } = useLanguage();
   const { createStore } = useApp();
   const [name, setName] = useState("");
   const [platform, setPlatform] = useState("pinduoduo");
@@ -129,14 +133,14 @@ function StoreOnboarding() {
       <span className="grid size-12 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary">
         <Cloud size={24} />
       </span>
-      <h1 className="mt-5 text-2xl font-bold">创建第一个店铺</h1>
+      <h1 className="mt-5 text-2xl font-bold">{t("创建第一个店铺")}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        店铺数据会安全保存在云端，并可在手机和电脑间同步。
+        {t("店铺数据会安全保存在云端，并可在手机和电脑间同步。")}
       </p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div>
           <label htmlFor="store-name" className="text-sm font-medium">
-            店铺名称
+            {t("店铺名称")}
           </label>
           <Input
             id="store-name"
@@ -144,13 +148,13 @@ function StoreOnboarding() {
             value={name}
             maxLength={120}
             onChange={(e) => setName(e.target.value)}
-            placeholder="例如：月明净旗舰店"
+            placeholder={language === "en-US" ? "e.g. MoonClean Official Store" : "例如：月明净旗舰店"}
             required
           />
         </div>
         <div>
           <label htmlFor="store-platform" className="text-sm font-medium">
-            经营平台
+            {language === "en-US" ? "Platform" : "经营平台"}
           </label>
           <AppSelect
             id="store-platform"
@@ -158,9 +162,9 @@ function StoreOnboarding() {
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
           >
-            <option value="pinduoduo">拼多多</option>
-            <option value="douyin">抖音电商</option>
-            <option value="other">其他平台</option>
+            <option value="pinduoduo">{language === "en-US" ? "Pinduoduo" : "拼多多"}</option>
+            <option value="douyin">{language === "en-US" ? "Douyin Shop" : "抖音电商"}</option>
+            <option value="other">{language === "en-US" ? "Other platform" : "其他平台"}</option>
           </AppSelect>
         </div>
         {error && (
@@ -169,7 +173,7 @@ function StoreOnboarding() {
           </p>
         )}
         <Button type="submit" loading={busy} disabled={busy || !name.trim()}>
-          {busy ? "正在创建…" : "创建店铺"}
+          {busy ? t("正在创建…") : t("创建店铺")}
         </Button>
       </form>
     </div>
@@ -178,6 +182,7 @@ function StoreOnboarding() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { language, toggleLanguage, t } = useLanguage();
   const {
     data,
     mode,
@@ -306,7 +311,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setLogoutBusy(false);
     }
   }
-  const currentLabel =
+  const currentLabel = t(
     nav.find((n) => n.href === pathname)?.label ||
     (
       { "/migrate": "本地数据迁移", "/account": "账号设置" } as Record<
@@ -314,7 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         string
       >
     )[pathname] ||
-    "经营总览";
+    "经营总览");
   function toggleMobileNav(href: string) {
     const next = mobilePrimary.includes(href)
       ? mobilePrimary.length > 2 ? mobilePrimary.filter((item) => item !== href) : mobilePrimary
@@ -454,14 +459,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               collapsed && "sr-only",
             )}
           >
-            工作空间
+            {t("工作空间")}
           </p>
           <nav className="space-y-1">
             {nav.slice(0, 9).map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
-                title={label}
+                title={t(label)}
                 aria-current={pathname === href ? "page" : undefined}
                 className={cn(
                   "flex h-11 items-center gap-3 rounded-[13px] px-3 text-sm font-medium transition-colors",
@@ -472,19 +477,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <Icon size={19} strokeWidth={pathname === href ? 2.3 : 1.8} />
-                {!collapsed && label}
+                {!collapsed && t(label)}
               </Link>
             ))}
           </nav>
-          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-muted-foreground", collapsed && "sr-only")}>经营工具与连接</p>
+          <p className={cn("mb-3 mt-8 px-3 text-[11px] font-semibold tracking-[.16em] text-muted-foreground", collapsed && "sr-only")}>{language === "en-US" ? "TOOLS & INTEGRATIONS" : "经营工具与连接"}</p>
           <nav className="space-y-1">
             {nav.slice(9).map(({ href, label, icon: Icon }) => (
-              <Link key={href} href={href} title={label} aria-current={pathname === href ? "page" : undefined} className={cn(
+              <Link key={href} href={href} title={t(label)} aria-current={pathname === href ? "page" : undefined} className={cn(
                 "flex h-11 items-center gap-3 rounded-[13px] px-3 text-sm font-medium transition-colors",
                 pathname === href ? "bg-[var(--mc-tint-blue)] font-semibold text-primary" : "text-muted-foreground hover:bg-[var(--mc-tint-blue)] hover:text-foreground",
                 collapsed && "justify-center",
               )}>
-                <Icon size={19} strokeWidth={pathname === href ? 2.2 : 1.8} />{!collapsed && label}
+                <Icon size={19} strokeWidth={pathname === href ? 2.2 : 1.8} />{!collapsed && t(label)}
               </Link>
             ))}
           </nav>
@@ -493,17 +498,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {!collapsed && (
             <div className="material-subtle rounded-[18px] p-4">
               <div className="mb-1 truncate text-xs font-semibold text-foreground">
-                {data?.settings.store.name || "当前店铺"}
+                {data?.settings.store.name || t("当前店铺")}
               </div>
               <div className="text-xs text-muted-foreground">
                 {mode === "cloud"
-                  ? `云端数据 · ${role ? roleLabels[role] : ""}`
-                  : "本地数据 · 当前设备"}
+                  ? `${t("云端数据")} · ${role ? t(roleLabels[role]) : ""}`
+                  : `${t("本地数据")} · ${t("当前设备")}`}
               </div>
             </div>
           )}
           <div className="mt-4 px-2 text-[11px] text-muted-foreground">
-            {!collapsed ? "MOONCLEAN OS · 工作台" : "OS"}
+            {!collapsed ? `MOONCLEAN OS · ${language === "en-US" ? "WORKSPACE" : "工作台"}` : "OS"}
           </div>
         </div>
       </aside>
@@ -511,17 +516,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="mc-toolbar material-standard sticky top-0 z-20 flex h-[62px] flex-nowrap items-center justify-between gap-1 px-3 py-1.5 sm:px-5 md:h-[68px] md:px-9">
           <Link href="/dashboard" aria-label="月明净 MoonClean OS 首页" className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden md:hidden"><Image src="/yue-ming-jing-logo.png" alt="月明净品牌标志" width={64} height={64} className="size-12 object-contain" priority /></Link>
           <div className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-            <span>工作空间</span>
+            <span>{t("工作空间")}</span>
             <ChevronRight size={14} />
             <span className="font-medium text-muted-foreground">{currentLabel}</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
+            <button type="button" onClick={toggleLanguage} title={language === "zh-CN" ? "Switch to English" : "切换为中文"} aria-label={language === "zh-CN" ? "Switch to English" : "切换为中文"} className="mc-toolbar-action inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-semibold md:h-9 md:min-w-9 md:text-[11px]">
+              <Languages size={15}/><span>{language === "zh-CN" ? "EN" : "中"}</span>
+            </button>
             <button type="button" onClick={cycleTheme} title="切换外观" aria-label={`外观：${themePreference === "system" ? "跟随系统" : themePreference === "night" ? "深色" : "浅色"}，点击切换`} className="mc-toolbar-action hidden size-9 items-center justify-center rounded-xl md:inline-flex">
               {nightMode ? <Moon size={17}/> : <Sun size={17}/>}
             </button>
             {mode === "cloud" && stores.length > 0 && (
               <AppSelect
-                aria-label="切换店铺"
+                aria-label={t("切换店铺")}
                 disabled={loading||modeSwitchBusy}
                 className="max-w-[30vw] rounded-xl border border-border bg-card/75 px-2 py-1.5 text-[11px] font-medium text-foreground sm:max-w-[210px] sm:px-2.5 sm:py-2 sm:text-xs"
                 value={activeStoreId || ""}
@@ -534,13 +542,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))}
               </AppSelect>
             )}
-            <button type="button" onClick={() => { setModeSwitchError(""); setDataModeDialogOpen(true); }} disabled={loading||modeSwitchBusy} aria-label="切换本地数据或云端数据" title="切换数据存储位置" className={cn(
+            <button type="button" onClick={() => { setModeSwitchError(""); setDataModeDialogOpen(true); }} disabled={loading||modeSwitchBusy} aria-label={language === "en-US" ? "Switch local or cloud data" : "切换本地数据或云端数据"} title={t("选择数据存储位置")} className={cn(
               "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border px-2 py-1.5 text-[10px] font-semibold transition-colors hover:bg-[var(--mc-tint-green)] disabled:opacity-60 sm:gap-1.5 sm:px-2.5 sm:text-[11px]",
               error
                 ? "bg-[var(--mc-tint-red)] text-[var(--mc-color-danger)]"
                 : "bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]",
             )}>
-              <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-current" />{mode === "local" ? error ? "本地异常" : saving ? "本机保存中…" : "本地数据" : error ? "云端异常" : saving ? "保存中…" : "云端数据"}<ChevronDown size={12}/>
+              <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-current" />{mode === "local" ? error ? t("本地异常") : saving ? t("本机保存中…") : t("本地数据") : error ? t("云端异常") : saving ? t("保存中…") : t("云端数据")}<ChevronDown size={12}/>
             </button>
             {mode === "cloud" && (
               <>
@@ -615,40 +623,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {mobileNavItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", active ? "text-primary" : "text-muted-foreground")}>
-              <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{label}</span>
+              <Icon size={20} strokeWidth={active ? 2.3 : 1.9} /><span className="truncate">{t(label)}</span>
             </Link>;
           })}
-          <button type="button" aria-label="更多功能" aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={openMobileMenu} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-primary" : "text-muted-foreground")}>
-            <Menu size={20}/><span>更多</span>
+          <button type="button" aria-label={t("更多功能")} aria-expanded={mobileMenuOpen} aria-current={!mobilePrimary.includes(pathname) ? "page" : undefined} onClick={openMobileMenu} className={cn("relative z-10 flex min-w-0 flex-col items-center gap-1 rounded-[16px] py-2 text-[10px] font-semibold transition-colors duration-200", mobileMenuOpen || !mobilePrimary.includes(pathname) ? "text-primary" : "text-muted-foreground")}>
+            <Menu size={20}/><span>{t("更多")}</span>
           </button>
         </div>
       </nav>
       <Sheet open={mobileMenuOpen} onOpenChange={(open) => { setMobileMenuOpen(open); if (open) setMobileMenuExpanded(false); }}>
         <SheetContent side="bottom" className={cn("mobile-more-sheet overflow-y-auto rounded-[28px] border-border bg-card/95 p-5 pb-[max(22px,env(safe-area-inset-bottom))] shadow-[0_24px_70px_rgba(31,57,82,0.20)] backdrop-blur-2xl md:hidden", mobileMenuExpanded && "is-expanded", sheetDragging && "is-dragging")}>
-          <button type="button" aria-label={mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能"} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title="上下滑动展开或收起">
+          <button type="button" aria-label={language === "en-US" ? (mobileMenuExpanded ? "Collapse menu" : "Expand menu") : (mobileMenuExpanded ? "下滑收起更多功能" : "上滑展开更多功能")} onPointerDown={onSheetHandlePointerDown} onPointerMove={onSheetHandlePointerMove} onPointerUp={onSheetHandlePointerEnd} onPointerCancel={onSheetHandlePointerEnd} onClick={() => { if (suppressSheetHandleClick.current) { suppressSheetHandleClick.current = false; return; } setMobileMenuExpanded(value => !value); }} className="mobile-more-drag-handle mx-auto mb-2 flex h-6 w-16 touch-none items-center justify-center" title={language === "en-US" ? "Drag to expand or collapse" : "上下滑动展开或收起"}>
             <span aria-hidden="true" className="h-1 w-10 rounded-full bg-[var(--mc-tint-blue)]" />
           </button>
           <SheetHeader className="px-1 pb-4 text-left">
             <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={21}/></div>
-            <SheetTitle className="text-xl">更多功能</SheetTitle>
-            <p className="text-sm text-muted-foreground">常用经营工具与系统管理</p>
+            <SheetTitle className="text-xl">{t("更多功能")}</SheetTitle>
+            <p className="text-sm text-muted-foreground">{t("常用经营工具与系统管理")}</p>
+            <button type="button" onClick={toggleLanguage} className="mb-3 flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm font-medium">
+              <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Languages size={18}/></span>{language === "zh-CN" ? "Language" : "语言"}</span>
+              <span className="text-primary">{language === "zh-CN" ? "English" : "简体中文"}</span>
+            </button>
           </SheetHeader>
-          <button type="button" aria-label="切换外观" onClick={cycleTheme} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted">
-            <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary">{nightMode ? <Moon size={18}/> : <Sun size={18}/>}</span><span><span className="block text-sm font-semibold text-foreground">外观模式</span><span className="mt-0.5 block text-xs text-muted-foreground">{themePreference === "system" ? "跟随系统" : themePreference === "night" ? "深色" : "浅色"} · 点击切换</span></span></span>
+          <button type="button" aria-label={t("切换外观")} onClick={cycleTheme} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted">
+            <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary">{nightMode ? <Moon size={18}/> : <Sun size={18}/>}</span><span><span className="block text-sm font-semibold text-foreground">{t("外观模式")}</span><span className="mt-0.5 block text-xs text-muted-foreground">{themePreference === "system" ? t("跟随系统") : themePreference === "night" ? t("深色") : t("浅色")} · {t("点击切换")}</span></span></span>
             <ChevronRight size={18} className="text-muted-foreground" />
           </button>
           <button type="button" onClick={() => setCustomizingNav((value) => !value)} className="mb-5 flex w-full items-center justify-between rounded-2xl border border-border bg-gradient-to-r from-[var(--mc-tint-blue)] to-card p-4 text-left transition-colors hover:bg-[var(--mc-tint-blue)]">
-            <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-card text-primary shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-foreground">自定义底栏</span><span className="mt-0.5 block text-xs text-muted-foreground">选择常用入口，最多显示 4 个</span></span></span>
+            <span className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-xl bg-card text-primary shadow-sm"><SlidersHorizontal size={19}/></span><span><span className="block text-sm font-semibold text-foreground">{t("自定义底栏")}</span><span className="mt-0.5 block text-xs text-muted-foreground">{t("选择常用入口，最多显示 4 个")}</span></span></span>
             <ChevronRight size={18} className={cn("text-muted-foreground transition-transform", customizingNav && "rotate-90")}/>
           </button>
-          {customizingNav && <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-foreground">底栏快捷入口</p><span className="text-xs text-muted-foreground">已选 {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground")}><Icon size={17}/><span className="flex-1 truncate">{label}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-border bg-primary text-primary-foreground" : "border-border")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-muted-foreground hover:text-primary">恢复默认底栏</button></div>}
-          <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground">经营工具</p>
+          {customizingNav && <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4"><div className="mb-3 flex items-center justify-between"><p className="text-sm font-semibold text-foreground">{t("底栏快捷入口")}</p><span className="text-xs text-muted-foreground">{t("已选")} {mobilePrimary.length}/4</span></div><div className="grid grid-cols-2 gap-2">{nav.map(({href,label,icon:Icon}) => { const selected = mobilePrimary.includes(href); return <button key={href} type="button" aria-pressed={selected} onClick={() => toggleMobileNav(href)} disabled={!selected && mobilePrimary.length >= 4} className={cn("flex min-w-0 items-center gap-2.5 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45", selected ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-muted-foreground")}><Icon size={17}/><span className="flex-1 truncate">{t(label)}</span><span className={cn("grid size-4 place-items-center rounded-full border", selected ? "border-border bg-primary text-primary-foreground" : "border-border")}>{selected && <Check size={11}/>}</span></button>; })}</div><button type="button" onClick={() => { setMobilePrimary(defaultMobilePrimary); localStorage.setItem(mobileNavStorageKey, JSON.stringify(defaultMobilePrimary)); }} className="mt-3 text-xs font-medium text-muted-foreground hover:text-primary">{t("恢复默认底栏")}</button></div>}
+          <p className="mb-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground">{t("经营工具")}</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && !["/settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{t(label)}</Link>)}
           </div>
-          <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-muted-foreground">系统与账号</p>
+          <p className="mb-2 mt-5 px-1 text-xs font-semibold tracking-wide text-muted-foreground">{t("系统与账号")}</p>
           <div className="grid grid-cols-2 gap-2">
-            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/ai-settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{label}</Link>)}
+            {nav.filter(item => !mobilePrimary.includes(item.href) && ["/settings", "/ai-settings", "/motion", "/integrations", "/sync-center"].includes(item.href)).map(({href,label,icon:Icon})=><Link key={href} href={href} onClick={selectMobileRoute} className={cn("flex items-center gap-3 rounded-2xl border p-3.5 text-sm font-medium transition-colors", pathname===href ? "border-border bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-card text-foreground hover:border-border hover:bg-[var(--mc-tint-blue)]")}><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Icon size={18}/></span>{t(label)}</Link>)}
             {mode==="cloud"&&<Link href="/account" onClick={selectMobileRoute} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 text-sm font-medium text-foreground"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><CircleUserRound size={18}/></span>账号设置</Link>}
           </div>
         </SheetContent>
@@ -656,22 +668,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Dialog open={dataModeDialogOpen} onOpenChange={open=>{if(!modeSwitchBusy)setDataModeDialogOpen(open);}}>
         <DialogContent className="rounded-[28px] border border-border p-6 sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-xl text-foreground">选择数据存储位置</DialogTitle>
-            <DialogDescription className="leading-6">切换只会更改当前读取的数据源，不会自动复制或合并两边的数据。</DialogDescription>
+            <DialogTitle className="text-xl text-foreground">{t("选择数据存储位置")}</DialogTitle>
+            <DialogDescription className="leading-6">{t("切换只会更改当前读取的数据源，不会自动复制或合并两边的数据。")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             {(["cloud","local"] as const).map(target=>{
               const active=mode===target;
               return <button key={target} type="button" disabled={modeSwitchBusy||loading} onClick={()=>void chooseDataMode(target)} className={cn("rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-wait disabled:opacity-60",active?"border-border bg-[var(--mc-tint-blue)] shadow-[inset_0_0_0_1px_#d5eaff]":"border-border bg-card hover:border-border")}>
                 <span className={cn("mb-3 grid size-10 place-items-center rounded-xl",target==="cloud"?"bg-[var(--mc-tint-blue)] text-primary":"bg-[var(--mc-tint-green)] text-[var(--mc-color-success)]")}>{target==="cloud"?<Cloud size={20}/>:<HardDrive size={20}/>}</span>
-                <span className="block text-sm font-semibold text-foreground">{target==="cloud"?"云端数据":"本地数据"}{active&&<span className="ml-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-primary">当前使用</span>}</span>
-                <span className="mt-1.5 block text-xs leading-5 text-muted-foreground">{target==="cloud"?"安全保存在云端，手机和电脑可同步，支持店铺与团队协作。":"保存在此设备的浏览器中；不会自动上传或跨设备同步。"}</span>
+                <span className="block text-sm font-semibold text-foreground">{target==="cloud"?t("云端数据"):t("本地数据")}{active&&<span className="ml-2 rounded-full bg-card px-2 py-0.5 text-[10px] font-medium text-primary">{t("当前使用")}</span>}</span>
+                <span className="mt-1.5 block text-xs leading-5 text-muted-foreground">{target==="cloud"?t("安全保存在云端，手机和电脑可同步，支持店铺与团队协作。"):t("保存在此设备的浏览器中；不会自动上传或跨设备同步。")}</span>
               </button>;
             })}
           </div>
           {modeSwitchError&&<p role="alert" className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]">{modeSwitchError}</p>}
           {modeSwitchError.includes("登录")&&<Link href="/login" onClick={()=>setDataModeDialogOpen(false)} className="text-sm font-semibold text-primary">前往登录云端账号 →</Link>}
-          <p className="text-xs leading-5 text-muted-foreground">本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。</p>
+          <p className="text-xs leading-5 text-muted-foreground">{t("本地与云端数据相互独立。需要迁移数据时，请使用“本地数据迁移”向导。")}</p>
         </DialogContent>
       </Dialog>
       <PerformanceDebugCapsule motionLevel={motionLevel} dataMode={mode}/>

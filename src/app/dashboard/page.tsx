@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
+import { useLanguage } from "@/components/language-provider";
 import {
   DemoNote,
   MetricCard,
@@ -32,6 +33,7 @@ import { compareValues, dailySourceGroup, isDailyCostComplete, previousPeriodEnd
 const DashboardTrendChart = dynamic(() => import("@/components/charts/dashboard-trend-chart"));
 export default function Dashboard() {
   const { data } = useApp();
+  const { language, t } = useLanguage();
   const [days, setDays] = useState<7 | 30>(7);
   if (!data) return <p>正在加载数据…</p>;
   const currentDate = storeToday(data.settings.store.timezone);
@@ -67,14 +69,14 @@ export default function Dashboard() {
   currentStart.setUTCDate(currentStart.getUTCDate() - (days - 1));
   const currentLabel = `${currentStart.toISOString().slice(0, 10)} 至 ${currentDate}`;
   const formatComparison = (currentValue: number | null, previousValue: number | null, money = false) => {
-    if (currentValue === null || previousValue === null) return "数据不足，无法比较";
-    if (previousRows.length === 0) return "上一周期暂无经营日报";
+    if (currentValue === null || previousValue === null) return t("数据不足，无法比较");
+    if (previousRows.length === 0) return t("上一周期暂无经营日报");
     const comparison = compareValues(currentValue, previousValue);
-    if (comparison.delta === 0) return "与上一周期持平";
-    const direction = comparison.delta > 0 ? "上升" : "下降";
+    if (comparison.delta === 0) return t("与上一周期持平");
+    const direction = comparison.delta > 0 ? t("上升") : t("下降");
     const amount = money ? formatMoney(Math.abs(comparison.delta)) : `${Math.abs(comparison.delta).toFixed(2)}x`;
     const rate = comparison.percent === null ? "" : `（${comparison.percent > 0 ? "+" : ""}${comparison.percent.toFixed(1)}%）`;
-    return `较前期${direction} ${amount}${rate}`;
+    return language === "en-US" ? `${t("较前期")} ${direction} ${amount}${rate.replace(/[（）]/g, "")}` : `较前期${direction} ${amount}${rate}`;
   };
   return (
     <>
@@ -100,18 +102,18 @@ export default function Dashboard() {
       <section className="material-hero mb-5 overflow-hidden rounded-[22px]">
         <div className="grid gap-5 p-5 md:grid-cols-[1.45fr_1fr] md:items-center md:px-6 md:py-5">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--mc-tint-blue)] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-primary"><span className="size-1.5 rounded-full bg-primary" />近 {days} 天经营快照</span>
-            <h2 className="mt-2.5 text-[20px] font-semibold tracking-[-.035em] text-foreground md:text-[23px]">经营表现，清晰可见。</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">销售、利润与经营目标集中呈现，数据更新后自动同步。</p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--mc-tint-blue)] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-primary"><span className="size-1.5 rounded-full bg-primary" />{language === "en-US" ? `${days}-day business snapshot` : `近 ${days} 天经营快照`}</span>
+            <h2 className="mt-2.5 text-[20px] font-semibold tracking-[-.035em] text-foreground md:text-[23px]">{t("经营表现，清晰可见。")}</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("销售、利润与经营目标集中呈现，数据更新后自动同步。")}</p>
             <div className="mt-4 grid max-w-[500px] grid-cols-2 gap-4">
-              <div className="border-r border-border pr-3"><p className="text-[11px] text-muted-foreground">期间净销售额</p><p className="number mt-1 text-[25px] font-semibold tracking-[-.04em] text-foreground md:text-[29px]">{formatMoney(summary.netSales)}</p></div>
-              <div><p className="text-[11px] text-muted-foreground">估算经营利润</p><p className={`number mt-1 text-[23px] font-semibold tracking-[-.04em] md:text-[27px] ${Number(summary.profit)<0?"text-[var(--mc-color-danger)]":"text-[var(--mc-color-success)]"}`}>{formatMoney(summary.profit)}</p></div>
+              <div className="border-r border-border pr-3"><p className="text-[11px] text-muted-foreground">{t("期间净销售额")}</p><p className="number mt-1 text-[25px] font-semibold tracking-[-.04em] text-foreground md:text-[29px]">{formatMoney(summary.netSales)}</p></div>
+              <div><p className="text-[11px] text-muted-foreground">{t("估算经营利润")}</p><p className={`number mt-1 text-[23px] font-semibold tracking-[-.04em] md:text-[27px] ${Number(summary.profit)<0?"text-[var(--mc-color-danger)]":"text-[var(--mc-color-success)]"}`}>{formatMoney(summary.profit)}</p></div>
             </div>
           </div>
           <div className="rounded-[17px] border border-border bg-[linear-gradient(130deg,var(--card)_0%,var(--mc-tint-blue)_100%)] p-4 md:p-5">
-            <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-medium text-muted-foreground">本月销售目标</p><p className="number mt-1 text-[22px] font-semibold tracking-tight text-foreground">{targetPercent ? `${targetPercent.toFixed(1)}%` : "未设置"}</p></div><span className="grid size-9 place-items-center rounded-xl bg-card text-primary shadow-sm"><Target size={17}/></span></div>
+            <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-medium text-muted-foreground">{t("本月销售目标")}</p><p className="number mt-1 text-[22px] font-semibold tracking-tight text-foreground">{targetPercent ? `${targetPercent.toFixed(1)}%` : t("未设置")}</p></div><span className="grid size-9 place-items-center rounded-xl bg-card text-primary shadow-sm"><Target size={17}/></span></div>
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--mc-tint-blue)]"><div className="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none" style={{width:`${targetProgress}%`}}/></div>
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground"><span>已完成 {formatMoney(monthSales)} / {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-primary">经营数据 <ArrowRight size={12}/></Link></div>
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground"><span>{t("已完成")} {formatMoney(monthSales)} / {formatMoney(data.settings.salesTarget)}</span><Link href="/data" className="inline-flex items-center gap-1 font-semibold text-primary">{t("经营数据")} <ArrowRight size={12}/></Link></div>
           </div>
         </div>
       </section>
@@ -159,16 +161,16 @@ export default function Dashboard() {
       </div>
       <section aria-label="经营周期对比" className="mt-4 rounded-2xl border border-border bg-card px-4 py-3 md:mt-5 md:px-5">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-1">
-          <h2 className="text-xs font-semibold text-foreground md:text-sm">经营周期对比</h2>
-          <p className="text-[10px] text-muted-foreground md:text-xs">当前 {currentLabel} · 对比 {previousLabel} · 两期按相同天数计算</p>
+          <h2 className="text-xs font-semibold text-foreground md:text-sm">{t("经营周期对比")}</h2>
+          <p className="text-[10px] text-muted-foreground md:text-xs">{language === "en-US" ? `${currentLabel} vs. ${previousLabel} · both periods use equal days` : `当前 ${currentLabel} · 对比 ${previousLabel} · 两期按相同天数计算`}</p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <div><p className="text-[10px] text-muted-foreground">净销售额</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.netSales), Number(previousSummary.netSales), true)}</p></div>
-          <div><p className="text-[10px] text-muted-foreground">估算经营利润</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.profit), Number(previousSummary.profit), true)}</p></div>
-          <div><p className="text-[10px] text-muted-foreground">推广消耗</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.adSpend), Number(previousSummary.adSpend), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">{t("净销售额")}</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.netSales), Number(previousSummary.netSales), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">{t("估算经营利润")}</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.profit), Number(previousSummary.profit), true)}</p></div>
+          <div><p className="text-[10px] text-muted-foreground">{t("推广消耗")}</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(Number(summary.adSpend), Number(previousSummary.adSpend), true)}</p></div>
           <div><p className="text-[10px] text-muted-foreground">广告 ROAS</p><p className="mt-1 text-[11px] font-medium text-foreground md:text-xs">{formatComparison(summary.roas, previousSummary.roas)}</p></div>
         </div>
-        <p className="mt-3 border-t border-border pt-2 text-[10px] leading-4 text-muted-foreground">利润为基于已录入收入、成本与推广数据的估算；{comparisonCostIncompleteDays>0?`当前及对比周期有 ${comparisonCostIncompleteDays} 条日报成本不完整，利润变化不宜直接用于判断业绩改善。`:`成本字段已完整，仍应结合两期数据覆盖情况解读。`}{previousRows.length===0?"上一周期没有日报记录，不能据此判断趋势。":""}</p>
+        <p className="mt-3 border-t border-border pt-2 text-[10px] leading-4 text-muted-foreground">{language === "en-US" ? `Profit is estimated from recorded sales, costs, and advertising. ${comparisonCostIncompleteDays > 0 ? `${comparisonCostIncompleteDays} daily reports have incomplete costs; do not use this change alone to assess performance.` : t("成本字段已完整，仍应结合两期数据覆盖情况解读。")}${previousRows.length === 0 ? ` ${t("上一周期没有日报记录，不能据此判断趋势。")}` : ""}` : <>利润为基于已录入收入、成本与推广数据的估算；{comparisonCostIncompleteDays>0?`当前及对比周期有 ${comparisonCostIncompleteDays} 条日报成本不完整，利润变化不宜直接用于判断业绩改善。`:`成本字段已完整，仍应结合两期数据覆盖情况解读。`}{previousRows.length===0?"上一周期没有日报记录，不能据此判断趋势。":""}</>}</p>
       </section>
       <div className="mt-5 overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_8px_28px_rgba(35,74,108,0.055)] md:rounded-[22px]">
         <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} connected />
