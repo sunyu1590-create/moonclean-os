@@ -20,7 +20,7 @@ const taskSourceHref=(task:OperationTask)=>{
   if(!task.source_module||!task.source_id)return null;
   const routes={notes:"/notes",experiments:"/experiments",competitors:"/competitors","service-cases":"/service","copilot-conversations":"/copilot"} as const;
   const query=task.source_module==="copilot-conversations"?"conversation":"id";
-  return {href:`${routes[task.source_module]}?${query}=${encodeURIComponent(task.source_id)}`,label:{notes:"运营备忘录",experiments:"运营实验",competitors:"竞品档案","service-cases":"售后工单","copilot-conversations":"AI 对话"}[task.source_module]};
+  return {href:`${routes[task.source_module]}?${query}=${encodeURIComponent(task.source_id)}`,label:{notes:"笔记中心",experiments:"运营实验",competitors:"竞品档案","service-cases":"售后工单","copilot-conversations":"AI 对话"}[task.source_module]};
 };
 const blank={title:"",detail:"",priority:"normal" as Priority,status:"todo" as Status,dueDate:""};
 function addTaskDays(day:string,count:number){const date=new Date(`${day}T12:00:00Z`);date.setUTCDate(date.getUTCDate()+count);return date.toISOString().slice(0,10);}

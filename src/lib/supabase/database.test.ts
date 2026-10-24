@@ -15,6 +15,8 @@ const migrations = [
   "202610190001_image_import.sql",
   "20261019001234_operations_workbench.sql",
   "20261022150000_account_avatar_member_lookup.sql",
+  "20261024055552_note_center.sql",
+  "20261024055642_note_center_query_tuning.sql",
 ];
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;

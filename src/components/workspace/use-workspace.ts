@@ -128,10 +128,11 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
         const next=current.map(row=>row.id===id?{...row,[field]:restore?null:new Date().toISOString()}:row);
         writeLocal(activeStoreId,resource,next); commitRows(next);
       } else {
-        const checked=(method==="PATCH"?workspacePatchSchema(resource):resourceSchemas[resource]).parse(value) as Record<string,unknown>;
+        const payload={...value}; delete payload.__silent;
+        const checked=(method==="PATCH"?workspacePatchSchema(resource):resourceSchemas[resource]).parse(payload) as Record<string,unknown>;
         const now=new Date().toISOString();
         if(method==="POST") {
-          const row={...checked,id:crypto.randomUUID(),store_id:activeStoreId,created_by:"local-user",created_at:now,updated_at:now} as WorkspaceRow;
+          const row={...checked,id:typeof checked.id==="string"?checked.id:crypto.randomUUID(),store_id:activeStoreId,created_by:"local-user",created_at:now,updated_at:now} as WorkspaceRow;
           const next=[row,...current];writeLocal(activeStoreId,resource,next);commitRows(next);created=row;
         } else {
           const id=String(checked.id||"");
@@ -147,11 +148,12 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
             writeLocal(activeStoreId,historyResource,[historyRow,...history]);
           }
           const next=current.map(row=>row.id===id?{...row,...merged,updated_at:now}:row);
-          writeLocal(activeStoreId,resource,next);commitRows(next);
+          writeLocal(activeStoreId,resource,next);commitRows(next);created=next.find(row=>row.id===id);
         }
       }
     } else {
-      const response=await fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/workspace/${resource}`,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(value)});
+      const payload={...value}; delete payload.__silent;
+      const response=await fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/workspace/${resource}`,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const result=await response.json() as {error?:string;id?:string;[key:string]:unknown};
       if(!response.ok) throw new Error(result.error||"云端保存失败");
       const current=rowsRef.current;
@@ -163,6 +165,7 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
       } else if(method==="PATCH") {
         const updated=result as WorkspaceRow;
         next=current.map(row=>row.id===updated.id?updated:row);
+        created=updated;
       } else {
         const id=String(value.id);
         const field=value.archive===true||value.restoreArchive===true?"archived_at":resource==="notes"||resource==="copilot-conversations"?"deleted_at":"archived_at";
@@ -175,8 +178,8 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
         setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt,feature);
       }
     }
-    notifyFeedback({kind:"success",title:success,description:mode==="cloud"?"已保存到云端店铺。":"已保存在此设备。"});
+    if(success)notifyFeedback({kind:"success",title:success,description:mode==="cloud"?"已保存到云端店铺。":"已保存在此设备。"});
     return created;
   },[activeStoreId,commitRows,feature,mode,resource,userId]);
-  return {rows,loading,refreshing,error,lastUpdated,refresh,create:(v:Record<string,unknown>)=>mutate("POST",v,"已创建"),update:(v:Record<string,unknown>)=>mutate("PATCH",v,"已保存"),remove:(id:string)=>mutate("DELETE",{id},"已移入回收站"),archive:(id:string)=>mutate("DELETE",{id,archive:true},"已归档"),restore:(id:string)=>mutate("DELETE",{id,restore:true},"已恢复"),unarchive:(id:string)=>mutate("DELETE",{id,restore:true,restoreArchive:true},"已取消归档")};
+  return {rows,loading,refreshing,error,lastUpdated,refresh,create:(v:Record<string,unknown>)=>mutate("POST",v,v.__silent===true?"":"已创建"),update:(v:Record<string,unknown>)=>mutate("PATCH",v,v.__silent===true?"":"已保存"),remove:(id:string)=>mutate("DELETE",{id},"已移入回收站"),archive:(id:string)=>mutate("DELETE",{id,archive:true},"已归档"),restore:(id:string)=>mutate("DELETE",{id,restore:true},"已恢复"),unarchive:(id:string)=>mutate("DELETE",{id,restore:true,restoreArchive:true},"已取消归档")};
 }

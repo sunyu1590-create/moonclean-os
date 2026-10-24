@@ -73,7 +73,7 @@ const nav = [
   { href: "/orders", label: "订单中心", icon: ShoppingCart },
   { href: "/inventory", label: "库存管理", icon: Boxes },
   { href: "/tasks", label: "运营待办", icon: ClipboardCheck },
-  { href: "/notes", label: "运营备忘录", icon: NotebookPen },
+  { href: "/notes", label: "笔记中心", icon: NotebookPen },
   { href: "/copilot", label: "AI 运营助手", icon: BrainCircuit },
   { href: "/ai-chat", label: "AI 聊天", icon: MessageCircle },
   { href: "/ai-settings", label: "AI 设置", icon: Sparkles },

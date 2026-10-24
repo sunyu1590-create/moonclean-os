@@ -1,5 +1,5 @@
-import { WorkspacePage } from "@/components/workspace/workspace-page";
+import { NotesCenter } from "@/components/notes/notes-center";
 export default async function Page({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   const params = await searchParams;
-  return <WorkspacePage module="notes" initialNoteId={params.id} />;
+  return <NotesCenter initialNoteId={params.id} />;
 }

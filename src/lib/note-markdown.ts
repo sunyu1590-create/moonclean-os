@@ -9,11 +9,13 @@ export function normalizeNoteMarkdown(value: string) {
     .trim();
 }
 
-export function applyAiNoteContent(action: "polish" | "suggest", current: string, result: string) {
+export function applyAiNoteContent(action: "polish" | "suggest" | "summarize" | "title" | "todos" | "structure" | "tags" | "retrospective", current: string, result: string) {
   const markdown = normalizeNoteMarkdown(result);
   if (!markdown) return current;
-  if (action === "polish") return markdown;
-  const section = /^#{1,3}\s+AI 建议\b/m.test(markdown) ? markdown : `## AI 建议\n\n${markdown}`;
+  if (action === "polish" || action === "structure") return markdown;
+  if (action === "title" || action === "tags") return current;
+  const heading = action === "summarize" ? "摘要" : action === "todos" ? "待办事项" : action === "retrospective" ? "运营复盘" : "AI 建议";
+  const section = new RegExp(`^#{1,3}\\s+${heading}\\b`, "m").test(markdown) ? markdown : `## ${heading}\n\n${markdown}`;
   return `${current.trimEnd()}${current.trim() ? "\n\n" : ""}${section}`.trim();
 }
 

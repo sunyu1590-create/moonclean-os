@@ -4,6 +4,7 @@ import { appendOnlyResources, resourceSchemas, workspacePatchSchema, workspaceRe
 describe("运营工作台数据校验", () => {
   it("只允许列出的工作台资源", () => {
     expect(workspaceResource.safeParse("notes").success).toBe(true);
+    expect(workspaceResource.safeParse("note-folders").success).toBe(true);
     expect(workspaceResource.safeParse("stores").success).toBe(false);
   });
   it("拒绝负竞品价格并接受有效价格", () => {
@@ -28,6 +29,14 @@ describe("运营工作台数据校验", () => {
     const invalidRelationPatch = workspacePatchSchema("notes").parse({ id, related_type: null });
     expect(resourceSchemas.notes.safeParse({ ...existing, ...invalidRelationPatch }).success).toBe(false);
     expect(workspacePatchSchema("notes").safeParse({ id, title: "更新标题" }).success).toBe(true);
+  });
+  it("笔记支持自动标题与店铺范围文件夹关联，保留原来的 Markdown 正文", () => {
+    const folderId = "81000000-0000-4000-8000-000000000003";
+    const note = resourceSchemas.notes.safeParse({ title: "经营复盘首行", title_is_auto: true, body_markdown: "# 经营复盘首行\n\n保留正文", folder_id: folderId, folder: "复盘" });
+    expect(note.success).toBe(true);
+    expect(workspaceTable["note-folders"]).toBe("operation_note_folders");
+    expect(resourceSchemas["note-folders"].safeParse({ name: "  复盘  " }).success).toBe(true);
+    expect(resourceSchemas["note-folders"].safeParse({ name: "" }).success).toBe(false);
   });
   it("历史与 AI 用量资源只读或追加，不提供普通覆盖", () => {
     expect(appendOnlyResources.has("note-versions")).toBe(true);

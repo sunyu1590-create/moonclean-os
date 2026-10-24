@@ -24,6 +24,7 @@ export const BACKUP_STORE_TABLES = [
   "inventory_movements",
   "operation_tasks",
   "operation_notes",
+  "operation_note_folders",
   "operation_note_versions",
   "operation_experiments",
   "competitors",

@@ -15,6 +15,10 @@ insert into public.products(id,store_id,name,category)
  values('71000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000001','Laundry','cleaning');
 insert into public.operation_notes(id,store_id,title,body_markdown,created_by)
  values('81000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000001','Owner note','baseline',auth.uid());
+insert into public.operation_note_folders(id,store_id,name,created_by)
+ values('85000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000001','运营复盘',auth.uid());
+update public.operation_notes set folder='运营复盘',folder_id='85000000-0000-4000-8000-000000000001'
+ where id='81000000-0000-4000-8000-000000000001';
 insert into public.operation_tasks(store_id,title,source_module,source_id)
  values('61000000-0000-4000-8000-000000000001','Review note link','notes','81000000-0000-4000-8000-000000000001');
 insert into public.operation_experiments(id,store_id,name,experiment_type,product_id,source_note_id)
@@ -27,6 +31,7 @@ update public.operation_notes set related_type='copilot_conversation',related_id
  where id='81000000-0000-4000-8000-000000000001';
 do $$ begin
  if (select count(*) from public.operation_note_versions where note_id='81000000-0000-4000-8000-000000000001')<>1 then raise exception 'note first version missing'; end if;
+ if (select count(*) from public.operation_notes n join public.operation_note_folders f on f.id=n.folder_id and f.store_id=n.store_id where n.id='81000000-0000-4000-8000-000000000001' and f.name='运营复盘')<>1 then raise exception 'note folder association missing'; end if;
  if (select count(*) from public.operation_tasks where source_module='notes' and source_id='81000000-0000-4000-8000-000000000001')<>1 then raise exception 'task source link missing'; end if;
  if (select count(*) from public.operation_notes where related_type='copilot_conversation' and related_id='84000000-0000-4000-8000-000000000001')<>1 then raise exception 'copilot note link missing'; end if;
  if (select count(*) from public.service_template_versions where template_id='81000000-0000-4000-8000-000000000001')<>0 then raise exception 'unrelated template version'; end if;
@@ -61,6 +66,7 @@ end $$;
 select set_config('request.jwt.claim.sub','51000000-0000-4000-8000-000000000003',true);
 do $$ begin
  if (select count(*) from public.operation_notes)<>1 then raise exception 'viewer cannot read note'; end if;
+ if (select count(*) from public.operation_note_folders where id='85000000-0000-4000-8000-000000000001')<>1 then raise exception 'viewer cannot read note folder'; end if;
  begin
   insert into public.operation_notes(store_id,title,created_by) values('61000000-0000-4000-8000-000000000001','Viewer note',auth.uid());
   raise exception 'viewer note insert allowed';
@@ -76,7 +82,7 @@ do $$ begin
 end $$;
 select set_config('request.jwt.claim.sub','51000000-0000-4000-8000-000000000004',true);
 do $$ begin
- if exists(select 1 from public.operation_notes) or exists(select 1 from public.competitors) then raise exception 'cross-store workspace read'; end if;
+ if exists(select 1 from public.operation_notes) or exists(select 1 from public.competitors) or exists(select 1 from public.operation_note_folders) then raise exception 'cross-store workspace read'; end if;
  begin
   insert into public.operation_experiments(store_id,name,experiment_type) values('61000000-0000-4000-8000-000000000001','Other store','custom');
   raise exception 'cross-store experiment write allowed';
