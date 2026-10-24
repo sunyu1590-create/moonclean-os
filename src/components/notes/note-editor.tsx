@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Clock3, Code2, Download, FileText, Heading1, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, LoaderCircle, MoreHorizontal, Pin, Quote, Redo2, RotateCcw, Save, Sparkles, Strikethrough, Table2, Trash2, Undo2, X } from "lucide-react";
+import { Archive, ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Clock3, Code2, Download, FileText, Heading1, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, LoaderCircle, MoreHorizontal, Pin, Quote, Redo2, RotateCcw, Save, Sparkles, Strikethrough, Table2, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AiNoteTools, type AiNoteAction } from "@/components/workspace/ai-note-tools";
 import { useWorkspaceResource } from "@/components/workspace/use-workspace";
 import { useApp } from "@/components/app-provider";
@@ -77,6 +79,10 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
   const [showVersions, setShowVersions] = useState(false);
   const [internalLinkOpen, setInternalLinkOpen] = useState(false);
   const [internalLinkTarget, setInternalLinkTarget] = useState("");
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [restoreVersionTarget, setRestoreVersionTarget] = useState<WorkspaceRow | null>(null);
   const [conflict, setConflict] = useState(initialConflict);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [folderId, setFolderId] = useState(value.folder_id || "");
@@ -261,10 +267,15 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
   const insertLink = () => {
     const editor = editorRef.current;
     if (!editor) return;
-    const url = window.prompt("输入链接地址（https://…）");
+    setLinkUrl("");
+    setLinkDialogOpen(true);
+  };
+  const applyLink = () => {
+    const url = linkUrl.trim();
     if (!url) return;
     if (!/^https?:\/\//i.test(url) && !url.startsWith("/notes?id=")) { notifyFeedback({ kind: "error", title: "链接格式无效", description: "请使用 https:// 链接或笔记中心内部链接。" }); return; }
     command(current => current.chain().focus().extendMarkRange("link").setLink({ href: url, target: url.startsWith("/") ? null : "_blank" }).run());
+    setLinkDialogOpen(false);
   };
   const uploadAttachment = async (file?: File) => {
     if (!file || !activeStoreId || mode !== "cloud") return;
@@ -317,10 +328,10 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
   };
   const versionsForNote = versions.filter(version => version.note_id === noteId).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   const restoreVersion = (version: WorkspaceRow) => {
-    if (!window.confirm("将历史版本正文载入当前编辑区？当前内容会先自动保存为新版本。")) return;
     change({ title: String(version.title || ""), title_is_auto: false, body_markdown: String(version.body_markdown || "") });
     editorRef.current?.commands.setContent(String(version.body_markdown || ""), { contentType: "markdown" });
     setShowVersions(false);
+    setRestoreVersionTarget(null);
   };
 
   const formatButtons = [
@@ -366,7 +377,7 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
             {value.related_type && value.related_id && <button className="notes-menu-item" onClick={() => { const route = value.related_type === "product" || value.related_type === "sku" ? "/products" : value.related_type === "experiment" ? "/experiments" : value.related_type === "competitor" ? "/competitors" : value.related_type === "service_case" ? "/service" : "/copilot"; const key = value.related_type === "copilot_conversation" ? "conversation" : "id"; router.push(`${route}?${key}=${encodeURIComponent(value.related_id || "")}`); }}><Link2 size={14}/>打开关联业务记录</button>}
             <button className="notes-menu-item" onClick={() => { setInternalLinkOpen(true); setMenuOpen(false); }}><Link2 size={14}/>插入笔记链接</button>
             <button className="notes-menu-item" disabled={!canEdit} onClick={async () => { setMenuOpen(false); await onArchive(); }}><Archive size={14}/>归档</button>
-            <button className="notes-menu-item text-[var(--mc-color-danger)]" disabled={!canEdit} onClick={async () => { if (window.confirm("将这条笔记移入回收站？你可以在回收站中恢复。")) { setMenuOpen(false); await onDelete(); } }}><Trash2 size={14}/>移入回收站</button>
+            <button className="notes-menu-item text-[var(--mc-color-danger)]" disabled={!canEdit} onClick={() => { setMenuOpen(false); setConfirmDeleteOpen(true); }}><Trash2 size={14}/>移入回收站</button>
           </div>
         </>}
       </div>
@@ -420,10 +431,13 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
     </div>
     <div className="notes-editor-bottom-bar">
       <div className="flex min-w-0 items-center gap-2 text-[10px] text-muted-foreground"><FileText size={13}/><span className="truncate">{value.folder || "收件箱"}</span><span>·</span><span>{value.tags.length ? `${value.tags.length} 个标签` : "无标签"}</span></div>
-      <Button size="xs" variant="ghost" className="shrink-0" onClick={() => setAiOpen(open => !open)}><Sparkles size={14}/>AI</Button>
+      <Button type="button" size="xs" variant="ghost" className="notes-editor-ai-trigger shrink-0" onClick={(event) => { event.stopPropagation(); setAiOpen(open => !open); }}><Sparkles size={14}/>AI</Button>
     </div>
 
-    {internalLinkOpen && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/25 p-4" role="presentation" onClick={() => setInternalLinkOpen(false)}><section role="dialog" aria-modal="true" aria-label="插入笔记链接" className="w-full max-w-md rounded-2xl border border-border bg-card p-4 shadow-2xl" onClick={event => event.stopPropagation()}><div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold">插入笔记链接</h2><p className="mt-1 text-[10px] text-muted-foreground">选择一条笔记，在正文中创建内部链接。</p></div><button aria-label="关闭" onClick={() => setInternalLinkOpen(false)} className={buttons}><X size={16}/></button></div><select aria-label="选择目标笔记" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-xs" value={internalLinkTarget} onChange={event => setInternalLinkTarget(event.target.value)}><option value="">选择笔记</option>{availableNotes.filter(entry => entry.id !== noteId).map(entry => <option key={entry.id} value={String(entry.id)}>{entry.title_is_auto ? derivedTitle(String(entry.body_markdown || "")) : String(entry.title || "未命名笔记")}</option>)}</select><div className="mt-4 flex justify-end gap-2"><Button size="sm" variant="ghost" onClick={() => setInternalLinkOpen(false)}>取消</Button><Button size="sm" disabled={!internalLinkTarget} onClick={insertInternalLink}><Link2 size={14}/>插入链接</Button></div></section></div>}
-    {showVersions && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/25 p-4" role="presentation" onClick={() => setShowVersions(false)}><section role="dialog" aria-modal="true" aria-label="历史版本" className="max-h-[80vh] w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl" onClick={event => event.stopPropagation()}><header className="flex items-center justify-between border-b border-border px-4 py-3"><div><h2 className="text-sm font-semibold">历史版本</h2><p className="text-[10px] text-muted-foreground">正文发生变化时由数据库自动留存</p></div><button aria-label="关闭历史版本" onClick={() => setShowVersions(false)} className={buttons}><X size={16}/></button></header><div className="max-h-[65vh] divide-y divide-border overflow-y-auto">{versionsForNote.length ? versionsForNote.map(version => <article key={version.id} className="flex items-center justify-between gap-3 p-3"><div className="min-w-0"><p className="text-xs font-medium">{String(version.title || "未命名笔记")}</p><p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{String(version.body_markdown || "")}</p><p className="mt-1 text-[10px] text-muted-foreground">{new Date(String(version.created_at)).toLocaleString("zh-CN")}</p></div><Button size="xs" variant="outline" onClick={() => restoreVersion(version)}>载入</Button></article>) : <p className="p-8 text-center text-xs text-muted-foreground">暂无历史版本</p>}</div></section></div>}
+    <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>插入超链接</DialogTitle><DialogDescription>输入 https:// 地址，或使用笔记中心内部链接。</DialogDescription></DialogHeader><Input autoFocus aria-label="链接地址" value={linkUrl} onChange={event => setLinkUrl(event.target.value)} placeholder="https://example.com"/><DialogFooter><Button variant="ghost" onClick={() => setLinkDialogOpen(false)}>取消</Button><Button disabled={!linkUrl.trim()} onClick={applyLink}>插入链接</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={internalLinkOpen} onOpenChange={setInternalLinkOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>插入笔记链接</DialogTitle><DialogDescription>选择一条笔记，在正文中创建内部链接。</DialogDescription></DialogHeader><select aria-label="选择目标笔记" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-xs" value={internalLinkTarget} onChange={event => setInternalLinkTarget(event.target.value)}><option value="">选择笔记</option>{availableNotes.filter(entry => entry.id !== noteId).map(entry => <option key={entry.id} value={String(entry.id)}>{entry.title_is_auto ? derivedTitle(String(entry.body_markdown || "")) : String(entry.title || "未命名笔记")}</option>)}</select><DialogFooter><Button variant="ghost" onClick={() => setInternalLinkOpen(false)}>取消</Button><Button disabled={!internalLinkTarget} onClick={insertInternalLink}><Link2 size={14}/>插入链接</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={showVersions} onOpenChange={setShowVersions}><DialogContent className="max-h-[80dvh] overflow-hidden sm:max-w-xl"><DialogHeader><DialogTitle>历史版本</DialogTitle><DialogDescription>正文发生变化时由数据库自动留存。</DialogDescription></DialogHeader><div className="max-h-[60dvh] divide-y divide-border overflow-y-auto">{versionsForNote.length ? versionsForNote.map(version => <article key={version.id} className="flex items-center justify-between gap-3 p-3"><div className="min-w-0"><p className="text-xs font-medium">{String(version.title || "未命名笔记")}</p><p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{String(version.body_markdown || "")}</p><p className="mt-1 text-[10px] text-muted-foreground">{new Date(String(version.created_at)).toLocaleString("zh-CN")}</p></div><Button size="xs" variant="outline" onClick={() => setRestoreVersionTarget(version)}>载入</Button></article>) : <p className="p-8 text-center text-xs text-muted-foreground">暂无历史版本</p>}</div></DialogContent></Dialog>
+    <AlertDialog open={Boolean(restoreVersionTarget)} onOpenChange={open => { if (!open) setRestoreVersionTarget(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>载入此历史版本？</AlertDialogTitle><AlertDialogDescription>当前正文会先按自动保存规则保存，再载入所选历史正文。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction onClick={event => { event.preventDefault(); if (restoreVersionTarget) restoreVersion(restoreVersionTarget); }}>载入版本</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>将笔记移入回收站？</AlertDialogTitle><AlertDialogDescription>你可以之后从回收站恢复这条笔记。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>取消</AlertDialogCancel><AlertDialogAction onClick={event => { event.preventDefault(); setConfirmDeleteOpen(false); void onDelete(); }}>移入回收站</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </section>;
 }

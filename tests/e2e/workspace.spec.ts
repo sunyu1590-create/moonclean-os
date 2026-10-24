@@ -19,6 +19,22 @@ test.describe("运营功能工作台（本机模式）", () => {
     await expect(page.getByText("E2E 促销复盘").first()).toBeVisible();
   });
 
+  test("编辑器 AI 入口可点击，删除后退出当前编辑页", async ({ page }) => {
+    await page.goto("/notes");
+    await page.getByRole("button", { name: "新建笔记" }).click();
+    await page.getByLabel("笔记标题").fill("E2E 删除后退出");
+    await page.getByLabel("笔记正文").fill("确认 AI 底栏入口与删除后退出编辑。");
+    await expect(page.getByRole("button", { name: "AI", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "AI", exact: true }).click();
+    await expect(page.getByRole("region", { name: "AI 笔记助手" })).toBeVisible();
+    await page.locator(".notes-editor-header").getByRole("button", { name: "更多笔记操作" }).click();
+    await page.getByRole("button", { name: "移入回收站" }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "移入回收站", exact: true }).last().click();
+    await expect(page.getByRole("region", { name: "笔记编辑器" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "回收站" })).toBeVisible();
+  });
+
   test("快速离开编辑器也会把本机草稿写入笔记列表", async ({ page }) => {
     await page.goto("/notes");
     await page.getByRole("button", { name: "新建笔记" }).click();
@@ -80,13 +96,23 @@ test.describe("运营功能工作台（本机模式）", () => {
 
     const restoredRow = page.locator(".notes-list-item").filter({ hasText: "E2E 文件夹归档笔记" });
     await restoredRow.getByRole("button", { name: "笔记操作" }).click();
-    page.once("dialog", dialog => dialog.accept());
     await page.getByRole("button", { name: "删除", exact: true }).click();
+    const deleteDialog = page.getByRole("alertdialog");
+    await expect(deleteDialog).toBeVisible();
+    await deleteDialog.getByRole("button", { name: "移入回收站" }).click();
     await page.locator(".notes-sidebar-pane").getByRole("button", { name: "回收站" }).click();
     const trashedRow = page.locator(".notes-list-item").filter({ hasText: "E2E 文件夹归档笔记" });
     await expect(trashedRow).toBeVisible();
     await trashedRow.getByRole("button", { name: "恢复笔记" }).click();
     await expect(trashedRow).toHaveCount(0);
+    await page.locator(".notes-sidebar-pane").getByRole("button", { name: "全部笔记" }).click();
+    const folderRow = page.locator(".notes-sidebar-pane .group").filter({ hasText: "E2E 复盘文件夹" }).first();
+    await folderRow.hover();
+    await folderRow.getByRole("button", { name: "删除 E2E 复盘文件夹" }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "删除文件夹" }).click();
+    await expect(page.locator(".notes-sidebar-pane").getByRole("button", { name: /E2E 复盘文件夹/ })).toHaveCount(0);
+    await expect(page.locator(".notes-list-item").filter({ hasText: "E2E 文件夹归档笔记" })).toBeVisible();
   });
 
   test("可创建实验并录入结果指标", async ({ page }) => {

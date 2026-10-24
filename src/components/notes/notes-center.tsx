@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Archive, Clock3, Copy, FilePlus2, Folder, FolderPlus, LayoutGrid, List, MoreHorizontal, Pin, Plus, Search, Settings2, Star, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useApp } from "@/components/app-provider";
 import { useWorkspaceResource } from "@/components/workspace/use-workspace";
 import { notifyFeedback } from "@/lib/feedback";
@@ -53,6 +54,9 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
   const [folderName, setFolderName] = useState("");
   const [folderSaving, setFolderSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<WorkspaceRow | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<WorkspaceRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [listWidth, setListWidth] = useState(350);
   const gridRef = useRef<HTMLDivElement>(null);
   const syncingOutboxRef = useRef(false);
@@ -111,7 +115,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
   const selected = allNotes.find(row => row.id === selectedId);
 
   const syncOutbox = useCallback(async () => {
-    if (!activeStoreId || notesLoading || (mode === "cloud" && !navigator.onLine) || syncingOutboxRef.current) return;
+    if (!activeStoreId || notesLoading || mode !== "cloud" || !navigator.onLine || syncingOutboxRef.current) return;
     syncingOutboxRef.current = true;
     let needsRetry = false;
     try {
@@ -199,7 +203,6 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
     finally { setFolderSaving(false); }
   };
   const deleteFolder = async (folder: WorkspaceRow) => {
-    if (!window.confirm(`删除文件夹“${String(folder.name)}”？其中的笔记会移到收件箱，笔记内容不会删除。`)) return;
     try {
       for (const note of notes.rows.filter(row => row.folder_id === folder.id)) await notes.update({ id: note.id, folder_id: null, folder: "", __silent: true });
       await foldersResource.update({ id: folder.id, deleted_at: new Date().toISOString() });
@@ -215,10 +218,24 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
   };
   const archiveNote = async (row: WorkspaceRow) => { await notes.archive(String(row.id)); };
   const deleteNote = async (row: WorkspaceRow) => {
-    await notes.remove(String(row.id));
-    if (activeStoreId) removeNoteDraft(user?.id || "local", activeStoreId, String(row.id));
-    reloadDrafts();
-    if (selectedId === row.id) closeEditor();
+    try {
+      await notes.remove(String(row.id));
+      if (activeStoreId) removeNoteDraft(user?.id || "local", activeStoreId, String(row.id));
+      reloadDrafts();
+      if (selectedId === row.id) closeEditor();
+    } catch (cause) { report(cause, "删除笔记失败，笔记仍保留在原位置"); }
+  };
+  const confirmFolderDelete = async () => {
+    if (!folderToDelete) return;
+    setDeleteBusy(true);
+    try { await deleteFolder(folderToDelete); setFolderToDelete(null); }
+    finally { setDeleteBusy(false); }
+  };
+  const confirmNoteDelete = async () => {
+    if (!noteToDelete) return;
+    setDeleteBusy(true);
+    try { await deleteNote(noteToDelete); setNoteToDelete(null); }
+    finally { setDeleteBusy(false); }
   };
   const restoreNote = async (row: WorkspaceRow) => {
     if (row.deleted_at) await notes.restore(String(row.id)); else await notes.unarchive(String(row.id));
@@ -285,7 +302,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
         <button className={`notes-sidebar-link ${filter === "recent" ? "is-active" : ""}`} onClick={() => setFilter("recent")}><Clock3 size={14}/>最近编辑</button>
         <div className="notes-sidebar-divider"/>
         <div className="flex items-center justify-between px-2"><p className="notes-sidebar-label !px-0">文件夹</p><button aria-label="新建文件夹" title="新建文件夹" className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-primary" onClick={() => void createFolder()} disabled={!canEdit}><Plus size={13}/></button></div>
-        {activeFolders.map(folder => <div className="group flex items-center" key={folder.id}><button className={`notes-sidebar-link flex-1 ${filter === `folder:${folder.id}` ? "is-active" : ""}`} onClick={() => setFilter(`folder:${folder.id}`)}><Folder size={14}/><span className="truncate">{String(folder.name)}</span></button><div className="hidden gap-0.5 pr-1 group-hover:flex"><button aria-label={`重命名 ${String(folder.name)}`} title="重命名" className="grid size-6 place-items-center rounded text-muted-foreground hover:bg-muted" onClick={() => void renameFolder(folder)}><Settings2 size={12}/></button><button aria-label={`删除 ${String(folder.name)}`} title="删除" className="grid size-6 place-items-center rounded text-muted-foreground hover:bg-[var(--mc-tint-red)] hover:text-[var(--mc-color-danger)]" onClick={() => void deleteFolder(folder)}><X size={12}/></button></div></div>)}
+        {activeFolders.map(folder => <div className="group flex items-center" key={folder.id}><button className={`notes-sidebar-link flex-1 ${filter === `folder:${folder.id}` ? "is-active" : ""}`} onClick={() => setFilter(`folder:${folder.id}`)}><Folder size={14}/><span className="truncate">{String(folder.name)}</span></button><div className="hidden gap-0.5 pr-1 group-hover:flex"><button aria-label={`重命名 ${String(folder.name)}`} title="重命名" className="grid size-6 place-items-center rounded text-muted-foreground hover:bg-muted" onClick={() => void renameFolder(folder)}><Settings2 size={12}/></button><button aria-label={`删除 ${String(folder.name)}`} title="删除" className="grid size-6 place-items-center rounded text-muted-foreground hover:bg-[var(--mc-tint-red)] hover:text-[var(--mc-color-danger)]" onClick={() => setFolderToDelete(folder)}><X size={12}/></button></div></div>)}
         <div className="notes-sidebar-divider"/>
         <button className={`notes-sidebar-link ${filter === "archive" ? "is-active" : ""}`} onClick={() => setFilter("archive")}><Archive size={14}/>归档笔记</button>
         <button className={`notes-sidebar-link ${filter === "trash" ? "is-active" : ""}`} onClick={() => setFilter("trash")}><Trash2 size={14}/>回收站</button>
@@ -296,7 +313,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
         {notes.loading && visible.length === 0 ? <div className="space-y-2 p-3"><div className="h-16 animate-pulse rounded-lg bg-muted/70"/><div className="h-16 animate-pulse rounded-lg bg-muted/70"/><div className="h-16 animate-pulse rounded-lg bg-muted/70"/></div>
         : visible.length === 0 ? <div className="notes-empty"><span className="grid size-11 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><FilePlus2 size={18}/></span><p className="mt-3 text-sm font-medium">{search ? "没有找到匹配笔记" : filter === "trash" ? "回收站为空" : "从一句话开始记录"}</p><p className="mt-1 max-w-[220px] text-center text-[11px] leading-5 text-muted-foreground">{search ? "试试标题、正文关键词或标签。" : "无需先选类型或填写资料，点击新建后直接开始输入。"}</p></div>
         : <div className={`notes-list ${view === "cards" ? "notes-list-cards" : ""}`}>
-          {visible.slice(0, pageSize).map(row => <NoteListItem key={row.id} row={row} selected={selectedId === row.id} folderName={folderById.get(String(row.folder_id)) || String(row.folder || "收件箱")} filter={filter} folders={activeFolders} canEdit={canEdit} onOpen={() => openNote(String(row.id))} onPin={() => void updateNote(String(row.id), { is_pinned: !row.is_pinned })} onFavorite={() => void updateNote(String(row.id), { is_favorite: !row.is_favorite })} onDuplicate={() => void duplicateNote(row)} onDelete={() => void deleteNote(row)} onArchive={() => void archiveNote(row)} onRestore={() => void restoreNote(row)} onMove={folderId => void moveNote(row, folderId)}/>)}
+          {visible.slice(0, pageSize).map(row => <NoteListItem key={row.id} row={row} selected={selectedId === row.id} folderName={folderById.get(String(row.folder_id)) || String(row.folder || "收件箱")} filter={filter} folders={activeFolders} canEdit={canEdit} onOpen={() => openNote(String(row.id))} onPin={() => void updateNote(String(row.id), { is_pinned: !row.is_pinned })} onFavorite={() => void updateNote(String(row.id), { is_favorite: !row.is_favorite })} onDuplicate={() => void duplicateNote(row)} onDelete={() => setNoteToDelete(row)} onArchive={() => void archiveNote(row)} onRestore={() => void restoreNote(row)} onMove={folderId => void moveNote(row, folderId)}/>)}
           {visible.length > pageSize && <button className="mx-3 my-2 w-[calc(100%-1.5rem)] rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted" onClick={() => setPageSize(size => size + 50)}>继续加载 {Math.min(50, visible.length - pageSize)} 条</button>}
         </div>}
       </aside>
@@ -308,6 +325,8 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
     </div>
     {canEdit && <button type="button" aria-label="新建笔记" title="新建笔记" className="notes-fab" onClick={createNote}><Plus size={21}/><span>新建</span></button>}
     {folderDialog && <div className="fixed inset-0 z-[70] grid place-items-center bg-black/25 p-4" role="presentation" onClick={() => { if (!folderSaving) setFolderDialog(null); }}><section role="dialog" aria-modal="true" aria-label={folderDialog.mode === "create" ? "新建文件夹" : "重命名文件夹"} className="w-full max-w-sm rounded-2xl border border-border bg-card p-4 shadow-2xl" onClick={event => event.stopPropagation()}><h2 className="text-sm font-semibold">{folderDialog.mode === "create" ? "新建文件夹" : "重命名文件夹"}</h2><p className="mt-1 text-[10px] leading-4 text-muted-foreground">笔记保存在原有店铺数据中，文件夹仅用于整理。</p><form className="mt-4" onSubmit={saveFolder}><Input autoFocus aria-label="文件夹名称" value={folderName} onChange={event => setFolderName(event.target.value)} maxLength={80} required placeholder="例如：活动复盘"/><div className="mt-4 flex justify-end gap-2"><Button type="button" size="sm" variant="ghost" disabled={folderSaving} onClick={() => setFolderDialog(null)}>取消</Button><Button type="submit" size="sm" disabled={folderSaving || !folderName.trim()}>{folderSaving ? "保存中…" : folderDialog.mode === "create" ? "创建文件夹" : "保存名称"}</Button></div></form></section></div>}
+    <AlertDialog open={Boolean(folderToDelete)} onOpenChange={open => { if (!open && !deleteBusy) setFolderToDelete(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>删除文件夹“{String(folderToDelete?.name || "")}”？</AlertDialogTitle><AlertDialogDescription>文件夹中的笔记会移到收件箱，正文和历史版本都会保留。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleteBusy}>取消</AlertDialogCancel><AlertDialogAction disabled={deleteBusy} onClick={event => { event.preventDefault(); void confirmFolderDelete(); }}>{deleteBusy ? "处理中…" : "删除文件夹"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+    <AlertDialog open={Boolean(noteToDelete)} onOpenChange={open => { if (!open && !deleteBusy) setNoteToDelete(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>将笔记移入回收站？</AlertDialogTitle><AlertDialogDescription>“{noteToDelete ? displayTitle(noteToDelete) : "此笔记"}”可以之后从回收站恢复。</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleteBusy}>取消</AlertDialogCancel><AlertDialogAction disabled={deleteBusy} onClick={event => { event.preventDefault(); void confirmNoteDelete(); }}>{deleteBusy ? "处理中…" : "移入回收站"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
   </section>;
 }
 
@@ -325,7 +344,7 @@ function NoteListItem({ row, selected, folderName, filter, folders, canEdit, onO
       <span className="notes-list-summary">{summary || "还没有正文"}</span>
       <span className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground"><span className="truncate">{folderName}</span><span>·</span><span>{relativeDate(row.updated_at || row.created_at)}</span>{Array.isArray(row.tags) && row.tags.length > 0 && <><span>·</span><span className="truncate">{(row.tags as string[]).slice(0, 2).map(tag => `#${tag}`).join(" ")}</span></>}</span>
     </button>
-    {filter === "trash" ? <button aria-label="恢复笔记" title="恢复" className="notes-list-more" onClick={onRestore}><Undo2 size={15}/></button> : filter === "archive" ? <button aria-label="取消归档" title="取消归档" className="notes-list-more" onClick={onRestore}><Undo2 size={15}/></button> : <div className="relative"><button aria-label="笔记操作" title="操作" className="notes-list-more" onClick={() => setMenuOpen(value => !value)}><MoreHorizontal size={16}/></button>{menuOpen && <><button className="fixed inset-0 z-20" aria-label="关闭菜单" onClick={() => setMenuOpen(false)}/><div className="notes-row-menu absolute right-0 top-9 z-30 w-48 rounded-xl border border-border bg-card p-1.5 shadow-xl"><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onPin(); setMenuOpen(false); }}><Pin size={14}/>{row.is_pinned ? "取消置顶" : "置顶"}</button><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onFavorite(); setMenuOpen(false); }}><Star size={14}/>{row.is_favorite ? "取消收藏" : "收藏笔记"}</button><label className="notes-menu-item cursor-pointer"> <Folder size={14}/>移动到<select className="ml-auto max-w-24 bg-transparent text-[10px]" value={String(row.folder_id || "")} disabled={!canEdit} onChange={event => { onMove(event.target.value); setMenuOpen(false); }}><option value="">收件箱</option>{folders.map(folder => <option key={folder.id} value={String(folder.id)}>{String(folder.name)}</option>)}</select></label><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onDuplicate(); setMenuOpen(false); }}><Copy size={14}/>复制笔记</button><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onArchive(); setMenuOpen(false); }}><Archive size={14}/>归档</button><button className="notes-menu-item text-[var(--mc-color-danger)]" disabled={!canEdit} onClick={() => { if (window.confirm("将笔记移入回收站？")) onDelete(); setMenuOpen(false); }}><Trash2 size={14}/>删除</button></div></>}</div>}
+    {filter === "trash" ? <button aria-label="恢复笔记" title="恢复" className="notes-list-more" onClick={onRestore}><Undo2 size={15}/></button> : filter === "archive" ? <button aria-label="取消归档" title="取消归档" className="notes-list-more" onClick={onRestore}><Undo2 size={15}/></button> : <div className="relative"><button aria-label="笔记操作" title="操作" className="notes-list-more" onClick={() => setMenuOpen(value => !value)}><MoreHorizontal size={16}/></button>{menuOpen && <><button className="fixed inset-0 z-20" aria-label="关闭菜单" onClick={() => setMenuOpen(false)}/><div className="notes-row-menu absolute right-0 top-9 z-30 w-48 rounded-xl border border-border bg-card p-1.5 shadow-xl"><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onPin(); setMenuOpen(false); }}><Pin size={14}/>{row.is_pinned ? "取消置顶" : "置顶"}</button><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onFavorite(); setMenuOpen(false); }}><Star size={14}/>{row.is_favorite ? "取消收藏" : "收藏笔记"}</button><label className="notes-menu-item cursor-pointer"> <Folder size={14}/>移动到<select className="ml-auto max-w-24 bg-transparent text-[10px]" value={String(row.folder_id || "")} disabled={!canEdit} onChange={event => { onMove(event.target.value); setMenuOpen(false); }}><option value="">收件箱</option>{folders.map(folder => <option key={folder.id} value={String(folder.id)}>{String(folder.name)}</option>)}</select></label><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onDuplicate(); setMenuOpen(false); }}><Copy size={14}/>复制笔记</button><button className="notes-menu-item" disabled={!canEdit} onClick={() => { onArchive(); setMenuOpen(false); }}><Archive size={14}/>归档</button><button className="notes-menu-item text-[var(--mc-color-danger)]" disabled={!canEdit} onClick={() => { onDelete(); setMenuOpen(false); }}><Trash2 size={14}/>删除</button></div></>}</div>}
     {longPressed && <span className="sr-only">操作菜单已打开</span>}
   </article>;
 }

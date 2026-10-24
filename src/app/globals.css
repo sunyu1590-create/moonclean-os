@@ -575,6 +575,7 @@ html[data-motion="simple"] .mc-chart-reveal { animation: none !important; }
   .mc-skeleton, .mc-skeleton::after, .mc-motion-spinner, .mc-button-spinner, .mc-saving-glide, .mc-chart-reveal,
   html[data-motion] .app-page-transition, html[data-motion] [data-slot="button"],
   html[data-motion] [data-slot="dialog-content"], html[data-motion] [data-slot="dialog-overlay"] { animation: none !important; transition: none !important; }
+  html :is(button, a, [role="button"], [role="tab"]):active { filter: none !important; transform: none !important; }
   .mc-skeleton { background: #edf2f7; }
 }
 
@@ -1004,6 +1005,11 @@ html [data-slot="table-row"]:hover { background: var(--muted); }
 html [data-slot="table-head"] { color: var(--muted-foreground); }
 html :is(button, a, input, textarea, select, [role="tab"]):focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 html :is(input, textarea, [data-slot="select-trigger"]):focus-visible { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 15%, transparent); }
+html[data-motion="refined"] :is(button, a, [role="button"], [role="tab"]) { transition: filter 220ms ease, transform 220ms cubic-bezier(.2,.72,.25,1), background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+html[data-motion="refined"] :is(button, a, [role="button"], [role="tab"]):active:not(:disabled) { filter: blur(.7px); transform: scale(.985); }
+html[data-motion="standard"] :is(button, a, [role="button"], [role="tab"]) { transition: filter 150ms ease, transform 150ms ease, background-color 140ms ease, color 140ms ease; }
+html[data-motion="standard"] :is(button, a, [role="button"], [role="tab"]):active:not(:disabled) { filter: blur(.45px); transform: scale(.99); }
+html[data-motion="simple"] :is(button, a, [role="button"], [role="tab"]):active:not(:disabled) { filter: none; transform: none; }
 html [data-slot="dialog-content"],
 html [data-slot="alert-dialog-content"],
 html [data-slot="select-content"],
