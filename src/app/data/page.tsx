@@ -261,7 +261,7 @@ export default function DataPage() {
           {quality.sourceCounts.official>0&&<span>包含 {quality.sourceCounts.official} 条拼多多正式同步记录。</span>}
         </div>
       </SectionCard>
-      <div className="mb-5">
+      <div className="mb-5 mt-5">
         <ReportImageImport defaultDate={storeToday(data.settings.store.timezone)} disabled={!canEdit} onImport={importImage}/>
       </div>
       <div className="mb-5 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-4 text-sm text-muted-foreground">

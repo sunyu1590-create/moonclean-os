@@ -17,7 +17,7 @@ function addDays(day: string, count: number) {
   return date.toISOString().slice(0, 10);
 }
 
-export function DashboardIntelligence({ allDaily, allAdvertising }: { allDaily: DailyMetric[]; allAdvertising: AdvertisingMetric[] }) {
+export function DashboardIntelligence({ allDaily, allAdvertising, connected = false }: { allDaily: DailyMetric[]; allAdvertising: AdvertisingMetric[]; connected?: boolean }) {
   const { data, mode, activeStoreId, update } = useApp();
   const [cloudTasks, setCloudTasks] = useState<OperationTask[]>([]);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export function DashboardIntelligence({ allDaily, allAdvertising }: { allDaily: 
   const elapsed = (completed: string) => Math.max(0, Math.min(7, Math.floor((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${completed.slice(0,10)}T12:00:00Z`)) / 86400000)));
 
   return (
-    <section aria-labelledby="intelligence-title" className="mt-4 overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_8px_28px_rgba(35,74,108,0.055)] md:mt-5 md:rounded-[22px]">
+    <section aria-labelledby="intelligence-title" className={connected ? "overflow-hidden bg-card" : "mt-4 overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_8px_28px_rgba(35,74,108,0.055)] md:mt-5 md:rounded-[22px]"}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 md:px-6 md:py-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="relative grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary md:size-10 md:rounded-[14px]"><Bot size={18}/><Sparkles size={9} className="absolute -right-1 -top-1 text-[var(--mc-color-warning)]"/></span>

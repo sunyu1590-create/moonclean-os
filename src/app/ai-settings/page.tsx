@@ -29,7 +29,7 @@ import type { WorkspaceRow } from "@/lib/workspace";
 
 const features = [
   { title: "AI 运营助手", description: "围绕经营、商品、成本、推广和实验进行连续问答；回答支持折叠、分类与收纳。", href: "/copilot", icon: Bot, inputs: "近 30 日经营汇总、商品与成本、实验、竞品、置顶备忘录、审核话术及当前会话最近消息。" },
-  { title: "AI 自由聊天", description: "独立的日常聊天窗口，可选择 DeepSeek 模型与推理强度，不加载经营助手指令。", href: "/ai-chat", icon: MessageCircle, inputs: "只发送你在聊天窗口输入的内容和当前对话上下文；不读取商品、订单或店铺经营数据。聊天记录只保存在本机浏览器。" },
+  { title: "AI 自由聊天", description: "独立的日常聊天窗口，可选择 DeepSeek 模型与推理强度，不加载经营助手指令。", href: "/ai-chat", icon: MessageCircle, inputs: "只发送你输入的聊天内容和对话上下文；上传图片会先在当前浏览器本机 OCR，只有识别出的文字会随你发送的消息交给 AI，原图不上传；不读取商品、订单或店铺经营数据。聊天记录只保存在本机浏览器。" },
   { title: "AI 经营建议", description: "在总览、商品、推广、财务、库存、订单等页面按需生成指标建议。", href: "/dashboard", icon: Sparkles, inputs: "只发送当前页面明确允许的脱敏汇总指标，不传商品明细或自由文本。" },
   { title: "备忘录 AI 润色与建议", description: "根据当前笔记生成 Markdown 润色稿或行动建议，确认后再应用。", href: "/notes", icon: FileText, inputs: "仅在主动点击后发送当前笔记标题和正文，返回内容先预览，不会自动覆盖。" },
   { title: "售后分析与客服辅助", description: "基于同步订单与退款汇总分析售后问题，也可辅助拟定客服回复。", href: "/service", icon: Workflow, inputs: "售后总结发送去标识化订单、退款和问题分类汇总；客服辅助按对应页面操作发送必要文本。" },

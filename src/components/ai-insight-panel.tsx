@@ -16,10 +16,11 @@ type Feature = "dashboard" | "exceptions" | "advertising" | "products" | "financ
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
 type CacheEntry = { suggestion: string; generatedAt: string; contextKey: string };
 
-export function AiInsightPanel({ feature, context, autoRefresh = false }: {
+export function AiInsightPanel({ feature, context, autoRefresh = false, connected = false }: {
   feature: Feature;
   context: Record<string, InsightValue>;
   autoRefresh?: boolean;
+  connected?: boolean;
 }) {
   const { activeStoreId, mode } = useApp();
   const [suggestion, setSuggestion] = useState("");
@@ -87,7 +88,7 @@ export function AiInsightPanel({ feature, context, autoRefresh = false }: {
   }, [activeStoreId, autoRefresh, cacheKey, contextKey, feature, mode]);
 
   const formattedTime = generatedAt ? new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(new Date(generatedAt)) : "";
-  return <section aria-label="DeepSeek 智能建议" className="mb-5 rounded-[20px] border border-border bg-[linear-gradient(135deg,var(--mc-tint-blue),var(--card)_62%,var(--mc-tint-blue))] p-4 shadow-[0_8px_26px_rgba(39,86,129,.055)] md:p-5">
+  return <section aria-label="DeepSeek 智能建议" className={connected ? "rounded-none border-0 border-t border-border bg-card p-4 shadow-none md:p-5" : "mb-5 rounded-[20px] border border-border bg-[linear-gradient(135deg,var(--mc-tint-blue),var(--card)_62%,var(--mc-tint-blue))] p-4 shadow-[0_8px_26px_rgba(39,86,129,.055)] md:p-5"}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Bot size={18}/></span><div className="min-w-0"><h2 className="text-sm font-semibold text-foreground">DeepSeek 智能建议</h2><p className="mt-0.5 text-[11px] text-muted-foreground">{autoRefresh ? "使用近 7 天脱敏汇总；密码有效期可在AI 设置中调整" : "根据当前页面的经营汇总提供参考建议"}</p></div></div>
       <div className="flex items-center gap-2">{formattedTime && <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><Clock3 size={12}/>{formattedTime}</span>}<Button type="button" size="sm" variant="outline" disabled={busy || mode !== "cloud" || !activeStoreId} onClick={() => void generate()}><RefreshCw size={13} className={busy ? "animate-spin" : ""}/>{busy ? "正在分析" : suggestion ? "重新生成" : "生成建议"}</Button></div>

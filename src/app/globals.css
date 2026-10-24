@@ -1327,3 +1327,10 @@ html[data-motion="simple"] .web-search-setting,
 html[data-motion="simple"] .web-search-switch,
 html[data-motion="simple"] .web-search-switch span,
 html[data-motion="simple"] .ai-chat-history-item { transition:none !important; }
+
+.note-format-menu > summary::-webkit-details-marker { display: none; }
+.note-format-panel { transform-origin: top left; }
+.note-format-menu[open] .note-format-panel { animation: note-format-enter 160ms cubic-bezier(.2,.75,.25,1) both; }
+@keyframes note-format-enter { from { opacity:0; transform:translateY(-5px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .note-format-menu[open] .note-format-panel { animation:none; } }
+html[data-motion="simple"] .note-format-menu[open] .note-format-panel { animation:none; }

@@ -170,8 +170,10 @@ export default function Dashboard() {
         </div>
         <p className="mt-3 border-t border-border pt-2 text-[10px] leading-4 text-muted-foreground">利润为基于已录入收入、成本与推广数据的估算；{comparisonCostIncompleteDays>0?`当前及对比周期有 ${comparisonCostIncompleteDays} 条日报成本不完整，利润变化不宜直接用于判断业绩改善。`:`成本字段已完整，仍应结合两期数据覆盖情况解读。`}{previousRows.length===0?"上一周期没有日报记录，不能据此判断趋势。":""}</p>
       </section>
-      <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} />
-      <AiInsightPanel feature="dashboard" autoRefresh context={{ periodDays: days, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => !isDailyCostComplete(row)).length }} />
+      <div className="mt-5 overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_8px_28px_rgba(35,74,108,0.055)] md:rounded-[22px]">
+        <DashboardIntelligence allDaily={data.daily} allAdvertising={data.advertising} connected />
+        <AiInsightPanel feature="dashboard" autoRefresh connected context={{ periodDays: days, reportDays: rows.length, todaySales: Number(current.netSales), todayOrders: orders, todayAdSpend: Number(current.adSpend), periodNetSales: Number(summary.netSales), estimatedProfit: Number(summary.profit), profitMargin: summary.margin ?? "数据不足", attributedAdRevenue: Number(addMoney(ads.map(row => row.attributedSales))), adRoas: summary.roas ?? "数据不足", costIncompleteDays: rows.filter(row => !isDailyCostComplete(row)).length }} />
+      </div>
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
         <SectionCard title="经营趋势" sub={`近 ${days} 天净销售额与估算利润`}>
           <DeferredChart label="经营趋势图表">

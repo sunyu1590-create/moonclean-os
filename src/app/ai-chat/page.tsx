@@ -2,8 +2,9 @@
 
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import Link from "next/link";
-import { Archive, ArchiveRestore, Bot, Check, ChevronDown, CircleAlert, Copy, Eraser, History, KeyRound, LoaderCircle, Maximize2, MessageCircle, Minimize2, Pin, Plus, Search, Send, Settings2, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Bot, Check, ChevronDown, CircleAlert, Copy, Eraser, History, ImagePlus, KeyRound, LoaderCircle, Maximize2, MessageCircle, Minimize2, Pin, Plus, Search, Send, Settings2, SlidersHorizontal, Sparkles, Trash2, X } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { MarkdownContent } from "@/components/markdown-content";
@@ -72,6 +73,12 @@ export default function AiChatPage() {
   const [category, setCategory] = useState<ChatCategory>("随便聊聊");
   const [loadedStoreId, setLoadedStoreId] = useState("");
   const [draft, setDraft] = useState("");
+  const [ocrImage, setOcrImage] = useState<File | null>(null);
+  const [ocrPreview, setOcrPreview] = useState("");
+  const [ocrText, setOcrText] = useState("");
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrError, setOcrError] = useState("");
   const [model, setModel] = useState<ModelId>("deepseek-flash");
   const [effort, setEffort] = useState<Effort>("high");
   const [configured, setConfigured] = useState<boolean | null>(null);
@@ -91,6 +98,8 @@ export default function AiChatPage() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const ocrInputRef = useRef<HTMLInputElement>(null);
+  const ocrRequestRef = useRef(0);
   const immersiveTimerRef = useRef<number | null>(null);
   const historyRef = useRef<ChatConversation[]>([]);
   const historyScope = `${userId}:${activeStoreId || ""}`;
@@ -154,6 +163,17 @@ export default function AiChatPage() {
   }, [activeStoreId, mode]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [messages]);
+
+  useEffect(() => () => { if (ocrPreview) URL.revokeObjectURL(ocrPreview); }, [ocrPreview]);
+
+  useEffect(() => {
+    ocrRequestRef.current += 1;
+    const frame = window.requestAnimationFrame(() => {
+      setOcrImage(null); setOcrPreview(""); setOcrText(""); setOcrBusy(false); setOcrProgress(0); setOcrError("");
+      if (ocrInputRef.current) ocrInputRef.current.value = "";
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStoreId, mode]);
 
   useEffect(() => {
     if (!activeStoreId || loadedStoreId !== activeStoreId) return;
@@ -260,6 +280,46 @@ export default function AiChatPage() {
     notifyFeedback({ kind: "success", title: "已开始新对话", description: "之前的聊天已保存在历史记录中。" });
   }
 
+  async function recognizeImage(file: File) {
+    if (!file.type.startsWith("image/")) { setOcrError("请选择图片文件（JPG、PNG 或 WebP）。"); return; }
+    if (file.size > 10 * 1024 * 1024) { setOcrError("图片不能超过 10 MB，请先压缩后再试。"); return; }
+    if (ocrPreview) URL.revokeObjectURL(ocrPreview);
+    setOcrImage(file);
+    setOcrPreview(URL.createObjectURL(file));
+    setOcrText("");
+    setOcrError("");
+    setOcrProgress(0);
+    setOcrBusy(true);
+    const requestId = ++ocrRequestRef.current;
+    let worker: Awaited<ReturnType<typeof import("tesseract.js").createWorker>> | null = null;
+    try {
+      const { createWorker } = await import("tesseract.js");
+      worker = await createWorker(["chi_sim", "eng"], 1, {
+        logger: (message) => {
+          if (requestId === ocrRequestRef.current && message.status === "recognizing text") setOcrProgress(Math.round(message.progress * 100));
+        },
+      });
+      const result = await worker.recognize(file);
+      if (requestId !== ocrRequestRef.current) return;
+      const text = result.data.text.trim().slice(0, 12000);
+      if (!text) throw new Error("这张图片没有识别到文字，请换一张更清晰的图片。");
+      setOcrText(text);
+      setOcrProgress(100);
+    } catch (cause) {
+      if (requestId === ocrRequestRef.current) setOcrError(cause instanceof Error ? cause.message : "图片识别失败，请检查网络后重试。");
+    } finally {
+      if (worker) { try { await worker.terminate(); } catch { /* The recognition result or error is already captured. */ } }
+      if (requestId === ocrRequestRef.current) setOcrBusy(false);
+    }
+  }
+
+  function removeOcrImage() {
+    ocrRequestRef.current += 1;
+    if (ocrPreview) URL.revokeObjectURL(ocrPreview);
+    setOcrImage(null); setOcrPreview(""); setOcrText(""); setOcrBusy(false); setOcrProgress(0); setOcrError("");
+    if (ocrInputRef.current) ocrInputRef.current.value = "";
+  }
+
   function openConversation(conversation: ChatConversation) {
     setActiveConversationId(conversation.id); setCategory(conversation.category); setMessages(conversation.messages); setError(""); setHistoryOpen(false);
   }
@@ -270,13 +330,15 @@ export default function AiChatPage() {
   }
 
   async function sendWithKey(apiKey: string) {
-    const content = draft.trim();
-    if (!content || busy || !activeStoreId) return;
+    const question = draft.trim();
+    const content = [question, ocrText.trim() ? `【图片 OCR 识别文字】\n${ocrText.trim()}\n\n请结合以上识别文字回答我的问题。` : ""].filter(Boolean).join("\n\n");
+    if (!content || busy || ocrBusy || !activeStoreId) return;
     setSending(true); setError(""); setDraft("");
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content, createdAt: new Date().toISOString() };
     const assistantMessage: ChatMessage = { id: crypto.randomUUID(), role: "assistant", content: "", createdAt: new Date().toISOString(), model };
     const nextMessages = [...messages, userMessage, assistantMessage];
     setMessages(nextMessages);
+    if (ocrImage) removeOcrImage();
     try {
       const response = await fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/ai/chat`, {
         method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
@@ -338,7 +400,8 @@ export default function AiChatPage() {
 
   async function submit(event?: FormEvent) {
     event?.preventDefault();
-    if (!draft.trim() || busy) return;
+    if ((!draft.trim() && !ocrText.trim()) || busy || ocrBusy) return;
+    if (ocrImage && !ocrText.trim()) { setError("这张图片还没有可用的识别文字，请重试识别或先移除图片。"); return; }
     if (mode !== "cloud" || !activeStoreId) { setError("AI 聊天需要先切换到云端店铺。"); return; }
     setPreparing(true); setError("");
     notifyFeedback({ kind: "info", title: webSearch ? "正在联网搜索" : "正在发送", description: webSearch ? "正在检索网页并安全连接 AI 服务…" : "正在安全连接 AI 服务…" });
@@ -396,12 +459,19 @@ export default function AiChatPage() {
       </div>
       <form onSubmit={(event) => void submit(event)} className="border-t border-border bg-card/95 p-3 sm:p-4">
         <div className="relative">
+          {ocrImage && <div className="mb-2 flex items-center gap-3 rounded-xl border border-border bg-[var(--mc-tint-blue)]/45 p-2.5">
+            {ocrPreview && <Image src={ocrPreview} alt="待识别图片预览" width={48} height={48} unoptimized className="size-12 shrink-0 rounded-lg border border-border object-cover"/>}
+            <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium text-foreground">{ocrImage.name}</p><p role={ocrError ? "alert" : "status"} className={`mt-0.5 text-[10px] ${ocrError ? "text-[var(--mc-color-danger)]" : "text-muted-foreground"}`}>{ocrError || (ocrBusy ? ocrProgress ? `正在识别图片文字 ${ocrProgress}%` : "正在加载识别组件…" : `已识别 ${ocrText.length.toLocaleString()} 个字符 · 发送后交给 AI 分析`)}</p><p className="mt-0.5 text-[9px] leading-4 text-muted-foreground">原图留在本机；发送时只提交识别出的文字。</p>{ocrBusy && <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-background"><div className="h-full rounded-full bg-primary transition-[width] duration-200" style={{width:`${Math.max(5,ocrProgress)}%`}}/></div>}</div>
+            <button type="button" aria-label="移除图片" title="移除图片" onClick={removeOcrImage} disabled={ocrBusy||busy} className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-50"><X size={15}/></button>
+          </div>}
           <Textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={handleInputKeyDown} disabled={busy || mode !== "cloud"} rows={2} placeholder={mode !== "cloud" ? "切换到云端店铺后开始聊天…" : "发消息给 DeepSeek…"} className="min-h-[112px] max-h-40 resize-none rounded-2xl border-border bg-background py-3 pb-14 pr-3 text-sm leading-6"/>
           <div className="ai-chat-composer-footer absolute bottom-2 left-3 right-3 z-20 flex min-w-0 items-center gap-2">
             <span className="shrink-0 text-[10px] text-muted-foreground">Enter 发送</span>
+            <input ref={ocrInputRef} type="file" accept="image/*" className="hidden" onChange={(event) => { const file=event.target.files?.[0]; if(file) void recognizeImage(file); event.target.value=""; }}/>
+            <Button type="button" variant="outline" aria-label="上传图片并识别文字" title="上传图片并识别文字" disabled={busy||ocrBusy||mode!=="cloud"} onClick={()=>ocrInputRef.current?.click()} className="h-8 shrink-0 gap-1.5 rounded-xl px-2.5 text-[11px]"><ImagePlus size={14}/><span className="hidden sm:inline">图片 OCR</span></Button>
             <span className="ai-chat-composer-mode min-w-0 flex-1 truncate text-[10px] text-muted-foreground" title={`${currentModel.name} · ${category} · ${efforts.find((item) => item.id === effort)?.label} · ${webSearch ? "联网搜索已开启" : "联网搜索已关闭"}`}>{currentModel.name.replace("DeepSeek ", "")} · {efforts.find((item) => item.id === effort)?.label}{webSearch ? " · 联网" : ""}</span>
             <Button type="button" variant="outline" aria-label="更多聊天设置" aria-expanded={moreOpen} aria-controls="ai-chat-more-settings" onClick={() => setMoreOpen((open) => !open)} className="h-8 shrink-0 whitespace-nowrap rounded-xl px-2.5 text-[11px]"><SlidersHorizontal size={14}/>更多<ChevronDown size={13} className={`transition-transform duration-200 ${moreOpen ? "rotate-180" : ""}`}/></Button>
-            <Button type="submit" aria-label={busy ? "正在发送消息" : "发送消息"} disabled={busy || !draft.trim() || mode !== "cloud"} className="size-10 shrink-0 rounded-xl p-0 transition-all duration-200 active:scale-90 disabled:opacity-60">{busy ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={16} className="transition-transform duration-200 group-hover:translate-x-0.5"/>}</Button>
+            <Button type="submit" aria-label={busy ? "正在发送消息" : "发送消息"} disabled={busy || ocrBusy || (!draft.trim() && !ocrText.trim()) || mode !== "cloud"} className="size-10 shrink-0 rounded-xl p-0 transition-all duration-200 active:scale-90 disabled:opacity-60">{busy ? <LoaderCircle size={17} className="animate-spin"/> : <Send size={16} className="transition-transform duration-200 group-hover:translate-x-0.5"/>}</Button>
             {moreOpen && <div id="ai-chat-more-settings" className="ai-chat-more-panel space-y-3 rounded-2xl border border-border bg-[var(--mc-tint-blue)]/80 p-3 shadow-[0_18px_46px_rgba(31,57,82,.18)] backdrop-blur-2xl" aria-label="更多聊天设置">
               <div className="grid grid-cols-2 gap-2">
                 <AppSelect aria-label="选择模型" value={model} disabled={busy} onChange={(event) => setModel(event.target.value as ModelId)} className="h-9 min-w-0 rounded-xl border border-border bg-background px-2.5 text-xs font-medium sm:px-3 sm:text-sm"><option value="deepseek-flash">V4.1 Flash</option><option value="deepseek-v4-pro">V4 Pro</option></AppSelect>
