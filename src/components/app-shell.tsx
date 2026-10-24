@@ -40,7 +40,6 @@ import {
   SearchCheck,
   Headset,
   MessageCircle,
-  Languages,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -182,7 +181,7 @@ function StoreOnboarding() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { language, t } = useLanguage();
   const {
     data,
     mode,
@@ -521,9 +520,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-medium text-muted-foreground">{currentLabel}</span>
           </div>
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-2">
-            <button type="button" onClick={toggleLanguage} title={language === "zh-CN" ? "Switch to English" : "切换为中文"} aria-label={language === "zh-CN" ? "Switch to English" : "切换为中文"} className="mc-toolbar-action inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1 rounded-lg px-1 text-[10px] font-semibold md:h-9 md:min-w-9 md:text-[11px]">
-              <Languages size={15}/><span>{language === "zh-CN" ? "EN" : "中"}</span>
-            </button>
             <button type="button" onClick={cycleTheme} title="切换外观" aria-label={`外观：${themePreference === "system" ? "跟随系统" : themePreference === "night" ? "深色" : "浅色"}，点击切换`} className="mc-toolbar-action hidden size-9 items-center justify-center rounded-xl md:inline-flex">
               {nightMode ? <Moon size={17}/> : <Sun size={17}/>}
             </button>
@@ -640,10 +636,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><Sparkles size={21}/></div>
             <SheetTitle className="text-xl">{t("更多功能")}</SheetTitle>
             <p className="text-sm text-muted-foreground">{t("常用经营工具与系统管理")}</p>
-            <button type="button" onClick={toggleLanguage} className="mb-3 flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm font-medium">
-              <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><Languages size={18}/></span>{language === "zh-CN" ? "Language" : "语言"}</span>
-              <span className="text-primary">{language === "zh-CN" ? "English" : "简体中文"}</span>
-            </button>
           </SheetHeader>
           <button type="button" aria-label={t("切换外观")} onClick={cycleTheme} className="mb-4 flex w-full items-center justify-between rounded-2xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted">
             <span className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary">{nightMode ? <Moon size={18}/> : <Sun size={18}/>}</span><span><span className="block text-sm font-semibold text-foreground">{t("外观模式")}</span><span className="mt-0.5 block text-xs text-muted-foreground">{themePreference === "system" ? t("跟随系统") : themePreference === "night" ? t("深色") : t("浅色")} · {t("点击切换")}</span></span></span>

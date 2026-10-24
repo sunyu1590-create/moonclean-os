@@ -5,18 +5,24 @@ test.describe("运营功能工作台（本机模式）", () => {
 
   test("可切换并记住英文界面", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.getByRole("button", { name: "Switch to English" }).click();
+    await page.goto("/settings");
+    await page.getByRole("button", { name: "English" }).click();
+    await expect(page.getByRole("button", { name: "English" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /EN/ })).toHaveCount(0);
+    await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Good morning. See how your business is doing." })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "en-US");
     await expect(page.getByRole("link", { name: "Overview" }).first()).toBeVisible();
     await page.reload();
     await expect(page.getByRole("heading", { name: "Good morning. See how your business is doing." })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
-    const languageToggle = page.getByRole("button", { name: "切换为中文" });
-    const toggleBox = await languageToggle.boundingBox();
+    await page.goto("/settings");
+    const languageOption = page.getByRole("button", { name: "简体中文" });
+    const toggleBox = await languageOption.boundingBox();
     expect(toggleBox?.x).toBeGreaterThanOrEqual(0);
     expect((toggleBox?.x || 0) + (toggleBox?.width || 0)).toBeLessThanOrEqual(390);
-    await languageToggle.click();
+    await languageOption.click();
+    await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "早上好，今天的生意一目了然" })).toBeVisible();
   });
 
@@ -189,6 +195,6 @@ test.describe("运营功能工作台（本机模式）", () => {
   test("本机演示模式明确提示 AI 未连接，不伪造回答", async ({ page }) => {
     await page.goto("/copilot");
     await expect(page.getByText("DeepSeek 未连接")).toBeVisible();
-    await expect(page.getByPlaceholder("请先在系统设置连接 DeepSeek。" )).toBeDisabled();
+    await expect(page.getByPlaceholder("请先在 AI 设置中连接 DeepSeek。" )).toBeDisabled();
   });
 });

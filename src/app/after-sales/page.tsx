@@ -20,6 +20,7 @@ import { getCachedDeepSeekKey } from "@/lib/deepseek-key";
 import { MarkdownContent } from "@/components/markdown-content";
 import { AiStreamStatus } from "@/components/ai-stream-status";
 import { readAiTextStream } from "@/lib/read-ai-stream";
+import { useLanguage } from "@/components/language-provider";
 
 type Period = 7 | 30 | 90;
 type Draft = { reason: RefundReason | ""; note: string };
@@ -27,6 +28,7 @@ const EMPTY_ORDERS: IntegrationSnapshot["orders"] = [];
 const EMPTY_REFUNDS: IntegrationSnapshot["refunds"] = [];
 
 export default function AfterSalesPage() {
+  const { language } = useLanguage();
   const { activeStoreId, mode, role } = useApp();
   const [snapshot, setSnapshot] = useState<IntegrationSnapshot | null>(null);
   const [error, setError] = useState("");
@@ -98,7 +100,7 @@ export default function AfterSalesPage() {
     if (!activeStoreId) return;
     setAiBusy(true); setAiError(""); setSummary("");
     try {
-      const response = await fetch(`/api/stores/${activeStoreId}/after-sales/summary`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, days: aiPeriod }) });
+      const response = await fetch(`/api/stores/${activeStoreId}/after-sales/summary`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, days: aiPeriod, language }) });
       let text = "";
       await readAiTextStream(response, (delta) => { text += delta; setSummary(text); });
       if (!text.trim()) throw new Error("AI 未返回有效分析内容");

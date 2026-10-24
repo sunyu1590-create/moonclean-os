@@ -52,6 +52,21 @@ describe("自由 AI 聊天 API", () => {
     expect(state.logs[0]).toMatchObject({ model: "deepseek-v4-pro", outcome: "success", prompt_tokens: null, completion_tokens: null });
   });
 
+  it("英文模式下用英文指引回答并描述联网资料安全边界", async () => {
+    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => { void init; return String(url).endsWith("/v1/tools/search")
+      ? Response.json({ results: [{ title: "Release notes", url: "https://example.com/release", summary: "New features" }] })
+      : new Response('data: {"choices":[{"delta":{"content":"Here is the summary."}}]}\n\ndata: [DONE]\n\n', { headers: { "Content-Type": "text/event-stream" } }); });
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await POST(makeRequest({
+      apiKey: "sk-test-secret-key-value", model: "deepseek-flash", reasoningEffort: "high", language: "en-US", webSearch: true,
+      messages: [{ role: "user", content: "What changed recently?" }],
+    }), { params: Promise.resolve({ storeId }) });
+    expect(response.status).toBe(200);
+    const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string) as { messages: { content: string }[] };
+    expect(body.messages[0]?.content).toContain("Reply in clear, natural English");
+    expect(body.messages[1]?.content).toContain("untrusted references");
+  });
+
   it("拒绝服务商列表之外的模型 ID", async () => {
     const response = await POST(makeRequest({
       apiKey: "sk-test-secret-key-value",

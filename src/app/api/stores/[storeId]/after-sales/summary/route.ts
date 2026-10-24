@@ -5,7 +5,7 @@ import { requireStore, rejectCrossOriginMutation } from "@/lib/supabase/auth";
 import { refundReasonSchema, REFUND_REASONS } from "@/lib/after-sales";
 import { streamDeepSeekText } from "@/lib/ai-stream";
 
-const inputSchema = z.object({ apiKey: z.string().trim().min(20).max(512), days: z.union([z.literal(7), z.literal(30), z.literal(90)]) });
+const inputSchema = z.object({ apiKey: z.string().trim().min(20).max(512), days: z.union([z.literal(7), z.literal(30), z.literal(90)]), language: z.enum(["zh-CN", "en-US"]).default("zh-CN") });
 const recentRequests = new Map<string, number>();
 
 export async function POST(request: Request, { params }: { params: Promise<{ storeId: string }> }) {
@@ -70,7 +70,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
         max_tokens: 850,
         stream: true,
         messages: [
-          { role: "system", content: "你是中国电商售后运营分析助手。只依据给出的汇总数字，用简体中文给出简洁、具体、可执行的分析。指出样本量和未分类限制；不能声称因果，不能编造数字。建议按问题频次排序，最多给出3条行动建议。开头简要说明可见数据依据，不展示内部推理草稿。" },
+          { role: "system", content: parsed.data.language === "en-US" ? "You are an e-commerce after-sales operations analyst. Use only the supplied aggregate figures. Respond in concise, specific, actionable English. State sample-size and unclassified-data limitations. Do not claim causation or invent numbers. Rank issues by frequency and provide no more than three actions. Briefly state the visible evidence first; do not reveal internal reasoning." : "你是中国电商售后运营分析助手。只依据给出的汇总数字，用简体中文给出简洁、具体、可执行的分析。指出样本量和未分类限制；不能声称因果，不能编造数字。建议按问题频次排序，最多给出3条行动建议。开头简要说明可见数据依据，不展示内部推理草稿。" },
           { role: "user", content: `请分析以下脱敏汇总数据并给出问题排序和行动建议：${JSON.stringify(safeFacts)}` },
         ],
       }),

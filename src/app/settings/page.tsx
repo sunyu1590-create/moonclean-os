@@ -15,6 +15,7 @@ import {
   Sparkles,
   Activity,
   ChevronDown,
+  Languages,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -38,7 +39,9 @@ import { parseAppData } from "@/lib/repository";
 import { DEBUG_METRICS, PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, setPerformanceDebugEnabled, setPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { notifyFeedback } from "@/lib/feedback";
 import { AttachmentBackup } from "@/components/attachment-backup";
+import { useLanguage } from "@/components/language-provider";
 export default function SettingsPage() {
+  const { language, setLanguage, t } = useLanguage();
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -186,6 +189,11 @@ export default function SettingsPage() {
       />
       <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
         <div className="space-y-5">
+          <SectionCard title={t("语言与地区")} sub={t("选择 MoonClean OS 的界面语言；偏好仅保存在当前浏览器。") } action={<Languages size={19} className="text-primary" />}>
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-[var(--mc-tint-blue)]/60 p-1.5" role="group" aria-label={t("界面语言")}>
+              {([{ id: "zh-CN", label: "简体中文" }, { id: "en-US", label: "English" }] as const).map((option) => <button key={option.id} type="button" aria-pressed={language === option.id} onClick={() => setLanguage(option.id)} className={`min-h-11 rounded-xl px-3 text-sm font-medium transition-all active:scale-[.98] ${language === option.id ? "bg-card text-primary shadow-sm ring-1 ring-primary/15" : "text-muted-foreground hover:text-foreground"}`}>{option.label}</button>)}
+            </div>
+          </SectionCard>
           <SectionCard title="动效设置" sub="统一管理全站动效档位、页面切换方式及系统动态效果偏好。" action={<Sparkles size={19} className="text-primary" />}>
             <Link href="/motion" className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 transition-colors hover:bg-card sm:p-4">
               <span><strong className="block text-sm text-foreground">打开动效设置模块</strong><span className="mt-1 block text-xs text-muted-foreground">动效档位、页面切换和系统减少动态效果状态</span></span>

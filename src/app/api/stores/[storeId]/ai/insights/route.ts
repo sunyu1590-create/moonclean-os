@@ -12,6 +12,7 @@ const safeValue = z.union([
 ]);
 const inputSchema = z.object({
   apiKey: z.string().trim().min(20).max(512),
+  language: z.enum(["zh-CN", "en-US"]).default("zh-CN"),
   feature: featureSchema,
   context: z.record(z.string().max(48), safeValue).refine((value) => Object.keys(value).length <= 24, "分析字段过多"),
 });
@@ -57,7 +58,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
   recentRequests.set(auth.user.id, now);
 
   try {
-    const systemPrompt = parsed.data.feature === "exceptions"
+  const systemPrompt = parsed.data.language === "en-US"
+    ? "You are MoonClean OS's e-commerce operations analyst. Use only the facts listed in the user message; never recalculate, invent, or guess numbers, products, plans, or causes. First assess data coverage and cost completeness. If fewer daily reports are available than the selected period, state that the sample is incomplete; call out missing today's data separately. If costs are incomplete, do not assess profit, margin, or break-even ROAS; recommend completing costs before evaluating them. The refund rate is based on store-wide daily reports for the last 7 days, while refund-risk product counts are SKU aggregates for the last 30 days; these scopes differ and must not be described as contradictory. Estimates and alert thresholds are not causal findings or industry standards. Reply in concise, user-facing English Markdown with no more than three actions. For each action, state the evidence and next check. Do not show field names, JSON, code, backticks, or internal reasoning. Use summary metrics only; never request or expose personal information, secrets, or credentials."
+    : parsed.data.feature === "exceptions"
       ? "你是 MoonClean OS 的中国电商经营助手，负责解读经营异常中心。只根据用户消息中列出的中文事实作答，不要重算、补造或猜测任何数字、商品、计划或原因。先判断数据覆盖和成本完整度，再决定哪些经营结论目前可用。若日报覆盖天数少于分析周期，明确这是不完整样本，不把它称为完整一周趋势；今日缺失要单独说明。只要成本不完整，就不得判断利润盈亏、利润率高低或推广是否达到保本，只建议补齐成本后再评估。退款率是近7天全店日报退款金额/成交额，退款提示商品数是近30天按SKU汇总；两者统计范围和粒度不同，不得说它们互相矛盾。所有估算和提示线都不是因果结论或行业标准。简体中文回答，最多三条行动建议；每条写清数据依据和下一步核查，不得给出超出数据支持的经营决策。只输出面向用户的简洁 Markdown，不展示字段名、JSON、代码、反引号或内部推理。"
       : "你是 MoonClean OS 的中国电商经营助手。只根据用户消息列出的中文事实作答，不要重算、补造或猜测数字、商品或原因。先说最值得关注且数据足以支持的一点，再给最多三条核查或行动建议。若覆盖不足或缺少关键指标，明确写出限制，不据此给出确定结论；不同周期、统计范围和指标口径不可直接互相比较。用简体中文和简洁 Markdown，不得输出字段名、JSON、代码、反引号或内部推理。只依据汇总数据，不要求或输出个人信息、密钥或凭据。";
     const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -88,10 +91,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
           && Number(context.refundRiskProducts) === 0
           && /(不一致|矛盾|冲突)/.test(content);
         if (parsed.data.feature === "exceptions" && (leakedField || unsupportedNumber || falseRefundConflict)) {
-          return buildExceptionsFallback(context);
+          return parsed.data.language === "en-US"
+            ? `Data coverage is limited: ${facts.split("\n").slice(0, 3).join("; ")}. Complete the missing daily records and costs before drawing conclusions about profit or break-even performance. Review refund definitions and date ranges before acting on the alert. The available summary does not support a more specific conclusion.`
+            : buildExceptionsFallback(context);
         }
         if (leakedField || unsupportedNumber) {
-          return `分析依据：${facts.split("\n").slice(0, 3).join("；")}。\n\n当前回复包含无法直接展示的内部指标标记，已改为依据页面汇总给出提示。请先核对本页数据完整度，再结合来源记录判断原因；现有汇总不足以支持更具体的结论。`;
+          return parsed.data.language === "en-US"
+            ? `Evidence: ${facts.split("\n").slice(0, 3).join("; ")}.\n\nThe generated answer contained an internal metric reference, so it has been replaced with a safer summary. Check data coverage and source records first; the available summary does not support a more specific conclusion.`
+            : `分析依据：${facts.split("\n").slice(0, 3).join("；")}。\n\n当前回复包含无法直接展示的内部指标标记，已改为依据页面汇总给出提示。请先核对本页数据完整度，再结合来源记录判断原因；现有汇总不足以支持更具体的结论。`;
         }
         return content;
       },

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { Moon, ArrowRight, Mail, LockKeyhole, Languages } from "lucide-react";
+import { Moon, ArrowRight, Mail, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ const copy = {
 } as const;
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
-  const { language, toggleLanguage, t } = useLanguage();
+  const { language, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -100,7 +100,6 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
   return (
     <div className="min-h-screen bg-[var(--mc-tint-blue)] p-4 sm:p-8 lg:p-10">
-      <button type="button" onClick={toggleLanguage} aria-label={language === "zh-CN" ? "Switch to English" : "切换为中文"} className="fixed right-4 top-4 z-20 inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card/90 px-3 text-xs font-semibold text-foreground shadow-sm backdrop-blur"><Languages size={15}/>{language === "zh-CN" ? "EN" : "中文"}</button>
       <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-[1240px] overflow-hidden rounded-[30px] border border-border bg-card shadow-[0_24px_70px_rgba(29,43,62,.08)] lg:grid-cols-[1.05fr_.95fr]">
         <aside className="relative hidden overflow-hidden bg-[var(--mc-color-brand-strong)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
           <div className="pointer-events-none absolute -right-44 -top-44 size-[520px] rounded-full border border-white/10" />
