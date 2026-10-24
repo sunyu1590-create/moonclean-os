@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.52";
+export const APP_VERSION = "1.1.53";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.53",
+    date: "2026-10-24",
+    title: "AI 笔记助手居中弹窗",
+    changes: [
+      "点击笔记编辑器底栏 AI 后，在屏幕中央打开标准弹窗；弹窗高度适配手机视口，内容过长时可在弹窗内滚动，并可随时关闭返回编辑器。",
+      "AI 结果确认应用后自动关闭弹窗；手机端回归检查覆盖弹窗居中、视口边界和关闭返回。",
+    ],
+  },
   {
     version: "1.1.52",
     date: "2026-10-24",

@@ -410,18 +410,7 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
           <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" onChange={event => { void uploadAttachment(event.target.files?.[0]); event.currentTarget.value = ""; }}/>
         </div>
         <NoteRichEditor value={value.body_markdown} onChange={bodyChanged} editable={canEdit} storeId={activeStoreId} onUploadImage={() => fileInput.current?.click()} onEditorReady={editorReady}/>
-        {aiOpen && <div className="mt-4"><AiNoteTools key={noteId} storeId={activeStoreId} enabled={mode === "cloud" && canEdit} title={activeTitle} content={value.body_markdown} onApply={(action: AiNoteAction, result: string) => {
-          if (action === "title") { setTitle(result.trim().replace(/^#+\s*/, "").replace(/^['"“”]+|['"“”]+$/g, "").slice(0, 240)); return; }
-          if (action === "tags") {
-            const tags = [...new Set(result.split(/[\n,，、;；]+/).map(tag => tag.replace(/^\s*[-*#\d.)]+\s*/, "").trim().replace(/^#/, "")).filter(Boolean))].slice(0, 30);
-            setTags(tags.join(", ")); return;
-          }
-          const replace = action === "polish" || action === "structure";
-          const sectionTitle = action === "summarize" ? "摘要" : action === "todos" ? "待办事项" : action === "retrospective" ? "运营复盘" : "AI 建议";
-          const body = replace ? result : `${value.body_markdown}${value.body_markdown ? "\n\n" : ""}## ${sectionTitle}\n\n${result}`;
-          change({ body_markdown: body });
-          editorRef.current?.commands.setContent(body, { contentType: "markdown" });
-        }}/></div>}
+
         {(conflict || initialConflict) && <div role="alert" className="mt-4 rounded-xl border border-[var(--mc-color-warning)]/30 bg-[var(--mc-tint-yellow)] p-3 text-xs leading-5">
           <p className="font-semibold">这条笔记在另一设备有更新</p><p className="mt-1 text-muted-foreground">你的本机内容仍已保留。选择云端版本，或确认用本机版本覆盖云端。</p>
           <div className="mt-2 flex gap-2"><Button size="xs" variant="outline" onClick={() => { const remote = rowSnapshot((note.__remote_note as WorkspaceRow | undefined) || note); valueRef.current = remote; setValue(remote); setFolderId(remote.folder_id || ""); setTagsText(remote.tags.join(", ")); editorRef.current?.commands.setContent(remote.body_markdown, { contentType: "markdown" }); setBaseUpdatedAt(String(note.__remote_updated_at || note.updated_at || "")); dirtyRef.current = false; if (activeStoreId) removeNoteDraft(userId, activeStoreId, noteId); setConflict(false); setSaveStatus("已保存"); }}>使用云端版本</Button><Button size="xs" onClick={() => { setBaseUpdatedAt(String(note.__remote_updated_at || note.updated_at || "")); setConflict(false); dirtyRef.current = true; void saveNowRef.current(); }}>保留本机版本</Button></div>
@@ -431,8 +420,22 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
     </div>
     <div className="notes-editor-bottom-bar">
       <div className="flex min-w-0 items-center gap-2 text-[10px] text-muted-foreground"><FileText size={13}/><span className="truncate">{value.folder || "收件箱"}</span><span>·</span><span>{value.tags.length ? `${value.tags.length} 个标签` : "无标签"}</span></div>
-      <Button type="button" size="xs" variant="ghost" className="notes-editor-ai-trigger shrink-0" onClick={(event) => { event.stopPropagation(); setAiOpen(open => !open); }}><Sparkles size={14}/>AI</Button>
+      <Button type="button" size="xs" variant="ghost" className="notes-editor-ai-trigger shrink-0" onClick={(event) => { event.stopPropagation(); setAiOpen(true); }}><Sparkles size={14}/>AI</Button>
     </div>
+
+    <Dialog open={aiOpen} onOpenChange={setAiOpen}><DialogContent className="max-h-[82dvh] overflow-y-auto overscroll-contain sm:max-w-xl"><DialogHeader className="sr-only"><DialogTitle>AI 笔记助手</DialogTitle><DialogDescription>选择 AI 操作并预览生成结果。</DialogDescription></DialogHeader><AiNoteTools key={noteId} storeId={activeStoreId} enabled={mode === "cloud" && canEdit} title={activeTitle} content={value.body_markdown} onApply={(action: AiNoteAction, result: string) => {
+      if (action === "title") { setTitle(result.trim().replace(/^#+\s*/, "").replace(/^['"“”]+|['"“”]+$/g, "").slice(0, 240)); setAiOpen(false); return; }
+      if (action === "tags") {
+        const tags = [...new Set(result.split(/[\n,，、;；]+/).map(tag => tag.replace(/^\s*[-*#\d.)]+\s*/, "").trim().replace(/^#/, "")).filter(Boolean))].slice(0, 30);
+        setTags(tags.join(", ")); setAiOpen(false); return;
+      }
+      const replace = action === "polish" || action === "structure";
+      const sectionTitle = action === "summarize" ? "摘要" : action === "todos" ? "待办事项" : action === "retrospective" ? "运营复盘" : "AI 建议";
+      const body = replace ? result : `${value.body_markdown}${value.body_markdown ? "\n\n" : ""}## ${sectionTitle}\n\n${result}`;
+      change({ body_markdown: body });
+      editorRef.current?.commands.setContent(body, { contentType: "markdown" });
+      setAiOpen(false);
+    }}/></DialogContent></Dialog>
 
     <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>插入超链接</DialogTitle><DialogDescription>输入 https:// 地址，或使用笔记中心内部链接。</DialogDescription></DialogHeader><Input autoFocus aria-label="链接地址" value={linkUrl} onChange={event => setLinkUrl(event.target.value)} placeholder="https://example.com"/><DialogFooter><Button variant="ghost" onClick={() => setLinkDialogOpen(false)}>取消</Button><Button disabled={!linkUrl.trim()} onClick={applyLink}>插入链接</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={internalLinkOpen} onOpenChange={setInternalLinkOpen}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>插入笔记链接</DialogTitle><DialogDescription>选择一条笔记，在正文中创建内部链接。</DialogDescription></DialogHeader><select aria-label="选择目标笔记" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-xs" value={internalLinkTarget} onChange={event => setInternalLinkTarget(event.target.value)}><option value="">选择笔记</option>{availableNotes.filter(entry => entry.id !== noteId).map(entry => <option key={entry.id} value={String(entry.id)}>{entry.title_is_auto ? derivedTitle(String(entry.body_markdown || "")) : String(entry.title || "未命名笔记")}</option>)}</select><DialogFooter><Button variant="ghost" onClick={() => setInternalLinkOpen(false)}>取消</Button><Button disabled={!internalLinkTarget} onClick={insertInternalLink}><Link2 size={14}/>插入链接</Button></DialogFooter></DialogContent></Dialog>

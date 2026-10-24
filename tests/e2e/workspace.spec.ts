@@ -26,7 +26,9 @@ test.describe("运营功能工作台（本机模式）", () => {
     await page.getByLabel("笔记正文").fill("确认 AI 底栏入口与删除后退出编辑。");
     await expect(page.getByRole("button", { name: "AI", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "AI", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "AI 笔记助手" })).toBeVisible();
     await expect(page.getByRole("region", { name: "AI 笔记助手" })).toBeVisible();
+    await page.getByRole("dialog", { name: "AI 笔记助手" }).getByRole("button", { name: "Close" }).click();
     await page.locator(".notes-editor-header").getByRole("button", { name: "更多笔记操作" }).click();
     await page.getByRole("button", { name: "移入回收站" }).click();
     await expect(page.getByRole("alertdialog")).toBeVisible();
@@ -55,7 +57,7 @@ test.describe("运营功能工作台（本机模式）", () => {
     await page.getByRole("button", { name: "新建笔记" }).click();
     await expect(page.getByRole("region", { name: "笔记编辑器" })).toBeVisible();
     const editorBox = await page.locator(".notes-editor-shell").boundingBox();
-    expect(await page.locator(".notes-editor-scroll").evaluate(element => getComputedStyle(element).animationName)).toBe("notes-editor-blur-reveal");
+    expect(await page.locator(".notes-editor-shell").evaluate(element => getComputedStyle(element).filter)).toBe("none");
     expect(editorBox?.x).toBe(0);
     expect(editorBox?.y).toBe(0);
     expect(editorBox?.width).toBe(390);
@@ -64,13 +66,18 @@ test.describe("运营功能工作台（本机模式）", () => {
     await expect(page.getByRole("textbox", { name: "笔记正文" })).toBeVisible();
     const aiButton = page.getByRole("button", { name: "AI", exact: true });
     await aiButton.click();
+    const aiDialog = page.getByRole("dialog", { name: "AI 笔记助手" });
+    await expect(aiDialog).toBeVisible();
     await expect(page.getByRole("region", { name: "AI 笔记助手" })).toBeVisible();
+    const dialogBox = await aiDialog.boundingBox();
+    expect(dialogBox?.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox?.y).toBeGreaterThanOrEqual(0);
+    expect((dialogBox?.x || 0) + (dialogBox?.width || 0)).toBeLessThanOrEqual(390);
+    expect((dialogBox?.y || 0) + (dialogBox?.height || 0)).toBeLessThanOrEqual(844);
+    expect(Math.abs((dialogBox?.y || 0) + (dialogBox?.height || 0) / 2 - 422)).toBeLessThan(30);
+    await aiDialog.getByRole("button", { name: "Close" }).click();
+    await expect(aiDialog).toBeHidden();
     expect(await page.locator(".notes-editor-bottom-bar").evaluate(element => getComputedStyle(element).position)).toBe("fixed");
-    const aiButtonBox = await aiButton.boundingBox();
-    expect(aiButtonBox?.x).toBeGreaterThanOrEqual(0);
-    expect(aiButtonBox?.y).toBeGreaterThanOrEqual(0);
-    expect((aiButtonBox?.x || 0) + (aiButtonBox?.width || 0)).toBeLessThanOrEqual(390);
-    expect((aiButtonBox?.y || 0) + (aiButtonBox?.height || 0)).toBeLessThanOrEqual(844);
   });
 
   test("笔记文件夹整理、归档和回收站恢复", async ({ page }) => {
