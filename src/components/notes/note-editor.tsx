@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Clock3, Code2, Download, FileText, Heading1, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, LoaderCircle, MoreHorizontal, Pin, Quote, Redo2, RotateCcw, Save, Sparkles, Strikethrough, Table2, Trash2, Undo2 } from "lucide-react";
+import { Archive, ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Clock3, Code2, Download, FileText, Heading1, Heading2, Heading3, ImagePlus, Italic, LayoutGrid, Link2, List, ListOrdered, LoaderCircle, Maximize2, Minimize2, MoreHorizontal, Pin, Quote, Redo2, RotateCcw, Save, Sparkles, Strikethrough, Table2, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -19,6 +19,7 @@ import type { WorkspaceRow } from "@/lib/workspace";
 import type { AppData } from "@/lib/model";
 
 const BUCKET = "moonclean-service-attachments";
+type EditorLayout = "standard" | "wide" | "immersive";
 const buttons = "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--mc-tint-blue)] hover:text-primary disabled:opacity-40";
 function derivedTitle(body: string) {
   const first = body.replace(/<[^>]*>/g, "").split(/\r?\n/).map(line => line.replace(/^\s{0,3}(#{1,6}\s+|[-*+]\s+|\d+[.)]\s+|>\s*)/, "").replace(/[`*_~]/g, "").trim()).find(Boolean);
@@ -44,7 +45,7 @@ function normalizeDraft(note: NoteSnapshot, baseUpdatedAt: string | null, isNew:
   return { note, baseUpdatedAt, isNew, savedAt: new Date().toISOString() };
 }
 
-export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDelete, onArchive, canEdit, createNote, updateNote, refreshNotes }: {
+export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDelete, onArchive, canEdit, editorLayout, onEditorLayoutChange, onExitImmersive, createNote, updateNote, refreshNotes }: {
   note: WorkspaceRow;
   draft: NoteDraft | undefined;
   availableNotes: WorkspaceRow[];
@@ -53,6 +54,9 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
   onDelete: () => Promise<void>;
   onArchive: () => Promise<void>;
   canEdit: boolean;
+  editorLayout: EditorLayout;
+  onEditorLayoutChange: (layout: EditorLayout) => void;
+  onExitImmersive: () => void;
   createNote: (value: Record<string, unknown>) => Promise<WorkspaceRow | void>;
   updateNote: (value: Record<string, unknown>) => Promise<WorkspaceRow | void>;
   refreshNotes: () => Promise<boolean>;
@@ -348,13 +352,17 @@ export function NoteEditor({ note, draft, availableNotes, folders, onClose, onDe
     ["表格", Table2, (editor: NonNullable<NoteEditorInstance>) => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), "table"],
   ] as const;
 
-  return <section className="notes-editor-shell" aria-label="笔记编辑器" onClickCapture={event => { void navigateEditorLink(event); }}>
+  return <section className={`notes-editor-shell ${editorLayout === "immersive" ? "is-immersive-editor" : ""}`} aria-label="笔记编辑器" onClickCapture={event => { void navigateEditorLink(event); }}>
     <header className="notes-editor-header">
       <Button size="icon-sm" variant="ghost" aria-label="返回笔记列表" onClick={onClose}><ArrowLeft size={18}/></Button>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium text-muted-foreground">{saveStatus === "保存中" ? <><LoaderCircle className="mr-1 inline animate-spin" size={12}/></> : saveStatus === "已保存" ? <Check className="mr-1 inline text-[var(--mc-color-success)]" size={13}/> : null}{saveStatus}</p>
-        <p className="truncate text-[10px] text-muted-foreground/75">{value.category} · {note.updated_at || note.created_at ? new Date(String(note.updated_at || note.created_at)).toLocaleString("zh-CN", { dateStyle: "medium", timeStyle: "short" }) : "新建笔记"}</p>
+        <p className="truncate text-[12px] font-semibold" title={activeTitle}>{activeTitle}</p>
+        <p className="truncate text-[10px] font-medium text-muted-foreground">{saveStatus === "保存中" ? <><LoaderCircle className="mr-1 inline animate-spin" size={12}/></> : saveStatus === "已保存" ? <Check className="mr-1 inline text-[var(--mc-color-success)]" size={13}/> : null}{saveStatus}</p>
       </div>
+      <div className="notes-editor-layout-control">
+        <label className="notes-editor-layout-select"><LayoutGrid size={14}/><select aria-label="编辑器布局" value={editorLayout} onChange={event => onEditorLayoutChange(event.target.value as EditorLayout)}><option value="standard">标准模式</option><option value="wide">宽屏模式</option><option value="immersive">沉浸模式</option></select></label>
+      </div>
+      <Button size="icon-sm" variant="ghost" className="notes-editor-expand" aria-label={editorLayout === "immersive" ? "退出沉浸编辑" : "展开编辑器"} title={editorLayout === "immersive" ? "退出沉浸编辑（Esc）" : "展开编辑器"} onClick={editorLayout === "immersive" ? onExitImmersive : () => onEditorLayoutChange("immersive")}>{editorLayout === "immersive" ? <Minimize2 size={16}/> : <Maximize2 size={16}/>}</Button>
       <Button size="icon-sm" variant="ghost" aria-label="立即保存" title="立即保存" disabled={!canEdit || saveStatus === "保存中"} onClick={() => void saveNowRef.current()}><Save size={16}/></Button>
       <div className="relative">
         <Button size="icon-sm" variant="ghost" aria-label="更多笔记操作" title="更多" onClick={() => setMenuOpen(open => !open)}><MoreHorizontal size={18}/></Button>

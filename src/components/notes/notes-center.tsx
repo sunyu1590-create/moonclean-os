@@ -14,6 +14,8 @@ import type { WorkspaceRow } from "@/lib/workspace";
 import { NoteEditor } from "@/components/notes/note-editor";
 
 type Filter = "all" | "pinned" | "recent" | "favorites" | "archive" | "trash" | `folder:${string}`;
+type EditorLayout = "standard" | "wide" | "immersive";
+const EDITOR_LAYOUT_KEY = "moonclean-notes-editor-layout";
 function plainMarkdown(value: string) {
   return value.replace(/!\[[^\]]*\]\([^)]+\)/g, "图片").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s*[-*+]\s+/gm, "").replace(/^\s*\d+[.)]\s+/gm, "").replace(/^\s*>\s?/gm, "").replace(/[`*_~]/g, "").replace(/\|/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -58,9 +60,36 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
   const [noteToDelete, setNoteToDelete] = useState<WorkspaceRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [listWidth, setListWidth] = useState(350);
+  const [editorLayout, setEditorLayout] = useState<EditorLayout>("standard");
+  const previousLayoutRef = useRef<EditorLayout>("standard");
   const gridRef = useRef<HTMLDivElement>(null);
   const syncingOutboxRef = useRef(false);
   const canEdit = mode === "local" || role !== "viewer";
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(EDITOR_LAYOUT_KEY);
+    // Restore the last browser preference after hydration without changing the server-rendered layout.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved === "standard" || saved === "wide" || saved === "immersive") setEditorLayout(saved);
+  }, []);
+  const chooseEditorLayout = useCallback((layout: EditorLayout) => {
+    if (layout === "immersive" && editorLayout !== "immersive") previousLayoutRef.current = editorLayout;
+    setEditorLayout(layout);
+    window.localStorage.setItem(EDITOR_LAYOUT_KEY, layout);
+  }, [editorLayout]);
+  const exitImmersive = useCallback(() => {
+    const layout = previousLayoutRef.current === "immersive" ? "standard" : previousLayoutRef.current;
+    setEditorLayout(layout);
+    window.localStorage.setItem(EDITOR_LAYOUT_KEY, layout);
+  }, []);
+  useEffect(() => {
+    if (!selectedId || editorLayout !== "immersive") return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); exitImmersive(); }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editorLayout, exitImmersive, selectedId]);
 
   const reloadDrafts = useCallback(() => setDrafts(activeStoreId ? listNoteDrafts(user?.id || "local", activeStoreId) : []), [activeStoreId, user?.id]);
   useEffect(() => {
@@ -113,6 +142,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
     return filter === "recent" ? result.slice(0, 100) : result;
   }, [allNotes, deferredSearch, filter, folderById]);
   const selected = allNotes.find(row => row.id === selectedId);
+  const gridLayout: EditorLayout = editorLayout === "immersive" && !selected ? "standard" : editorLayout;
 
   const syncOutbox = useCallback(async () => {
     if (!activeStoreId || notesLoading || mode !== "cloud" || !navigator.onLine || syncingOutboxRef.current) return;
@@ -272,7 +302,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
     window.addEventListener("pointercancel", end, { once: true });
   };
 
-  return <section className="notes-center" aria-label="笔记中心">
+  return <section className={`notes-center ${editorLayout === "immersive" && selected ? "is-immersive" : ""}`} aria-label="笔记中心">
     <div className="notes-center-header">
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--mc-tint-blue)] text-primary"><FilePlus2 size={17}/></span>
@@ -293,7 +323,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
       <button aria-label="新建文件夹" title="新建文件夹" className="notes-filter-chip notes-folder-add" onClick={() => void createFolder()} disabled={!canEdit}><Plus size={13}/></button>
     </div>
 
-    <div ref={gridRef} style={{ "--notes-list-width": `${listWidth}px` } as React.CSSProperties} className={`notes-workspace-grid ${selected ? "has-selection" : ""}`}>
+    <div ref={gridRef} style={{ "--notes-list-width": `${listWidth}px` } as React.CSSProperties} className={`notes-workspace-grid layout-${gridLayout} ${selected ? "has-selection" : ""}`}>
       <nav className="notes-sidebar-pane" aria-label="笔记导航">
         <p className="notes-sidebar-label">工作空间</p>
         <button className={`notes-sidebar-link ${filter === "all" ? "is-active" : ""}`} onClick={() => setFilter("all")}><List size={14}/>全部笔记<span>{allNotes.filter(row => !row.deleted_at && !row.archived_at).length}</span></button>
@@ -319,7 +349,7 @@ export function NotesCenter({ initialNoteId = "" }: { initialNoteId?: string }) 
       </aside>
       <div className="notes-resize-handle" role="separator" aria-label="调整笔记列表宽度" aria-orientation="vertical" tabIndex={0} onPointerDown={startListResize} onKeyDown={event => { if (event.key === "ArrowLeft") setListWidth(width => Math.max(260, width - 20)); if (event.key === "ArrowRight") setListWidth(width => Math.min(560, width + 20)); }}/>
       <main className={`notes-reader-pane ${selected ? "has-note" : ""}`}>
-        {selected ? <NoteEditor key={selected.id} note={selected} draft={selectedDraft} availableNotes={allNotes.filter(row => !row.deleted_at && !row.archived_at)} folders={activeFolders} onClose={closeEditor} onDelete={async () => { await deleteNote(selected); }} onArchive={async () => { await archiveNote(selected); closeEditor(); }} canEdit={canEdit} createNote={notes.create} updateNote={notes.update} refreshNotes={notes.refresh}/>
+        {selected ? <NoteEditor key={selected.id} note={selected} draft={selectedDraft} availableNotes={allNotes.filter(row => !row.deleted_at && !row.archived_at)} folders={activeFolders} onClose={closeEditor} onDelete={async () => { await deleteNote(selected); }} onArchive={async () => { await archiveNote(selected); closeEditor(); }} canEdit={canEdit} editorLayout={editorLayout} onEditorLayoutChange={chooseEditorLayout} onExitImmersive={exitImmersive} createNote={notes.create} updateNote={notes.update} refreshNotes={notes.refresh}/>
         : <div className="notes-reader-empty"><span className="grid size-12 place-items-center rounded-2xl bg-[var(--mc-tint-blue)] text-primary"><FilePlus2 size={21}/></span><p className="mt-3 text-sm font-medium">选择一条笔记</p><p className="mt-1 text-xs text-muted-foreground">内容会在输入后自动保存</p></div>}
       </main>
     </div>

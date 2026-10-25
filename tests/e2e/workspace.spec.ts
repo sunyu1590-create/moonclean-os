@@ -122,6 +122,33 @@ test.describe("运营功能工作台（本机模式）", () => {
     expect(await page.locator(".notes-editor-bottom-bar").evaluate(element => getComputedStyle(element).position)).toBe("fixed");
   });
 
+  test("桌面笔记编辑器可切换布局、沉浸退出并保留内容与偏好", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/notes");
+    await page.evaluate(() => localStorage.removeItem("moonclean-notes-editor-layout"));
+    await page.reload();
+    await page.getByRole("button", { name: "新建笔记" }).click();
+    await page.getByLabel("笔记标题").fill("E2E 桌面布局切换");
+    await page.getByLabel("笔记正文").fill("切换编辑器布局时保留这段内容。");
+
+    const layout = page.getByLabel("编辑器布局");
+    const grid = page.locator(".notes-workspace-grid");
+    await layout.selectOption("wide");
+    await expect(grid).toHaveClass(/layout-wide/);
+    await page.getByRole("button", { name: "展开编辑器" }).click();
+    await expect(page.locator(".notes-center")).toHaveClass(/is-immersive/);
+    await expect(page.getByLabel("笔记正文")).toHaveText("切换编辑器布局时保留这段内容。");
+    await page.keyboard.press("Escape");
+    await expect(grid).toHaveClass(/layout-wide/);
+
+    await page.getByRole("button", { name: "展开编辑器" }).click();
+    await page.getByRole("button", { name: "退出沉浸编辑" }).click();
+    await expect(grid).toHaveClass(/layout-wide/);
+    await page.getByRole("button", { name: "返回笔记列表" }).click();
+    await page.locator(".notes-list-item").filter({ hasText: "E2E 桌面布局切换" }).getByRole("button").first().click();
+    await expect(grid).toHaveClass(/layout-wide/);
+  });
+
   test("笔记文件夹整理、归档和回收站恢复", async ({ page }) => {
     await page.goto("/notes");
     await page.getByRole("button", { name: "新建笔记" }).click();
