@@ -37,3 +37,23 @@ test("跨店铺 API 访问被拒绝", async ({ page }) => {
   );
   expect(response.status()).toBe(403);
 });
+
+
+test("登录页在桌面和手机布局正常，并支持显示与隐藏密码", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "月明净品牌标志" })).toBeVisible();
+  const password = page.getByRole("textbox", { name: "密码" });
+  await password.fill("secure-pass-123");
+  await page.getByRole("button", { name: "显示密码" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "隐藏密码" }).click();
+  await expect(password).toHaveAttribute("type", "password");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+  expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
+  const submit = page.getByRole("button", { name: "登录", exact: true });
+  await expect(submit).toBeInViewport();
+});

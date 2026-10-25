@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { Moon, ArrowRight, Mail, LockKeyhole } from "lucide-react";
+import { ArrowRight, Mail, LockKeyhole, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const configured = !!supabaseConfig();
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -99,152 +101,95 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }
   return (
-    <div className="min-h-screen bg-[var(--mc-tint-blue)] p-4 sm:p-8 lg:p-10">
-      <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-[1240px] overflow-hidden rounded-[30px] border border-border bg-card shadow-[0_24px_70px_rgba(29,43,62,.08)] lg:grid-cols-[1.05fr_.95fr]">
-        <aside className="relative hidden overflow-hidden bg-[var(--mc-color-brand-strong)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="pointer-events-none absolute -right-44 -top-44 size-[520px] rounded-full border border-white/10" />
-          <div className="pointer-events-none absolute -right-24 -top-20 size-[360px] rounded-full border border-white/10" />
-          <div className="relative flex items-center gap-3"><span className="grid size-11 place-items-center rounded-[15px] bg-card text-foreground"><Moon size={23} fill="#202936"/></span><span className="text-xl font-bold tracking-[-.04em]">MoonClean <span className="text-primary">OS</span></span></div>
-          <div className="relative max-w-lg pb-8"><p className="mb-5 text-xs font-semibold tracking-[.24em] text-primary">{language === "en-US" ? "MOONCLEAN · SMART BUSINESS WORKSPACE" : "月明净 · 智能经营工作台"}</p><h2 className="text-[48px] font-semibold leading-[1.17] tracking-[-.055em]">{language === "en-US" ? <>A clearer view<br/>of every business.</> : <>让每一笔生意，<br/>都看得更清楚。</>}</h2><p className="mt-6 max-w-md text-[15px] leading-8 text-muted-foreground">{language === "en-US" ? "Turn daily complexity into clear, reliable decisions, from sales trends to profit." : "从销售趋势到利润结构，把日常经营里的复杂问题，整理成清晰、可靠的判断。"}</p></div>
-          <div className="relative flex flex-wrap gap-2 text-xs text-primary"><span className="rounded-full border border-white/15 px-4 py-2">{t("经营总览")}</span><span className="rounded-full border border-white/15 px-4 py-2">{language === "en-US" ? "Profit analysis" : "利润分析"}</span><span className="rounded-full border border-white/15 px-4 py-2">{language === "en-US" ? "Cloud sync" : "云端同步"}</span></div>
-        </aside>
-        <div className="flex items-center justify-center px-5 py-10 sm:px-10 lg:px-14">
-        <div className="w-full max-w-[430px]">
-        <div className="mb-9 flex items-center justify-center gap-3 lg:hidden">
-          <span className="grid size-12 place-items-center rounded-2xl bg-primary text-white">
-            <Moon size={24} fill="white" />
-          </span>
-          <span className="text-xl font-bold">
-            MoonClean <span className="text-primary">OS</span>
-          </span>
-        </div>
-        <div className="p-2 sm:p-4">
-          <p className="mb-3 text-xs font-bold tracking-[.18em] text-primary">
-            MOONCLEAN OS
-          </p>
-          <h1 className="text-[32px] font-bold tracking-[-.04em] text-foreground">{t(copy[mode][0])}</h1>
-          <p className="mt-2 mb-8 text-sm text-muted-foreground">{t(copy[mode][1])}</p>
-          <form onSubmit={submit} className="space-y-5">
-            {mode === "signup" && (
-              <div>
-                <Label htmlFor="displayName">{t("昵称")}</Label>
-                <Input
-                  id="displayName"
-                  className="mt-2"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  maxLength={100}
-                  placeholder={t("你的称呼")}
-                />
-              </div>
-            )}
-            {mode !== "reset" && (
-              <div>
-                <Label htmlFor="email">{t("邮箱")}</Label>
-                <div className="relative mt-2">
-                  <Mail
-                    size={16}
-                    className="absolute left-3 top-2.5 text-muted-foreground"
-                  />
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                  />
-                </div>
-              </div>
-            )}
-            {mode !== "forgot" && (
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">
-                    {t(mode === "reset" ? "新密码" : "密码")}
-                  </Label>
-                  {mode === "login" && (
-                    <Link
-                      href="/forgot-password"
-                      className="text-xs text-primary hover:underline"
-                    >
-                      {t("忘记密码？")}
-                    </Link>
-                  )}
-                </div>
-                <div className="relative mt-2">
-                  <LockKeyhole
-                    size={16}
-                    className="absolute left-3 top-2.5 text-muted-foreground"
-                  />
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete={
-                      mode === "login" ? "current-password" : "new-password"
-                    }
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t("至少 8 位")}
-                  />
-                </div>
-              </div>
-            )}
-            {error && (
-              <p
-                role="alert"
-                className="rounded-xl bg-[var(--mc-tint-red)] p-3 text-sm text-[var(--mc-color-danger)]"
-              >
-                {error}
-              </p>
-            )}
-            {message && (
-              <p
-                role="status"
-                className="rounded-xl bg-[var(--mc-tint-green)] p-3 text-sm text-[var(--mc-color-success)]"
-              >
-                {message}
-              </p>
-            )}
-            <Button
-              type="submit"
-              className="mt-2 h-11 w-full"
-              disabled={busy || !configured}
-            >
-              {busy ? t("请稍候…") : t(copy[mode][2])}
-              <ArrowRight size={16} />
-            </Button>
-          </form>
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            {mode === "login" ? (
-              <>
-                {t("还没有账号？")} {" "}
-                <Link href="/signup" className="font-semibold text-primary">
-                  {t("立即注册")}
-                </Link>
-              </>
-            ) : mode === "reset" ? (
-              <Link href="/dashboard" className="font-semibold text-primary">
-                {t("返回经营总览")}
-              </Link>
-            ) : (
-              <Link href="/login" className="font-semibold text-primary">
-                {t("返回登录")}
-              </Link>
-            )}
+    <main className="auth-page min-h-[100svh] overflow-hidden px-3 py-3 text-white sm:px-5 sm:py-5 lg:px-7 lg:py-7">
+      <div className="auth-frame mx-auto grid min-h-[calc(100svh-24px)] max-w-[1440px] overflow-hidden rounded-[28px] border border-white/[.08] lg:min-h-[calc(100svh-56px)] lg:grid-cols-[1.08fr_.92fr]">
+        <aside className="auth-brand-panel relative flex min-h-[300px] flex-col justify-between overflow-hidden px-6 py-7 sm:min-h-[340px] sm:px-10 sm:py-9 lg:min-h-0 lg:px-14 lg:py-12 xl:px-[72px] xl:py-[58px]">
+          <div className="auth-grid absolute inset-0" aria-hidden="true" />
+          <div className="auth-orbit auth-orbit-one absolute" aria-hidden="true" />
+          <div className="auth-orbit auth-orbit-two absolute" aria-hidden="true" />
+          <div className="auth-glow auth-glow-a absolute" aria-hidden="true" />
+          <div className="auth-glow auth-glow-b absolute" aria-hidden="true" />
+          <div className="auth-brand-lockup relative z-10 flex items-center gap-3.5">
+            <span className="grid size-[52px] shrink-0 place-items-center rounded-[17px] bg-white p-1.5 shadow-[0_8px_28px_rgba(0,0,0,.16)] sm:size-[58px]">
+              <Image src="/yue-ming-jing-logo.png" alt="月明净品牌标志" width={128} height={128} priority className="size-full object-contain" />
+            </span>
+            <span className="text-[17px] font-semibold tracking-[-.035em] text-white sm:text-[19px]">MoonClean <span className="font-medium text-[#7db7ff]">OS</span></span>
           </div>
-        </div>
-        {!configured && (
-          <p className="mt-5 text-center text-xs text-[var(--mc-color-danger)]">
-            当前环境尚未配置 Supabase，参照 .env.example
-            配置后即可使用云端登录。
-          </p>
-        )}
+
+          <div className="auth-brand-copy relative z-10 max-w-[620px] py-9 lg:py-0">
+            <p className="mb-5 flex items-center gap-2.5 text-[10px] font-semibold tracking-[.24em] text-[#8fbdf7] sm:mb-7 sm:text-[11px]">
+              <span className="h-px w-7 bg-[#5295ec]/80" />{language === "en-US" ? "MOONCLEAN · SMART BUSINESS WORKSPACE" : "月明净 · 智能经营工作台"}
+            </p>
+            <h1 className="max-w-[620px] text-[clamp(35px,5vw,64px)] font-medium leading-[1.18] tracking-[-.055em] text-[#f5f8ff]">
+              {language === "en-US" ? <>A clearer view<br className="hidden sm:block" /> of every business.</> : <>让每一笔生意，<br />都看得更清楚。</>}
+            </h1>
+            <p className="mt-5 max-w-[430px] text-[14px] leading-7 text-[#a9bad2] sm:mt-7 sm:text-[15px] sm:leading-8">
+              {language === "en-US" ? "From operating data to profit analysis, make every decision with evidence." : <>从经营数据到利润分析，<br className="hidden sm:block" />让每一次决策都有据可依。</>}
+            </p>
+          </div>
+
+          <div className="auth-brand-footer relative z-10 flex flex-wrap items-center gap-2.5 text-[11px] text-[#b8c8df] sm:gap-3">
+            <span className="auth-feature-chip">{t("经营总览")}</span>
+            <span className="auth-feature-chip">{language === "en-US" ? "Profit analysis" : "利润分析"}</span>
+            <span className="auth-feature-chip">{language === "en-US" ? "Cloud sync" : "云端同步"}</span>
+            <span className="ml-auto hidden items-center gap-1.5 text-[10px] text-[#93a9c5] sm:inline-flex"><ShieldCheck size={13} />{language === "en-US" ? "Private, secure workspace" : "安全可信的经营空间"}</span>
+          </div>
+        </aside>
+
+        <section className="auth-form-panel relative flex items-center justify-center px-5 py-9 sm:px-10 sm:py-12 lg:px-12 xl:px-16">
+          <div className="auth-form-content w-full max-w-[408px]">
+            <div className="mb-8 sm:mb-10">
+              <p className="mb-3 text-[10px] font-semibold tracking-[.2em] text-[#78aef2] sm:text-[11px]">MOONCLEAN OS</p>
+              <h2 className="text-[30px] font-semibold leading-tight tracking-[-.045em] text-[#f5f8ff] sm:text-[34px]">{t(copy[mode][0])}</h2>
+              <p className="mt-2.5 text-[13px] leading-6 text-[#a5b7d2] sm:text-sm">{t(copy[mode][1])}</p>
+            </div>
+
+            <form onSubmit={submit} className="auth-form-fields space-y-[18px]">
+              {mode === "signup" && (
+                <div className="auth-field">
+                  <Label htmlFor="displayName" className="text-[12px] font-medium text-[#d4deed]">{t("昵称")}</Label>
+                  <Input id="displayName" className="auth-input mt-2" value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={100} placeholder={t("你的称呼")} />
+                </div>
+              )}
+              {mode !== "reset" && (
+                <div className="auth-field">
+                  <Label htmlFor="email" className="text-[12px] font-medium text-[#d4deed]">{t("邮箱")}</Label>
+                  <div className="auth-input-wrap relative mt-2">
+                    <Mail size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8399b6]" />
+                    <Input id="email" type="email" autoComplete="email" className="auth-input pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+                  </div>
+                </div>
+              )}
+              {mode !== "forgot" && (
+                <div className="auth-field">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="password" className="text-[12px] font-medium text-[#d4deed]">{t(mode === "reset" ? "新密码" : "密码")}</Label>
+                    {mode === "login" && <Link href="/forgot-password" className="rounded-md text-xs text-[#8bbaff] transition-colors hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f97f4]">{t("忘记密码？")}</Link>}
+                  </div>
+                  <div className="auth-input-wrap relative mt-2">
+                    <LockKeyhole size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8399b6]" />
+                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} className="auth-input pr-12 pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("至少 8 位")} />
+                    <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? (language === "en-US" ? "Hide password" : "隐藏密码") : (language === "en-US" ? "Show password" : "显示密码")} aria-pressed={showPassword} className="auth-password-toggle absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-[#8fa3c0] transition-colors hover:bg-white/[.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f97f4]">
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {error && <p role="alert" className="auth-feedback auth-feedback-error rounded-xl px-3.5 py-3 text-[13px] leading-5">{error}</p>}
+              {message && <p role="status" className="auth-feedback auth-feedback-success rounded-xl px-3.5 py-3 text-[13px] leading-5">{message}</p>}
+              <Button type="submit" loading={busy} className="auth-submit mt-2 h-[50px] w-full justify-between rounded-xl px-4 text-[14px] font-semibold" disabled={busy || !configured}>
+                <span>{busy ? t("请稍候…") : t(copy[mode][2])}</span>
+                {!busy && <ArrowRight size={17} aria-hidden="true" />}
+              </Button>
+            </form>
+
+            <div className="mt-7 text-center text-[13px] text-[#91a5c1]">
+              {mode === "login" ? <>{t("还没有账号？")} <Link href="/signup" className="auth-inline-link ml-1 font-semibold">{t("立即注册")}</Link></> : mode === "reset" ? <Link href="/dashboard" className="auth-inline-link font-semibold">{t("返回经营总览")}</Link> : <Link href="/login" className="auth-inline-link font-semibold">{t("返回登录")}</Link>}
+            </div>
+            {!configured && <p className="mt-5 text-center text-xs leading-5 text-[#e69b9b]">当前环境尚未配置 Supabase，参照 .env.example 配置后即可使用云端登录。</p>}
+          </div>
+        </section>
       </div>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
