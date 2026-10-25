@@ -13,7 +13,7 @@ test("邮箱密码登录及安全退出", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("邮箱").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("密码").fill(process.env.E2E_PASSWORD!);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByRole("button", { name: "登录工作台", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   const authCookies = (await page.context().cookies()).filter((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
   expect(authCookies.length).toBeGreaterThan(0);
@@ -36,7 +36,7 @@ test("跨店铺 API 访问被拒绝", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("邮箱").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("密码").fill(process.env.E2E_PASSWORD!);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByRole("button", { name: "登录工作台", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   const response = await page.request.get(
     `/api/stores/${process.env.E2E_OTHER_STORE_ID}/data`,
@@ -74,8 +74,15 @@ test("登录页在桌面和手机布局正常，并支持显示与隐藏密码",
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
   const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
   expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
-  const submit = page.getByRole("button", { name: "登录", exact: true });
+  const submit = page.getByRole("button", { name: "登录工作台", exact: true });
   await expect(submit).toBeInViewport();
+  await page.setViewportSize({ width: 320, height: 720 });
+  await expect(submit).toBeInViewport();
+  const submitBounds = await submit.boundingBox();
+  expect(submitBounds).not.toBeNull();
+  expect(submitBounds!.y + submitBounds!.height).toBeLessThanOrEqual(720);
+  const smallScreenDimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: window.innerWidth }));
+  expect(smallScreenDimensions.width).toBeLessThanOrEqual(smallScreenDimensions.viewport);
 });
 
 test("选择 30 天保持登录后可在新浏览器上下文恢复会话", async ({ page, browser }) => {
@@ -84,7 +91,7 @@ test("选择 30 天保持登录后可在新浏览器上下文恢复会话", asyn
   await page.getByLabel("邮箱").fill(process.env.E2E_EMAIL!);
   await page.getByLabel("密码").fill(process.env.E2E_PASSWORD!);
   await page.getByRole("checkbox", { name: /30 天内保持登录/ }).check();
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByRole("button", { name: "登录工作台", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
 
   const savedEmail = await page.evaluate(() => localStorage.getItem("moonclean-remembered-email-v1"));

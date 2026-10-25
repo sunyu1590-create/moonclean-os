@@ -18,7 +18,7 @@ const emailSchema = z.email("请输入有效邮箱地址");
 const passwordSchema = z.string().min(8, "密码至少 8 位");
 const REMEMBERED_EMAIL_KEY = "moonclean-remembered-email-v1";
 const copy = {
-  login: ["欢迎回来", "登录 MoonClean OS，继续掌握店铺经营。", "登录"],
+  login: ["欢迎回来", "登录 MoonClean OS，继续你的经营工作。", "登录工作台"],
   signup: ["创建账号", "先验证邮箱，再开始管理你的店铺。", "注册账号"],
   forgot: ["找回密码", "我们会向你的邮箱发送重置链接。", "发送重置邮件"],
   reset: ["设置新密码", "为账号设置一个新的安全密码。", "更新密码"],
@@ -175,8 +175,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }
   return (
-    <main className="auth-page min-h-[100svh] overflow-x-hidden overflow-y-auto px-3 py-3 text-white sm:px-5 sm:py-5 lg:px-7 lg:py-7">
-      <div className="auth-frame relative mx-auto grid min-h-[calc(100svh-24px)] max-w-[1440px] overflow-hidden rounded-[28px] border border-white/[.08] lg:min-h-[calc(100svh-56px)] lg:grid-cols-[1.08fr_.92fr]">
+    <main className="auth-page min-h-[100svh] overflow-x-hidden overflow-y-auto text-white">
+      <div className="auth-frame relative mx-auto grid min-h-[100svh] max-w-[1600px] overflow-hidden lg:min-h-[100svh] lg:grid-cols-[1.08fr_.92fr]">
         <aside className="auth-brand-panel relative flex min-h-[300px] flex-col justify-between overflow-hidden px-6 py-7 sm:min-h-[340px] sm:px-10 sm:py-9 lg:min-h-0 lg:px-14 lg:py-12 xl:px-[72px] xl:py-[58px]">
           <div className="auth-grid absolute inset-0" aria-hidden="true" />
           <div className="auth-orbit auth-orbit-one absolute" aria-hidden="true" />
@@ -191,18 +191,18 @@ export function AuthForm({ mode }: { mode: Mode }) {
           </div>
 
           <div className="auth-brand-copy relative z-10 max-w-[620px] py-9 lg:py-0">
-            <p className="mb-5 flex items-center gap-2.5 text-[10px] font-semibold tracking-[.24em] text-[#8fbdf7] sm:mb-7 sm:text-[11px]">
-              <span className="h-px w-7 bg-[#5295ec]/80" />{language === "en-US" ? "MOONCLEAN · SMART BUSINESS WORKSPACE" : "月明净 · 智能经营工作台"}
+            <p className="auth-brand-eyebrow mb-5 flex items-center gap-2.5 text-[10px] font-semibold tracking-[.2em] sm:mb-7 sm:text-[11px]">
+              <span className="h-px w-7 bg-[#5295ec]/80" />{language === "en-US" ? "MOONCLEAN · BUSINESS WORKSPACE" : "月明净 · 智能经营工作台"}
             </p>
             <h1 className="max-w-[620px] text-[clamp(35px,5vw,64px)] font-medium leading-[1.18] tracking-[-.055em] text-[#f5f8ff]">
-              {language === "en-US" ? <>A clearer view<br className="hidden sm:block" /> of every business.</> : <>让每一笔生意，<br />都看得更清楚。</>}
+              {language === "en-US" ? <>See your business<br className="hidden sm:block" /> more clearly.</> : "让经营更清晰。"}
             </h1>
             <p className="mt-5 max-w-[430px] text-[14px] leading-7 text-[#a9bad2] sm:mt-7 sm:text-[15px] sm:leading-8">
-              {language === "en-US" ? "From operating data to profit analysis, make every decision with evidence." : <>从经营数据到利润分析，<br className="hidden sm:block" />让每一次决策都有据可依。</>}
+              {language === "en-US" ? "Turn data into insight and confident decisions." : "从数据洞察到经营决策，让每一步都有据可依。"}
             </p>
           </div>
 
-          <div className="auth-brand-footer relative z-10 flex flex-wrap items-center gap-2.5 text-[11px] text-[#b8c8df] sm:gap-3">
+            <div className="auth-brand-footer relative z-10 flex flex-wrap items-center gap-2.5 text-[11px] text-[#b8c8df] sm:gap-3">
             <span className="auth-feature-chip">{t("经营总览")}</span>
             <span className="auth-feature-chip">{language === "en-US" ? "Profit analysis" : "利润分析"}</span>
             <span className="auth-feature-chip">{language === "en-US" ? "Cloud sync" : "云端同步"}</span>
@@ -224,7 +224,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
               <p className="mb-3 text-[10px] font-semibold tracking-[.2em] text-[#78aef2] sm:text-[11px]">MOONCLEAN OS</p>
               <h2 className="text-[30px] font-semibold leading-tight tracking-[-.045em] text-[#f5f8ff] sm:text-[34px]">{t(copy[mode][0])}</h2>
               <p className="mt-2.5 text-[13px] leading-6 text-[#a5b7d2] sm:text-sm">{t(copy[mode][1])}</p>
-              {checkingSession && <p role="status" className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#5b98e8]/25 bg-[#2878db]/10 px-3 py-1.5 text-xs text-[#bcd8ff]"><span className="size-1.5 animate-pulse rounded-full bg-[#69aaff]" />{t("正在验证登录状态…")}</p>}
+              {checkingSession && <p role="status" className="auth-session-status mt-4 inline-flex items-center gap-2 text-xs"><span className="size-1.5 animate-pulse rounded-full bg-[#398bff]" />{t("正在验证登录状态…")}</p>}
             </div>
 
             <form onSubmit={submit} className="auth-form-fields space-y-[18px]" aria-busy={checkingSession || busy}>
@@ -261,11 +261,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
               {mode === "login" && <div className="grid gap-3 rounded-xl border border-white/[.07] bg-white/[.025] px-3.5 py-3 sm:grid-cols-2">
                 <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-5 text-[#c4d2e5]">
                   <input type="checkbox" checked={rememberAccount} onChange={(event) => { const checked = event.target.checked; setRememberAccount(checked); if (!checked) try { localStorage.removeItem(REMEMBERED_EMAIL_KEY); } catch { /* Account memory is optional. */ } }} className="mt-1 size-3.5 accent-[#398bff]" />
-                  <span><span className="block font-medium text-[#e3ebf6]">{t("记住账号")}</span><span className="text-[11px] text-[#91a5c1]">{t("仅保存在当前浏览器")}</span></span>
+                  <span><span className="block font-medium text-[#e3ebf6]">{t("记住账号")}</span><span className="auth-option-description text-[11px] text-[#91a5c1]">{t("仅保存在当前浏览器")}</span></span>
                 </label>
                 <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-5 text-[#c4d2e5]">
                   <input type="checkbox" checked={rememberSession} onChange={(event) => setRememberSession(event.target.checked)} className="mt-1 size-3.5 accent-[#398bff]" />
-                  <span><span className="block font-medium text-[#e3ebf6]">{t("30 天内保持登录")}</span><span className="text-[11px] text-[#91a5c1]">{t("仅在可信的个人设备开启")}</span></span>
+                  <span><span className="block font-medium text-[#e3ebf6]">{t("30 天内保持登录")}</span><span className="auth-option-description text-[11px] text-[#91a5c1]">{t("仅在可信的个人设备开启")}</span></span>
                 </label>
               </div>}
               {error && <p role="alert" className="auth-feedback auth-feedback-error rounded-xl px-3.5 py-3 text-[13px] leading-5">{error}</p>}
