@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.63";
+export const APP_VERSION = "1.1.64";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.64",
+    date: "2026-10-25",
+    title: "修复浏览器重启后的登录会话持久化",
+    changes: [
+      "覆盖 Supabase SSR 默认写入的 400 天 Cookie 时长：未勾选保持登录时使用浏览器会话 Cookie，勾选后固定在最多 30 天内过期，并在浏览器、服务端和代理刷新路径保持一致。",
+      "为会话 Cookie 输出正确的 Max-Age/Expires、Secure、SameSite 与 Path 属性；保持主机限定 Cookie，不向 localStorage 写入认证令牌，并保留撤销、过期和退出清理逻辑。",
+    ],
+  },
   {
     version: "1.1.63",
     date: "2026-10-25",

@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import { shouldBypassAuthForLocalWorkspace } from "@/lib/local-workspace";
-import { getSupabaseAuthCookieOptions, SESSION_POLICY_COOKIE } from "@/lib/auth-session-policy";
+import { applySessionPolicyCookieOptions, getSupabaseAuthCookieOptions, SESSION_POLICY_COOKIE } from "@/lib/auth-session-policy";
 
 export async function proxy(request: NextRequest) {
   if (shouldBypassAuthForLocalWorkspace(
@@ -33,9 +33,7 @@ export async function proxy(request: NextRequest) {
       setAll(items, headers) {
         items.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        items.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
+        items.forEach(({ name, value, options }) => response.cookies.set(name, value, applySessionPolicyCookieOptions(options, sessionPolicy)));
         Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },

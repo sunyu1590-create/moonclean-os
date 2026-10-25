@@ -1,3 +1,5 @@
+import type { CookieOptions } from "@supabase/ssr";
+
 export const REMEMBERED_SESSION_DAYS = 30;
 export const SESSION_POLICY_COOKIE = "moonclean-session-policy";
 const MARKER_RETENTION_DAYS = 60;
@@ -25,7 +27,29 @@ export function getSupabaseAuthCookieOptions(policyValue: string | null | undefi
     path: "/",
     sameSite: "lax" as const,
     secure,
-    ...(remainingSeconds !== undefined ? { maxAge: remainingSeconds } : {}),
+    ...(remainingSeconds !== undefined ? { maxAge: remainingSeconds, expires: new Date(expiresAt!) } : {}),
+  };
+}
+
+/** @supabase/ssr 0.12.x overwrites configured maxAge with its 400 day default.
+ * Reapply our selected lifetime at each browser and server cookie write. */
+export function applySessionPolicyCookieOptions(
+  options: CookieOptions,
+  policyValue: string | null | undefined,
+  now = Date.now(),
+): CookieOptions {
+  if (options.maxAge === 0) return options;
+
+  const baseOptions = { ...options };
+  delete baseOptions.maxAge;
+  delete baseOptions.expires;
+  const expiresAt = getSessionPolicyExpiry(policyValue);
+  if (expiresAt === null) return baseOptions;
+
+  return {
+    ...baseOptions,
+    maxAge: Math.max(0, Math.ceil((expiresAt - now) / 1000)),
+    expires: new Date(expiresAt),
   };
 }
 

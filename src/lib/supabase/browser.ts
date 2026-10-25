@@ -1,8 +1,10 @@
 "use client";
 import { createBrowserClient } from "@supabase/ssr";
+import { parseCookie, stringifySetCookie } from "cookie";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseConfig } from "./config";
 import {
+  applySessionPolicyCookieOptions,
   clearSessionPolicyCookieHeader,
   createSessionPolicyValue,
   getSessionPolicyCookieHeader,
@@ -63,6 +65,17 @@ export function createBrowserSupabaseClient(rememberFor30Days?: boolean): Supaba
   cachedClient = createBrowserClient(config.url, config.key, {
     isSingleton: false,
     cookieOptions: getSupabaseAuthCookieOptions(policy, secureCookie()),
+    cookies: {
+      getAll() {
+        return Object.entries(parseCookie(document.cookie)).flatMap(([name, value]) => value === undefined ? [] : [{ name, value }]);
+      },
+      setAll(items) {
+        const activePolicy = readSessionPolicyCookie();
+        items.forEach(({ name, value, options }) => {
+          document.cookie = stringifySetCookie(name, value, applySessionPolicyCookieOptions(options, activePolicy));
+        });
+      },
+    },
   });
   cachedPolicy = cacheKey;
   return cachedClient;
