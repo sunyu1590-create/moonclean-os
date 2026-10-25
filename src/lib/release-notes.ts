@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.58";
+export const APP_VERSION = "1.1.59";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.59",
+    date: "2026-10-25",
+    title: "拼多多 OAuth 店铺授权回调",
+    changes: [
+      "平台连接中心新增拼多多开放平台 OAuth 授权与重新授权入口；回调校验有时效的签名 state 和 HttpOnly Cookie 后，用服务端 Client ID/Secret 调用 pdd.pop.auth.token.create。",
+      "Access Token、Refresh Token 与应用凭据使用 AES-256-GCM 加密后写入既有 private.platform_credentials；凭据写入 RPC 仅 service_role 可执行，浏览器和普通登录角色无法读取。",
+      "支持授权取消、失败和 Token 到期状态；回调完成后返回平台连接中心。未提供 Client ID/Secret 时明确显示未配置，不生成或冒充模拟授权结果。",
+    ],
+  },
   {
     version: "1.1.58",
     date: "2026-10-25",

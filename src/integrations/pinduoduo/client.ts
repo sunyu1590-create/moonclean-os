@@ -1,6 +1,6 @@
 export type Connection = {
   id:string; store_id:string; display_name:string; mode:"mock"|"official";
-  status:string; auto_sync:boolean; last_synced_at:string|null; last_result:string|null; created_at:string;
+  status:string; auto_sync:boolean; last_synced_at:string|null; last_result:string|null; created_at:string; expires_at?:string|null;
 };
 export type SyncJob = {
   id:string; connection_id:string; kind:"orders"|"products"|"refunds";

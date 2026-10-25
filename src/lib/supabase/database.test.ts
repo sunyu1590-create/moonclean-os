@@ -17,6 +17,7 @@ const migrations = [
   "20261022150000_account_avatar_member_lookup.sql",
   "20261024055552_note_center.sql",
   "20261024055642_note_center_query_tuning.sql",
+  "20261025030729_pdd_oauth_credentials.sql",
 ];
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
@@ -67,6 +68,14 @@ describe("PostgreSQL 迁移与权限", () => {
   }, 15_000);
   it("库存和待办保持租户隔离与权限约束", async () => {
     await db.exec(file("supabase/tests/operations.sql"));
+  }, 15_000);
+  it("拼多多 OAuth 凭据函数仅允许服务端角色调用", async () => {
+    const result = await db.query<{ anon_exec: boolean; authenticated_exec: boolean; service_exec: boolean }>(
+      `select has_function_privilege('anon','public.save_pdd_oauth_credentials(uuid,uuid,bytea,bytea,bytea,bytea,timestamptz)','EXECUTE') as anon_exec,
+        has_function_privilege('authenticated','public.save_pdd_oauth_credentials(uuid,uuid,bytea,bytea,bytea,bytea,timestamptz)','EXECUTE') as authenticated_exec,
+        has_function_privilege('service_role','public.save_pdd_oauth_credentials(uuid,uuid,bytea,bytea,bytea,bytea,timestamptz)','EXECUTE') as service_exec`,
+    );
+    expect(result.rows[0]).toEqual({ anon_exec: false, authenticated_exec: false, service_exec: true });
   }, 15_000);
   it("新增工作台保持店铺隔离、Viewer 只读、身份不可伪造及历史不可覆盖", async () => {
     await db.exec(file("supabase/tests/workspace.sql"));

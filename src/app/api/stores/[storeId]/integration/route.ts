@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import Decimal from "decimal.js";
 import { requireStore, apiError, rejectCrossOriginMutation } from "@/lib/supabase/auth";
+import { createServiceSupabaseClient } from "@/lib/supabase/service";
 import { runMockSync } from "@/services/mock-sync";
 import { money, orderSchema, refundSchema } from "@/integrations/pinduoduo/types";
 import { refundReasonSchema } from "@/lib/after-sales";
@@ -50,6 +51,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sto
   const issueById = new Map((refundIssues.data || []).map((row) => [row.external_id, row.payload as { reason?: string|null; note?: string } | null]));
   const response = Object.fromEntries(Object.entries(results).filter(([key])=>key!=="refundIssues").map(([key,value])=>[key,value.data]));
   response.refunds = (refunds.data || []).map((row) => ({...row, ...(issueById.get(row.external_id) || {})}));
+  const officialConnections = (connections.data || []).filter(connection => connection.mode === "official");
+  if (officialConnections.length) {
+    try {
+      const admin = createServiceSupabaseClient();
+      const { data: expiries } = await admin.rpc("get_pdd_oauth_expiries", { p_store_id: storeId });
+      const expiryByConnection = new Map<string, string | null>();
+      for (const item of expiries || []) expiryByConnection.set(item.connection_id, item.expires_at);
+      response.connections = (connections.data || []).map(connection => {
+        const expiresAt = expiryByConnection.get(connection.id) || null;
+        const expired = typeof expiresAt === "string" && new Date(expiresAt).getTime() <= Date.now();
+        return { ...connection, expires_at: expiresAt, status: expired && connection.status === "authorized" ? "expired" : connection.status };
+      });
+    } catch {
+      // Never expose credential-query errors or secret material to the browser.
+    }
+  }
   return NextResponse.json(response,{
     headers:{"Cache-Control":"no-store"},
   });

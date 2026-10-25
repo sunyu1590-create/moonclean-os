@@ -25,7 +25,25 @@ export default function IntegrationsPage(){
   const [orderStatus,setOrderStatus]=useState("completed");
   const refresh=useCallback(async()=>{if(mode==="local"){setSnapshot(null);return;}if(activeStoreId)setSnapshot(await getIntegration(activeStoreId));},[activeStoreId,mode]);
   useEffect(()=>{queueMicrotask(()=>{void refresh().catch(e=>setError(e.message));});},[refresh]);
+  useEffect(()=>{
+    const result=new URLSearchParams(window.location.search).get("pddAuth");
+    const messages:Record<string,string>={
+      success:"拼多多店铺授权完成，Token 已由服务端加密保存。",
+      cancelled:"已取消拼多多授权，现有店铺数据未受影响。",
+      expired:"授权状态或授权码已过期，请重新授权。",
+      failed:"拼多多授权未完成，请检查服务端配置后重试。",
+      invalid:"授权校验失败，请从平台连接中心重新发起授权。",
+    };
+    if(result&&messages[result]){
+      queueMicrotask(()=>{
+        if(result==="success"||result==="cancelled")setNotice(messages[result]);
+        else setError(messages[result]);
+      });
+      window.history.replaceState(window.history.state,"","/integrations");
+    }
+  },[]);
   const connection=snapshot?.connections.find(c=>c.mode==="mock");
+  const officialConnection=snapshot?.connections.find(c=>c.mode==="official");
   const canEdit=role!=="viewer";
   const canAdmin=role==="owner"||role==="admin";
   async function act(body:unknown){
@@ -53,6 +71,17 @@ export default function IntegrationsPage(){
       notifyFeedback({ kind: "success", title: "演示店铺已创建", description: "已切换到新店铺的云端工作区。" });
     }catch(e){const message=e instanceof Error?e.message:"创建失败";setError(message);notifyFeedback({ kind: "error", title: "创建演示店铺失败", description: message });}
     finally{setBusy(false);}
+  }
+  async function authorizeOfficial(){
+    if(mode!=="cloud"||!activeStoreId)return;
+    setBusy(true);setError("");setNotice("");
+    try{
+      const response=await fetch("/api/pdd/authorize",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({storeId:activeStoreId})});
+      const body=await response.json();
+      if(!response.ok)throw new Error(body.error||"暂时无法发起拼多多授权。");
+      if(typeof body.authorizationUrl!=="string")throw new Error("授权服务响应无效。");
+      window.location.assign(body.authorizationUrl);
+    }catch(cause){setError(cause instanceof Error?cause.message:"暂时无法发起拼多多授权。");setBusy(false);}
   }
   const internalNames=new Map(data?.products.flatMap(p=>p.skus.map(s=>[s.id,`${p.name} · ${s.name}`] as const))||[]);
   if(mode==="local")return <><PageHead eyebrow="INTEGRATIONS / 平台连接" title="平台连接中心" description="平台授权与定时同步属于云端功能。"/><AiInsightPanel feature="integrations" context={{ connectionCount: 0 }}/><div className="rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-5 text-sm leading-6 text-primary">当前正在使用本地数据。切换到云端数据后，才能管理平台连接、查看同步任务或运行模拟同步。切换不会上传本地数据。</div></>;
@@ -158,11 +187,18 @@ export default function IntegrationsPage(){
         </Button>
       </SectionCard>}
     </div>}
-    <SectionCard title="官方接入准备" sub="等待拼多多开放平台资质及应用授权。当前无法填写或保存真实凭据。">
-      <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-        {["Client ID：待申请","Client Secret：待申请，仅服务端加密保存","OAuth Redirect URL：待官方文档确认","Access Token：待授权，仅服务端保存","Refresh Token：待授权，仅服务端保存","授权到期时间：待授权","API 权限状态：待核实"].map(item=><p key={item} className="rounded-xl bg-[var(--mc-tint-blue)] p-3">{item}</p>)}
+    <SectionCard title="拼多多店铺授权" sub="使用拼多多开放平台 OAuth；Access Token 与应用密钥仅由服务端处理。">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-1 text-sm">
+          <p>授权状态：<strong>{officialConnection?.status==="authorized"?"已授权":officialConnection?.status==="expired"?"已过期":officialConnection?.status==="failed"?"授权失败":officialConnection?.status==="unauthorized"?"待授权":"未连接"}</strong></p>
+          {officialConnection?.expires_at&&<p className="text-xs text-muted-foreground">Token 到期：{new Date(officialConnection.expires_at).toLocaleString("zh-CN")}</p>}
+          {officialConnection?.last_result&&<p className="text-xs text-muted-foreground">{officialConnection.last_result}</p>}
+        </div>
+        <Button disabled={!canAdmin||busy||mode!=="cloud"||!activeStoreId} onClick={()=>void authorizeOfficial()}>
+          <Link2 size={16}/>{officialConnection&&["authorized","expired","failed"].includes(officialConnection.status)?"重新授权拼多多店铺":"授权拼多多店铺"}
+        </Button>
       </div>
-      <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground"><AlertTriangle size={14}/>获得官方资料后先核对接口、签名和授权流程，再启用正式适配器。</p>
+      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground"><AlertTriangle size={14} className="mt-0.5 shrink-0"/>仅店铺所有者和管理员可发起授权。请先在 Vercel 服务端配置 PDD_CLIENT_ID、PDD_CLIENT_SECRET、PDD_OAUTH_STATE_SECRET 与 PDD_TOKEN_ENCRYPTION_KEY。</p>
     </SectionCard>
   </>;
 }
