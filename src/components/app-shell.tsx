@@ -219,8 +219,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const syncSystem = () => setSystemDark(media.matches);
+    const syncThemePreference = (event: Event) => {
+      const preference = (event as CustomEvent<unknown>).detail;
+      if (preference === "night" || preference === "day") {
+        setThemePreference(preference);
+        setThemeReady(true);
+      }
+    };
     syncSystem();
     media.addEventListener("change", syncSystem);
+    window.addEventListener("moonclean-theme-change", syncThemePreference);
     const frame = window.requestAnimationFrame(() => {
       try {
         const saved = localStorage.getItem(themeStorageKey);
@@ -228,7 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       } catch { /* Use the system theme when storage is unavailable. */ }
       setThemeReady(true);
     });
-    return () => { window.cancelAnimationFrame(frame); media.removeEventListener("change", syncSystem); };
+    return () => { window.cancelAnimationFrame(frame); media.removeEventListener("change", syncSystem); window.removeEventListener("moonclean-theme-change", syncThemePreference); };
   }, []);
   useEffect(() => {
     if (!themeReady) return;

@@ -18,6 +18,8 @@ const en: Record<string, string> = {
   "PRICING LAB / 定价模拟": "PRICING LAB / SIMULATOR", "PRODUCT HEALTH / 商品诊断": "PRODUCT HEALTH / INSIGHTS",
   "INTEGRATIONS / 平台连接": "INTEGRATIONS / PLATFORMS", "ACCOUNT / 当前账号": "ACCOUNT / PROFILE",
   "早上好，今天的生意一目了然": "Good morning. See how your business is doing.",
+  "下午好，今天的生意一目了然": "Good afternoon. See how your business is doing.",
+  "晚上好，今天的生意一目了然": "Good evening. See how your business is doing.",
   "从销售、推广到利润，掌握店铺经营节奏。": "Track your store's performance across sales, advertising, and profit.",
   "让每一笔推广费更清楚": "Understand every advertising dollar", "广告效果以归因成交额衡量，与全店销售额分开核算。": "Ad performance is measured by attributed sales, separate from store-wide sales.",
   "看见收入，也看清留下的利润": "See revenue and the profit you keep", "所有经营费用汇总至统一的财务计算模块。": "All operating expenses are consolidated in one financial view.",

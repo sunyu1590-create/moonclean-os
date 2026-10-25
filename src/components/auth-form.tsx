@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { ArrowRight, Mail, LockKeyhole, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowRight, Mail, LockKeyhole, Eye, EyeOff, ShieldCheck, SunMoon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ const copy = {
 } as const;
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
-  const { language, t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -32,6 +32,13 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const configured = !!supabaseConfig();
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "day" ? "night" : "day";
+    document.documentElement.dataset.theme = next;
+    document.documentElement.style.colorScheme = next === "night" ? "dark" : "light";
+    try { localStorage.setItem("moonclean-theme-v1", next); } catch { /* Keep the selected theme for this session. */ }
+    window.dispatchEvent(new CustomEvent("moonclean-theme-change", { detail: next }));
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
@@ -102,7 +109,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
   return (
     <main className="auth-page min-h-[100svh] overflow-hidden px-3 py-3 text-white sm:px-5 sm:py-5 lg:px-7 lg:py-7">
-      <div className="auth-frame mx-auto grid min-h-[calc(100svh-24px)] max-w-[1440px] overflow-hidden rounded-[28px] border border-white/[.08] lg:min-h-[calc(100svh-56px)] lg:grid-cols-[1.08fr_.92fr]">
+      <div className="auth-frame relative mx-auto grid min-h-[calc(100svh-24px)] max-w-[1440px] overflow-hidden rounded-[28px] border border-white/[.08] lg:min-h-[calc(100svh-56px)] lg:grid-cols-[1.08fr_.92fr]">
         <aside className="auth-brand-panel relative flex min-h-[300px] flex-col justify-between overflow-hidden px-6 py-7 sm:min-h-[340px] sm:px-10 sm:py-9 lg:min-h-0 lg:px-14 lg:py-12 xl:px-[72px] xl:py-[58px]">
           <div className="auth-grid absolute inset-0" aria-hidden="true" />
           <div className="auth-orbit auth-orbit-one absolute" aria-hidden="true" />
@@ -138,6 +145,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
         <section className="auth-form-panel relative flex items-center justify-center px-5 py-9 sm:px-10 sm:py-12 lg:px-12 xl:px-16">
           <div className="auth-form-content w-full max-w-[408px]">
+            <div className="auth-preferences mb-7 flex items-center justify-end gap-2" aria-label={language === "en-US" ? "Display preferences" : "显示偏好设置"}>
+              <button type="button" onClick={() => setLanguage(language === "zh-CN" ? "en-US" : "zh-CN")} className="auth-preference-button" aria-label={language === "en-US" ? "Switch language to Chinese" : "切换界面语言为英文"} title={language === "en-US" ? "Switch language to Chinese" : "切换界面语言为英文"}>
+                <span className="text-[11px] font-semibold tracking-wide">{language === "zh-CN" ? "EN" : "中文"}</span>
+              </button>
+              <button type="button" onClick={toggleTheme} className="auth-preference-button" aria-label={language === "en-US" ? "Toggle day and night mode" : "切换日夜模式"} title={language === "en-US" ? "Toggle day and night mode" : "切换日夜模式"}>
+                <SunMoon size={16} aria-hidden="true" />
+              </button>
+            </div>
             <div className="mb-8 sm:mb-10">
               <p className="mb-3 text-[10px] font-semibold tracking-[.2em] text-[#78aef2] sm:text-[11px]">MOONCLEAN OS</p>
               <h2 className="text-[30px] font-semibold leading-tight tracking-[-.045em] text-[#f5f8ff] sm:text-[34px]">{t(copy[mode][0])}</h2>

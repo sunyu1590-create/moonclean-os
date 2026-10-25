@@ -40,9 +40,19 @@ test("跨店铺 API 访问被拒绝", async ({ page }) => {
 
 
 test("登录页在桌面和手机布局正常，并支持显示与隐藏密码", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "欢迎回来" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
   await expect(page.getByRole("img", { name: "月明净品牌标志" })).toBeVisible();
+  await page.getByRole("button", { name: "切换界面语言为英文" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await page.getByRole("button", { name: "Toggle day and night mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.locator(".auth-page")).toHaveCSS("color-scheme", "dark");
+  await page.getByRole("button", { name: "Toggle day and night mode" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
+  await page.getByRole("button", { name: "Switch language to Chinese" }).click();
   const password = page.getByRole("textbox", { name: "密码" });
   await password.fill("secure-pass-123");
   await page.getByRole("button", { name: "显示密码" }).click();

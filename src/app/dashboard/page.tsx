@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import Decimal from "decimal.js";
@@ -27,6 +27,7 @@ import { OperationsExceptionCenter } from "@/components/operations-exception-cen
 import { AiInsightPanel } from "@/components/ai-insight-panel";
 import { financialSummary, formatMoney, addMoney } from "@/lib/finance";
 import { numeric, periodRows, storeToday, trend } from "@/lib/analytics";
+import { dashboardGreetingAt } from "@/lib/dashboard-greeting";
 import { DeferredChart } from "@/components/charts/deferred-chart";
 import { compareValues, dailySourceGroup, isDailyCostComplete, previousPeriodEnd } from "@/lib/operating-review";
 
@@ -35,6 +36,14 @@ export default function Dashboard() {
   const { data } = useApp();
   const { language, t } = useLanguage();
   const [days, setDays] = useState<7 | 30>(7);
+  const [greeting, setGreeting] = useState("早上好，今天的生意一目了然");
+  const storeTimeZone = data?.settings.store.timezone;
+  useEffect(() => {
+    const updateGreeting = () => setGreeting(dashboardGreetingAt(new Date(), storeTimeZone));
+    updateGreeting();
+    const timer = window.setInterval(updateGreeting, 60_000);
+    return () => window.clearInterval(timer);
+  }, [storeTimeZone]);
   if (!data) return <p>正在加载数据…</p>;
   const currentDate = storeToday(data.settings.store.timezone);
   const rows = periodRows(data.daily, days, currentDate),
@@ -82,7 +91,7 @@ export default function Dashboard() {
     <>
       <PageHead
         eyebrow="OVERVIEW / 经营总览"
-        title="早上好，今天的生意一目了然"
+        title={greeting}
         description="从销售、推广到利润，掌握店铺经营节奏。"
         action={
           <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
