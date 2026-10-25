@@ -23,10 +23,13 @@ export async function requireUser(): Promise<Denied | Authorized> {
   const { data: claimsData } = await supabase.auth.getClaims();
   const sessionId = typeof claimsData?.claims?.session_id === "string" ? claimsData.claims.session_id : null;
   if (sessionId) {
-    const { data: deviceSession } = await supabase.from("user_device_sessions").select("revoked_at").eq("session_id", sessionId).maybeSingle();
-    if (deviceSession?.revoked_at) {
+    const { data: deviceSession, error: deviceSessionError } = await supabase.from("user_device_sessions").select("revoked_at,remember_until").eq("session_id", sessionId).eq("user_id", user.id).maybeSingle();
+    if (deviceSessionError) return { ok: false, error: NextResponse.json({ error: "无法验证登录会话，请稍后重试。" }, { status: 503 }) };
+    if (deviceSession?.revoked_at || (deviceSession?.remember_until && Date.parse(deviceSession.remember_until) <= Date.now())) {
+      if (deviceSession?.remember_until && Date.parse(deviceSession.remember_until) <= Date.now() && !deviceSession.revoked_at)
+        await supabase.from("user_device_sessions").update({ revoked_at: new Date().toISOString() }).eq("session_id", sessionId).eq("user_id", user.id);
       await supabase.auth.signOut({ scope: "local" });
-      return { ok: false, error: NextResponse.json({ error: "此设备已从账号中移除，请重新登录。" }, { status: 401 }) };
+      return { ok: false, error: NextResponse.json({ error: deviceSession?.revoked_at ? "此设备已从账号中移除，请重新登录。" : "保持登录期限已到，请重新登录。" }, { status: 401 }) };
     }
   }
   return { ok: true, supabase, user };

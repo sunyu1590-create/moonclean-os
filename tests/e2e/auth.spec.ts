@@ -15,8 +15,14 @@ test("邮箱密码登录及安全退出", async ({ page }) => {
   await page.getByLabel("密码").fill(process.env.E2E_PASSWORD!);
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  const authCookies = (await page.context().cookies()).filter((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
+  expect(authCookies.length).toBeGreaterThan(0);
+  expect(authCookies.every((cookie) => cookie.expires === -1)).toBe(true);
+  await page.reload();
+  await expect(page).toHaveURL(/\/dashboard/);
   await page.getByRole("button", { name: "退出登录" }).click();
   await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByLabel("邮箱")).toHaveValue(process.env.E2E_EMAIL!);
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login/);
 });
@@ -54,6 +60,10 @@ test("登录页在桌面和手机布局正常，并支持显示与隐藏密码",
   await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
   await page.getByRole("button", { name: "Switch language to Chinese" }).click();
   const password = page.getByRole("textbox", { name: "密码" });
+  await expect(page.getByRole("checkbox", { name: /记住账号/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /30 天内保持登录/ })).not.toBeChecked();
+  await expect(page.getByRole("textbox", { name: "邮箱" })).toHaveAttribute("autocomplete", "username");
+  await expect(password).toHaveAttribute("autocomplete", "current-password");
   await password.fill("secure-pass-123");
   await page.getByRole("button", { name: "显示密码" }).click();
   await expect(password).toHaveAttribute("type", "text");
@@ -66,4 +76,31 @@ test("登录页在桌面和手机布局正常，并支持显示与隐藏密码",
   expect(dimensions.width).toBeLessThanOrEqual(dimensions.viewport);
   const submit = page.getByRole("button", { name: "登录", exact: true });
   await expect(submit).toBeInViewport();
+});
+
+test("选择 30 天保持登录后可在新浏览器上下文恢复会话", async ({ page, browser }) => {
+  test.skip(!process.env.E2E_EMAIL || !process.env.E2E_PASSWORD, "需提供已验证的 Supabase 测试账号");
+  await page.goto("/login");
+  await page.getByLabel("邮箱").fill(process.env.E2E_EMAIL!);
+  await page.getByLabel("密码").fill(process.env.E2E_PASSWORD!);
+  await page.getByRole("checkbox", { name: /30 天内保持登录/ }).check();
+  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  const savedEmail = await page.evaluate(() => localStorage.getItem("moonclean-remembered-email-v1"));
+  expect(savedEmail).toBe(process.env.E2E_EMAIL);
+  const authCookies = (await page.context().cookies()).filter((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
+  expect(authCookies.length).toBeGreaterThan(0);
+  expect(authCookies.every((cookie) => cookie.expires > Date.now() / 1000 + 29 * 24 * 60 * 60)).toBe(true);
+
+  const reopenedContext = await browser.newContext({ storageState: await page.context().storageState() });
+  try {
+    const reopened = await reopenedContext.newPage();
+    await reopened.goto("/dashboard");
+    await expect(reopened).toHaveURL(/\/dashboard/);
+  } finally {
+    await reopenedContext.close();
+  }
+  await page.getByRole("button", { name: "退出登录" }).click();
+  await expect(page).toHaveURL(/\/login/);
 });

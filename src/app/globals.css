@@ -1664,17 +1664,23 @@ html[data-theme="day"] .auth-preference-button:hover { border-color: rgb(20 104 
   .auth-orbit-two { top: -30%; right: -24%; width: 68vw; }
 }
 @media (max-width: 640px) {
-  .auth-page { padding: 0; background: #0a1424; }
+  .auth-page { padding: 0; overflow-x: hidden; overflow-y: auto; background: #0a1424; }
   html[data-theme="day"] .auth-page { background: #edf2f8; }
   .auth-frame { min-height: 100svh; border: 0; border-radius: 0; box-shadow: none; }
-  .auth-brand-panel { min-height: 280px; padding: 24px 23px 22px; }
-  .auth-brand-copy { padding-block: 29px 20px; }
-  .auth-brand-copy h1 { font-size: clamp(35px, 10vw, 45px); }
-  .auth-brand-copy > p:last-child { margin-top: 13px; font-size: 13px; line-height: 1.8; }
-  .auth-brand-footer { gap: 7px; }
-  .auth-feature-chip { min-height: 28px; padding-inline: 10px; font-size: 10px; }
-  .auth-form-panel { align-items: flex-start; padding: 30px 23px max(32px, env(safe-area-inset-bottom)); }
+  .auth-brand-panel { min-height: 0; padding: 20px 23px 15px; }
+  .auth-brand-panel > .auth-brand-lockup > span:first-child { width: 48px; height: 48px; border-radius: 15px; }
+  .auth-brand-copy { padding-block: 18px 13px; }
+  .auth-brand-copy > p:first-child { margin-bottom: 12px; }
+  .auth-brand-copy h1 { font-size: clamp(31px, 8.5vw, 38px); line-height: 1.13; }
+  .auth-brand-copy > p:last-child { margin-top: 10px; font-size: 12px; line-height: 1.65; }
+  .auth-brand-footer { gap: 6px; }
+  .auth-feature-chip { min-height: 25px; padding-inline: 8px; font-size: 9px; }
+  .auth-form-panel { align-items: flex-start; padding: 14px 23px max(24px, env(safe-area-inset-bottom)); }
   .auth-form-content { max-width: 460px; }
+  .auth-form-content .auth-preferences { margin-bottom: 10px; }
+  .auth-form-content > div:nth-child(2) { margin-bottom: 18px; }
+  .auth-form-fields > :not(:first-child) { margin-top: 12px; }
+  .auth-form-fields > label { padding-block: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .auth-page, .auth-brand-copy, .auth-form-content, .auth-field, .auth-glow-a, .auth-glow-b { animation: none !important; }

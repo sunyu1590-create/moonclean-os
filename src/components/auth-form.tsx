@@ -2,19 +2,21 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { ArrowRight, Mail, LockKeyhole, Eye, EyeOff, ShieldCheck, SunMoon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { clearBrowserSessionPolicy, createBrowserSupabaseClient, isBrowserSessionPolicyExpired, recreateBrowserSupabaseClient, setBrowserSessionPolicy, setBrowserSessionPolicyUntil } from "@/lib/supabase/browser";
+import { getBrowserDeviceId } from "@/lib/browser-device-id";
 import { supabaseConfig } from "@/lib/supabase/config";
 import { useLanguage } from "@/components/language-provider";
 
 type Mode = "login" | "signup" | "forgot" | "reset";
 const emailSchema = z.email("请输入有效邮箱地址");
 const passwordSchema = z.string().min(8, "密码至少 8 位");
+const REMEMBERED_EMAIL_KEY = "moonclean-remembered-email-v1";
 const copy = {
   login: ["欢迎回来", "登录 MoonClean OS，继续掌握店铺经营。", "登录"],
   signup: ["创建账号", "先验证邮箱，再开始管理你的店铺。", "注册账号"],
@@ -31,7 +33,50 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberAccount, setRememberAccount] = useState(true);
+  const [rememberSession, setRememberSession] = useState(false);
   const configured = !!supabaseConfig();
+  const [checkingSession, setCheckingSession] = useState(mode === "login" && configured);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+        if (savedEmail) setEmail(savedEmail);
+      } catch { /* Browser account remembrance is optional. */ }
+      const authError = new URLSearchParams(window.location.search).get("error");
+      if (authError === "session-expired") setMessage(t("保持登录期限已到，请重新登录。"));
+      else if (authError === "session-revoked") setMessage(t("此设备的登录已撤销，请重新登录。"));
+      else if (authError === "session-check") setMessage(t("暂时无法验证登录状态，请稍后重试。"));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [t]);
+  useEffect(() => {
+    if (mode !== "login" || !configured) return;
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = createBrowserSupabaseClient();
+        if (isBrowserSessionPolicyExpired()) {
+          await supabase.auth.signOut({ scope: "local" });
+          clearBrowserSessionPolicy();
+          return;
+        }
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (data.user) {
+          const next = new URLSearchParams(window.location.search).get("next");
+          router.replace(next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+          router.refresh();
+          return;
+        }
+      } catch {
+        // An expired or unavailable session should leave the sign-in form usable.
+      } finally {
+        if (active) setCheckingSession(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [configured, mode, router]);
   function toggleTheme() {
     const next = document.documentElement.dataset.theme === "day" ? "night" : "day";
     document.documentElement.dataset.theme = next;
@@ -63,52 +108,74 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
     setBusy(true);
     try {
-      const supabase = createBrowserSupabaseClient();
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+        setBrowserSessionPolicy(rememberSession);
+        const browserDeviceId = getBrowserDeviceId();
+        const policyResponse = await fetch("/api/auth/login", {
+          method: "POST",
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json", ...(browserDeviceId ? { "x-moonclean-device-id": browserDeviceId } : {}) },
+          body: JSON.stringify({ email, password, rememberFor30Days: rememberSession }),
         });
-        if (error) throw error;
+        const policyBody = await policyResponse.json().catch(() => ({}));
+        if (!policyResponse.ok) {
+          if (policyResponse.status === 401 && policyBody.code === "email_not_confirmed") throw new Error(t("请先验证邮箱，再登录。"));
+          if (policyResponse.status === 401) throw new Error(t("邮箱或密码不正确。"));
+          throw new Error(t("无法保存登录时长设置，请重试。"));
+        }
+        setBrowserSessionPolicyUntil(policyBody.rememberUntil || null);
+        await recreateBrowserSupabaseClient();
+        try {
+          if (rememberAccount) localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim());
+          else localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+        } catch { /* The browser password manager can still retain the account. */ }
         const next = new URLSearchParams(window.location.search).get("next");
         router.replace(
           next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard",
         );
         router.refresh();
-      } else if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { display_name: displayName.trim() },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
-        if (error) throw error;
-        if (data.session) {
-          router.replace("/dashboard");
-          router.refresh();
-        } else
-          setMessage("注册申请已提交。请查看邮箱中的验证链接，验证后再登录。");
-      } else if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        });
-        if (error) throw error;
-        setMessage("如果邮箱对应有效账号，重置链接会发送到该邮箱。");
       } else {
-        const { error } = await supabase.auth.updateUser({ password });
-        if (error) throw error;
-        setMessage("密码已更新。请返回经营总览。");
+        const supabase = createBrowserSupabaseClient();
+        if (mode === "signup") {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { display_name: displayName.trim() },
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
+          });
+          if (error) throw error;
+          if (data.session) {
+            router.replace("/dashboard");
+            router.refresh();
+          } else
+            setMessage("注册申请已提交。请查看邮箱中的验证链接，验证后再登录。");
+        } else if (mode === "forgot") {
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+          });
+          if (error) throw error;
+          setMessage("如果邮箱对应有效账号，重置链接会发送到该邮箱。");
+        } else {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) throw error;
+          setMessage("密码已更新。请返回经营总览。");
+        }
       }
     } catch (cause) {
+      if (mode === "login") {
+        try { await createBrowserSupabaseClient().auth.signOut({ scope: "local" }); } catch { /* Remove local credentials even if the network is unavailable. */ }
+        clearBrowserSessionPolicy();
+      }
       setError(cause instanceof Error ? cause.message : "网络异常，请稍后重试");
     } finally {
       setBusy(false);
     }
   }
   return (
-    <main className="auth-page min-h-[100svh] overflow-hidden px-3 py-3 text-white sm:px-5 sm:py-5 lg:px-7 lg:py-7">
+    <main className="auth-page min-h-[100svh] overflow-x-hidden overflow-y-auto px-3 py-3 text-white sm:px-5 sm:py-5 lg:px-7 lg:py-7">
       <div className="auth-frame relative mx-auto grid min-h-[calc(100svh-24px)] max-w-[1440px] overflow-hidden rounded-[28px] border border-white/[.08] lg:min-h-[calc(100svh-56px)] lg:grid-cols-[1.08fr_.92fr]">
         <aside className="auth-brand-panel relative flex min-h-[300px] flex-col justify-between overflow-hidden px-6 py-7 sm:min-h-[340px] sm:px-10 sm:py-9 lg:min-h-0 lg:px-14 lg:py-12 xl:px-[72px] xl:py-[58px]">
           <div className="auth-grid absolute inset-0" aria-hidden="true" />
@@ -153,13 +220,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 <SunMoon size={16} aria-hidden="true" />
               </button>
             </div>
-            <div className="mb-8 sm:mb-10">
+            <div className="mb-8 sm:mb-10" aria-busy={checkingSession}>
               <p className="mb-3 text-[10px] font-semibold tracking-[.2em] text-[#78aef2] sm:text-[11px]">MOONCLEAN OS</p>
               <h2 className="text-[30px] font-semibold leading-tight tracking-[-.045em] text-[#f5f8ff] sm:text-[34px]">{t(copy[mode][0])}</h2>
               <p className="mt-2.5 text-[13px] leading-6 text-[#a5b7d2] sm:text-sm">{t(copy[mode][1])}</p>
+              {checkingSession && <p role="status" className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#5b98e8]/25 bg-[#2878db]/10 px-3 py-1.5 text-xs text-[#bcd8ff]"><span className="size-1.5 animate-pulse rounded-full bg-[#69aaff]" />{t("正在验证登录状态…")}</p>}
             </div>
 
-            <form onSubmit={submit} className="auth-form-fields space-y-[18px]">
+            <form onSubmit={submit} className="auth-form-fields space-y-[18px]" aria-busy={checkingSession || busy}>
               {mode === "signup" && (
                 <div className="auth-field">
                   <Label htmlFor="displayName" className="text-[12px] font-medium text-[#d4deed]">{t("昵称")}</Label>
@@ -171,7 +239,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                   <Label htmlFor="email" className="text-[12px] font-medium text-[#d4deed]">{t("邮箱")}</Label>
                   <div className="auth-input-wrap relative mt-2">
                     <Mail size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8399b6]" />
-                    <Input id="email" type="email" autoComplete="email" className="auth-input pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+                    <Input id="email" type="email" name="username" autoComplete="username" inputMode="email" autoCapitalize="none" spellCheck={false} className="auth-input pl-10" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
                   </div>
                 </div>
               )}
@@ -183,18 +251,28 @@ export function AuthForm({ mode }: { mode: Mode }) {
                   </div>
                   <div className="auth-input-wrap relative mt-2">
                     <LockKeyhole size={16} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8399b6]" />
-                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} className="auth-input pr-12 pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("至少 8 位")} />
+                    <Input id="password" type={showPassword ? "text" : "password"} name="password" autoComplete={mode === "login" ? "current-password" : "new-password"} className="auth-input pr-12 pl-10" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("至少 8 位")} />
                     <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? (language === "en-US" ? "Hide password" : "隐藏密码") : (language === "en-US" ? "Show password" : "显示密码")} aria-pressed={showPassword} className="auth-password-toggle absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-[#8fa3c0] transition-colors hover:bg-white/[.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f97f4]">
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
               )}
+              {mode === "login" && <div className="grid gap-3 rounded-xl border border-white/[.07] bg-white/[.025] px-3.5 py-3 sm:grid-cols-2">
+                <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-5 text-[#c4d2e5]">
+                  <input type="checkbox" checked={rememberAccount} onChange={(event) => { const checked = event.target.checked; setRememberAccount(checked); if (!checked) try { localStorage.removeItem(REMEMBERED_EMAIL_KEY); } catch { /* Account memory is optional. */ } }} className="mt-1 size-3.5 accent-[#398bff]" />
+                  <span><span className="block font-medium text-[#e3ebf6]">{t("记住账号")}</span><span className="text-[11px] text-[#91a5c1]">{t("仅保存在当前浏览器")}</span></span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-2.5 text-[12px] leading-5 text-[#c4d2e5]">
+                  <input type="checkbox" checked={rememberSession} onChange={(event) => setRememberSession(event.target.checked)} className="mt-1 size-3.5 accent-[#398bff]" />
+                  <span><span className="block font-medium text-[#e3ebf6]">{t("30 天内保持登录")}</span><span className="text-[11px] text-[#91a5c1]">{t("仅在可信的个人设备开启")}</span></span>
+                </label>
+              </div>}
               {error && <p role="alert" className="auth-feedback auth-feedback-error rounded-xl px-3.5 py-3 text-[13px] leading-5">{error}</p>}
               {message && <p role="status" className="auth-feedback auth-feedback-success rounded-xl px-3.5 py-3 text-[13px] leading-5">{message}</p>}
-              <Button type="submit" loading={busy} className="auth-submit mt-2 h-[50px] w-full justify-between rounded-xl px-4 text-[14px] font-semibold" disabled={busy || !configured}>
+              <Button type="submit" loading={busy} className="auth-submit mt-2 h-[50px] w-full justify-between rounded-xl px-4 text-[14px] font-semibold" disabled={busy || checkingSession || !configured}>
                 <span>{busy ? t("请稍候…") : t(copy[mode][2])}</span>
-                {!busy && <ArrowRight size={17} aria-hidden="true" />}
+                {!busy && !checkingSession && <ArrowRight size={17} aria-hidden="true" />}
               </Button>
             </form>
 

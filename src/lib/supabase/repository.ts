@@ -16,6 +16,8 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const body = await response
     .json()
     .catch(() => ({ error: "服务器返回了无效响应" }));
+  if (response.status === 401 && typeof window !== "undefined")
+    window.dispatchEvent(new Event("moonclean-auth-expired"));
   if (!response.ok)
     throw new Error(body.error || `请求失败 (${response.status})`);
   return body as T;

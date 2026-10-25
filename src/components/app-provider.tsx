@@ -14,6 +14,7 @@ import { createEmptyLocalData } from "@/lib/seed";
 import { setDisplayCurrency } from "@/lib/finance";
 import { notifyFeedback } from "@/lib/feedback";
 import { getBrowserDeviceId } from "@/lib/browser-device-id";
+import { clearBrowserSessionPolicy, createBrowserSupabaseClient, getBrowserSessionPolicyExpiry } from "@/lib/supabase/browser";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import {
   SupabaseRepository,
@@ -256,6 +257,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void fetch("/api/account/sessions", {
         cache: "no-store",
         headers: deviceId ? { "x-moonclean-device-id": deviceId } : undefined,
+      }).then((response) => {
+        if (response.status === 401) window.dispatchEvent(new Event("moonclean-auth-expired"));
       }).catch(() => undefined);
     };
     register();
@@ -263,6 +266,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", register);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", register); };
   }, [mode, user?.id, isAuthRoute]);
+  useEffect(() => {
+    if (mode !== "cloud" || !user?.id || isAuthRoute) return;
+    let timer = 0;
+    let active = true;
+    const expireSessionIfNeeded = () => {
+      if (!active) return;
+      const expiresAt = getBrowserSessionPolicyExpiry();
+      if (expiresAt === null) return;
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        void createBrowserSupabaseClient().auth.signOut({ scope: "local" }).finally(() => {
+          clearBrowserSessionPolicy();
+          window.location.replace("/login?error=session-expired");
+        });
+        return;
+      }
+      timer = window.setTimeout(expireSessionIfNeeded, Math.min(remaining, 2_147_000_000));
+    };
+    expireSessionIfNeeded();
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [mode, user?.id, isAuthRoute]);
+  useEffect(() => {
+    if (isAuthRoute) return;
+    const handleExpired = () => {
+      void createBrowserSupabaseClient().auth.signOut({ scope: "local" }).finally(() => {
+        clearBrowserSessionPolicy();
+        window.location.replace("/login?error=session-expired");
+      });
+    };
+    window.addEventListener("moonclean-auth-expired", handleExpired);
+    return () => window.removeEventListener("moonclean-auth-expired", handleExpired);
+  }, [isAuthRoute]);
   useEffect(() => {
     if (mode !== "cloud" || !activeStoreId || isAuthRoute) return;
     let active = true;

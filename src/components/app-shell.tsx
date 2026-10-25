@@ -2,7 +2,7 @@
 import { AppSelect } from "@/components/ui/app-select";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Megaphone,
@@ -43,7 +43,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { clearBrowserSessionPolicy, createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -180,7 +180,6 @@ function StoreOnboarding() {
 }
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { language, t } = useLanguage();
   const {
     data,
@@ -309,10 +308,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   async function signOut() {
     setLogoutBusy(true); setLogoutError("");
     try {
-      const { error } = await createBrowserSupabaseClient().auth.signOut();
+      const { error } = await createBrowserSupabaseClient().auth.signOut({ scope: "local" });
       if (error) throw error;
-      router.replace("/login");
-      router.refresh();
+      clearBrowserSessionPolicy();
+      window.location.replace("/login");
     } catch (cause) {
       setLogoutError(cause instanceof Error ? cause.message : "退出失败，请重试");
       setLogoutBusy(false);

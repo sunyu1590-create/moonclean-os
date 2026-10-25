@@ -22,6 +22,7 @@ const migrations = [
   "20261025030729_pdd_oauth_credentials.sql",
   "20261025114815_stabilize_device_sessions.sql",
   "20261025115811_secure_device_session_updates.sql",
+  "20261025122433_enforce_remembered_session_deadline.sql",
 ];
 const repeatableMigrations = migrations.filter((name) => ![
   "20261023110000_user_device_sessions.sql",
@@ -90,8 +91,12 @@ describe("PostgreSQL 迁移与权限", () => {
     await db.exec(file("supabase/tests/workspace.sql"));
   }, 15_000);
   it("设备会话只允许已登录用户执行登记与撤销", async () => {
-    const result = await db.query<{ device_id_nullable: boolean; register_anon: boolean; register_authenticated: boolean; register_definer: boolean; revoke_anon: boolean; revoke_authenticated: boolean; revoke_definer: boolean }>(
+    const result = await db.query<{ device_id_nullable: boolean; remember_until_nullable: boolean; active_definer: boolean; active_anon: boolean; active_authenticated: boolean; register_anon: boolean; register_authenticated: boolean; register_definer: boolean; revoke_anon: boolean; revoke_authenticated: boolean; revoke_definer: boolean }>(
       `select (select is_nullable = 'YES' from information_schema.columns where table_schema='public' and table_name='user_device_sessions' and column_name='device_id') as device_id_nullable,
+        (select is_nullable = 'YES' from information_schema.columns where table_schema='public' and table_name='user_device_sessions' and column_name='remember_until') as remember_until_nullable,
+        (select prosecdef from pg_proc where oid='public.current_device_session_active()'::regprocedure) as active_definer,
+        has_function_privilege('anon','public.current_device_session_active()','EXECUTE') as active_anon,
+        has_function_privilege('authenticated','public.current_device_session_active()','EXECUTE') as active_authenticated,
         has_function_privilege('anon','public.register_current_device_session_for_device(uuid,text,text)','EXECUTE') as register_anon,
         has_function_privilege('authenticated','public.register_current_device_session_for_device(uuid,text,text)','EXECUTE') as register_authenticated,
         (select prosecdef from pg_proc where oid='public.register_current_device_session_for_device(uuid,text,text)'::regprocedure) as register_definer,
@@ -99,7 +104,7 @@ describe("PostgreSQL 迁移与权限", () => {
         has_function_privilege('authenticated','public.revoke_device_sessions_for_device(uuid)','EXECUTE') as revoke_authenticated,
         (select prosecdef from pg_proc where oid='public.revoke_device_sessions_for_device(uuid)'::regprocedure) as revoke_definer`,
     );
-    expect(result.rows[0]).toEqual({ device_id_nullable: true, register_anon: false, register_authenticated: true, register_definer: false, revoke_anon: false, revoke_authenticated: true, revoke_definer: false });
+    expect(result.rows[0]).toEqual({ device_id_nullable: true, remember_until_nullable: true, active_definer: false, active_anon: false, active_authenticated: true, register_anon: false, register_authenticated: true, register_definer: false, revoke_anon: false, revoke_authenticated: true, revoke_definer: false });
   }, 15_000);
   it("设备 RPC 在调用用户身份下登记，并只撤销同设备的其他会话", async () => {
     const userId = "10000000-0000-4000-8000-000000000001";
@@ -123,6 +128,41 @@ describe("PostgreSQL 迁移与权限", () => {
         { session_id: oldSessionId, revoked: true },
         { session_id: currentSessionId, revoked: false },
       ]);
+    } finally {
+      await db.exec("reset role");
+    }
+  }, 15_000);
+  it("记住登录期限由设备会话数据限制为最多 30 天，并由 RLS 执行", async () => {
+    const userId = "10000000-0000-4000-8000-000000000002";
+    const deviceId = "20000000-0000-4000-8000-000000000002";
+    const sessionId = "30000000-0000-4000-8000-000000000003";
+    await db.query("insert into auth.users(id,email) values($1,'remember-test@example.com') on conflict(id) do nothing", [userId]);
+    await db.exec("set role authenticated");
+    try {
+      await db.query("select set_config('request.jwt.claim.sub',$1,false)", [userId]);
+      await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ session_id: sessionId })]);
+      await db.query("select public.register_current_device_session_for_device($1,'Edge · Android','test-agent')", [deviceId]);
+      await db.query(`update public.user_device_sessions
+        set remember_until = created_at + interval '30 days'
+        where session_id = $1`, [sessionId]);
+      const active = await db.query<{ current: boolean }>("select public.current_device_session_active() as current");
+      expect(active.rows[0].current).toBe(true);
+      await expect(db.query(`update public.user_device_sessions
+        set remember_until = created_at + interval '30 days 1 second'
+        where session_id = $1`, [sessionId])).rejects.toThrow();
+    } finally {
+      await db.exec("reset role");
+    }
+    await db.query("update public.user_device_sessions set remember_until = null, created_at = now() - interval '31 days' where session_id = $1", [sessionId]);
+    await db.exec("set role authenticated");
+    try {
+      await db.query("select set_config('request.jwt.claim.sub',$1,false)", [userId]);
+      await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ session_id: sessionId })]);
+      await db.query(`update public.user_device_sessions
+        set remember_until = created_at + interval '30 days'
+        where session_id = $1`, [sessionId]);
+      const active = await db.query<{ current: boolean }>("select public.current_device_session_active() as current");
+      expect(active.rows[0].current).toBe(false);
     } finally {
       await db.exec("reset role");
     }
