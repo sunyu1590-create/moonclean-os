@@ -13,6 +13,7 @@ import { hasLocalData, parseAppData, repository } from "@/lib/repository";
 import { createEmptyLocalData } from "@/lib/seed";
 import { setDisplayCurrency } from "@/lib/finance";
 import { notifyFeedback } from "@/lib/feedback";
+import { getBrowserDeviceId } from "@/lib/browser-device-id";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import {
   SupabaseRepository,
@@ -250,7 +251,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthRoute, modeReady, mode, refresh]);
   useEffect(() => {
     if (mode !== "cloud" || !user?.id || isAuthRoute) return;
-    const register = () => void fetch("/api/account/sessions", { cache: "no-store" }).catch(() => undefined);
+    const register = () => {
+      const deviceId = getBrowserDeviceId();
+      void fetch("/api/account/sessions", {
+        cache: "no-store",
+        headers: deviceId ? { "x-moonclean-device-id": deviceId } : undefined,
+      }).catch(() => undefined);
+    };
     register();
     const timer = window.setInterval(register, 5 * 60_000);
     window.addEventListener("focus", register);

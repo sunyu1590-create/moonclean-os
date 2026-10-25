@@ -15,10 +15,18 @@ const migrations = [
   "202610190001_image_import.sql",
   "20261019001234_operations_workbench.sql",
   "20261022150000_account_avatar_member_lookup.sql",
+  "20261023110000_user_device_sessions.sql",
+  "20261023111500_restrict_revoked_device_sessions.sql",
   "20261024055552_note_center.sql",
   "20261024055642_note_center_query_tuning.sql",
   "20261025030729_pdd_oauth_credentials.sql",
+  "20261025114815_stabilize_device_sessions.sql",
+  "20261025115811_secure_device_session_updates.sql",
 ];
+const repeatableMigrations = migrations.filter((name) => ![
+  "20261023110000_user_device_sessions.sql",
+  "20261023111500_restrict_revoked_device_sessions.sql",
+].includes(name));
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
 beforeAll(async () => {
@@ -31,7 +39,8 @@ beforeAll(async () => {
     grant usage on schema storage to authenticated,anon; grant select,insert,delete on storage.objects to authenticated; grant select,insert,update on storage.buckets to authenticated;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     create function auth.role() returns text language sql stable as $$ select nullif(current_setting('request.jwt.claim.role',true),'') $$;
-    grant usage on schema auth to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;`);
+    create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
+    grant usage on schema auth to authenticated,anon; grant execute on function auth.uid() to authenticated,anon; grant execute on function auth.jwt() to authenticated,anon;`);
   for (const name of migrations)
     await db.exec(
       file(`supabase/migrations/${name}`).replace(
@@ -45,7 +54,7 @@ afterAll(async () => {
 });
 describe("PostgreSQL 迁移与权限", () => {
   it("迁移可重复执行", async () => {
-    for (const name of migrations)
+    for (const name of repeatableMigrations)
       await db.exec(
         file(`supabase/migrations/${name}`).replace(
           "create extension if not exists pgcrypto;",
@@ -79,5 +88,43 @@ describe("PostgreSQL 迁移与权限", () => {
   }, 15_000);
   it("新增工作台保持店铺隔离、Viewer 只读、身份不可伪造及历史不可覆盖", async () => {
     await db.exec(file("supabase/tests/workspace.sql"));
+  }, 15_000);
+  it("设备会话只允许已登录用户执行登记与撤销", async () => {
+    const result = await db.query<{ device_id_nullable: boolean; register_anon: boolean; register_authenticated: boolean; register_definer: boolean; revoke_anon: boolean; revoke_authenticated: boolean; revoke_definer: boolean }>(
+      `select (select is_nullable = 'YES' from information_schema.columns where table_schema='public' and table_name='user_device_sessions' and column_name='device_id') as device_id_nullable,
+        has_function_privilege('anon','public.register_current_device_session_for_device(uuid,text,text)','EXECUTE') as register_anon,
+        has_function_privilege('authenticated','public.register_current_device_session_for_device(uuid,text,text)','EXECUTE') as register_authenticated,
+        (select prosecdef from pg_proc where oid='public.register_current_device_session_for_device(uuid,text,text)'::regprocedure) as register_definer,
+        has_function_privilege('anon','public.revoke_device_sessions_for_device(uuid)','EXECUTE') as revoke_anon,
+        has_function_privilege('authenticated','public.revoke_device_sessions_for_device(uuid)','EXECUTE') as revoke_authenticated,
+        (select prosecdef from pg_proc where oid='public.revoke_device_sessions_for_device(uuid)'::regprocedure) as revoke_definer`,
+    );
+    expect(result.rows[0]).toEqual({ device_id_nullable: true, register_anon: false, register_authenticated: true, register_definer: false, revoke_anon: false, revoke_authenticated: true, revoke_definer: false });
+  }, 15_000);
+  it("设备 RPC 在调用用户身份下登记，并只撤销同设备的其他会话", async () => {
+    const userId = "10000000-0000-4000-8000-000000000001";
+    const deviceId = "20000000-0000-4000-8000-000000000001";
+    const oldSessionId = "30000000-0000-4000-8000-000000000001";
+    const currentSessionId = "30000000-0000-4000-8000-000000000002";
+    await db.query("insert into auth.users(id,email) values($1,'device-test@example.com') on conflict(id) do nothing", [userId]);
+    await db.exec("set role authenticated");
+    try {
+      await db.query("select set_config('request.jwt.claim.sub',$1,false)", [userId]);
+      await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ session_id: oldSessionId })]);
+      await db.query("select public.register_current_device_session_for_device($1,'Edge · Android','test-agent')", [deviceId]);
+      await db.query("select set_config('request.jwt.claims',$1,false)", [JSON.stringify({ session_id: currentSessionId })]);
+      await db.query("select public.register_current_device_session_for_device($1,'Edge · Android','test-agent')", [deviceId]);
+      await db.query("select public.revoke_device_sessions_for_device($1)", [deviceId]);
+      const sessions = await db.query<{ session_id: string; revoked: boolean }>(
+        "select session_id, revoked_at is not null as revoked from public.user_device_sessions where user_id=$1 order by session_id",
+        [userId],
+      );
+      expect(sessions.rows).toEqual([
+        { session_id: oldSessionId, revoked: true },
+        { session_id: currentSessionId, revoked: false },
+      ]);
+    } finally {
+      await db.exec("reset role");
+    }
   }, 15_000);
 });

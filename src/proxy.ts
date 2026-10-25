@@ -18,18 +18,22 @@ export async function proxy(request: NextRequest) {
     const target = new URL("/login?setup=1", request.url);
     return NextResponse.redirect(target);
   }
+  // API routes authenticate themselves through requireUser/requireStore. Avoid
+  // a second concurrent getUser() refresh in middleware for every API request.
+  if (isApi) return NextResponse.next();
   let response = NextResponse.next({ request });
   const supabase = createServerClient(config.url, config.key, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(items) {
+      setAll(items, headers) {
         items.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         items.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
+        Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },
   });

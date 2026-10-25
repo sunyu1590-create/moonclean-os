@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "private, no-cache, no-store, must-revalidate, max-age=0",
+          },
+          { key: "Expires", value: "0" },
+          { key: "Pragma", value: "no-cache" },
+        ],
+      },
+      {
         source: "/fonts/OPPOSans4-SC-6b9ec61a.woff2",
         headers: [
           {
