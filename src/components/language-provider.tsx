@@ -115,6 +115,7 @@ const en: Record<string, string> = {
   "利润质量与效率": "Profit quality and efficiency", "与上一周期对比": "Compare with previous period",
   "服务连接": "Service connection", "数据与隐私": "Data & privacy", "AI 功能目录": "AI feature catalog", "用量与诊断": "Usage & diagnostics",
   "语言与地区": "Language & region", "选择 MoonClean OS 的界面语言；偏好仅保存在当前浏览器。": "Choose the MoonClean OS interface language. This preference is saved in this browser.", "界面语言": "Interface language",
+  "界面字体": "Interface font", "开启使用 OPPOSans；关闭后使用设备的系统默认字体。": "Enable OPPO Sans or turn it off to use the device's system font.", "当前使用 OPPOSans 字体。": "OPPO Sans is currently enabled.", "当前使用设备系统字体。": "The device's system font is currently enabled.", "启用 OPPOSans 字体": "Enable OPPO Sans font", "已启用 OPPOSans": "OPPO Sans enabled", "已切换到系统字体": "Switched to system font", "页面将使用 OPPOSans 显示。": "Pages will use OPPO Sans.", "页面将使用设备系统默认字体显示。": "Pages will use the device's system font.",
   "打开动效设置模块": "Open motion settings", "打开 AI 设置模块": "Open AI settings", "性能调试浮窗": "Performance diagnostics",
   "金额": "Amount", "数量": "Quantity", "名称": "Name", "备注": "Notes", "说明": "Description",
   "暂无数据": "No data yet", "暂无记录": "No records yet", "导出": "Export", "导入": "Import",

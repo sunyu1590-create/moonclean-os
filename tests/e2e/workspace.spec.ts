@@ -26,6 +26,25 @@ test.describe("运营功能工作台（本机模式）", () => {
     await expect(page.getByRole("heading", { name: "早上好，今天的生意一目了然" })).toBeVisible();
   });
 
+  test("可在系统设置启用或关闭 OPPOSans，并记住字体偏好", async ({ page }) => {
+    await page.goto("/settings");
+    const fontSwitch = page.getByRole("switch", { name: "启用 OPPOSans 字体" });
+    await expect(fontSwitch).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("html")).toHaveAttribute("data-app-font", "oppo");
+    await expect.poll(() => page.locator("body").evaluate((body) => getComputedStyle(body).fontFamily)).toContain("MoonClean OPPOSans");
+
+    await fontSwitch.click();
+    await expect(fontSwitch).toHaveAttribute("aria-checked", "false");
+    await expect(page.locator("html")).toHaveAttribute("data-app-font", "system");
+    await expect.poll(() => page.locator("body").evaluate((body) => getComputedStyle(body).fontFamily)).not.toContain("MoonClean OPPOSans");
+    await page.reload();
+    await expect(page.getByRole("switch", { name: "启用 OPPOSans 字体" })).toHaveAttribute("aria-checked", "false");
+    await expect(page.locator("html")).toHaveAttribute("data-app-font", "system");
+
+    await page.getByRole("switch", { name: "启用 OPPOSans 字体" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-app-font", "oppo");
+  });
+
   test("笔记中心自动保存后刷新仍可检索并能转为待办", async ({ page }) => {
     await page.goto("/notes");
     await page.getByRole("button", { name: "新建笔记" }).click();

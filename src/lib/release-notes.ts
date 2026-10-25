@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.56";
+export const APP_VERSION = "1.1.57";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.57",
+    date: "2026-10-25",
+    title: "增加 OPPOSans 字体开关",
+    changes: [
+      "系统设置新增 OPPOSans 字体选项，默认启用；关闭后全站回退到设备系统字体，偏好保存在当前浏览器并在刷新后保持。",
+      "字体文件仅在启用 OPPOSans 时参与字体选择，并沿用现有 WOFF2 资源与长期缓存配置。",
+      "端到端检查验证开关、实际计算字体和刷新后的偏好恢复。",
+    ],
+  },
   {
     version: "1.1.56",
     date: "2026-10-25",

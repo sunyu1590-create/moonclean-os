@@ -8,12 +8,20 @@
   initial-value: 0deg;
 }
 
+@font-face {
+  font-family: "MoonClean OPPOSans";
+  src: url("/fonts/OPPOSans4-SC-6b9ec61a.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --font-sans: var(--mc-font-family);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -76,6 +84,8 @@ html[data-motion="refined"] {
   }
 }
 :root {
+  --mc-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --mc-font-family: var(--mc-font-system);
   /* MoonClean design tokens: spacing follows a 4px scale. */
   --mc-type-xs: 12px;
   --mc-type-sm: 14px;
@@ -108,8 +118,12 @@ html[data-motion="refined"] {
   --mc-z-feedback: 100;
   --mc-z-overlay: 400;
 }
+html[data-app-font="oppo"] {
+  --mc-font-family: "MoonClean OPPOSans", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --font-sans: var(--mc-font-family);
+}
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --font-sans: var(--mc-font-family);
 }
 * {
   box-sizing: border-box;
@@ -117,7 +131,7 @@ html[data-motion="refined"] {
 body {
   background: var(--mc-color-page);
   color: var(--mc-color-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-family: var(--mc-font-family);
   -webkit-font-smoothing: antialiased;
 }
 button {
@@ -958,7 +972,7 @@ html[data-theme="night"] {
   --mc-glass-edge: rgb(255 255 255 / .13);
 }
 html {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-family: var(--mc-font-family);
   text-rendering: optimizeLegibility;
 }
 html body {
