@@ -17,6 +17,8 @@ import {
   ChevronDown,
   Languages,
   Type,
+  CloudDownload,
+  CloudUpload,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -61,6 +63,9 @@ export default function SettingsPage() {
   const [debugOptionsOpen, setDebugOptionsOpen] = useState(false);
   const [debugMetrics, setDebugMetrics] = useState<DebugMetricId[]>([]);
   const [oppoSansEnabled, setOppoSansEnabledState] = useState(true);
+  const [preferenceBusy, setPreferenceBusy] = useState(false);
+  const [preferenceMessage, setPreferenceMessage] = useState("");
+  const [preferenceError, setPreferenceError] = useState("");
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -121,6 +126,50 @@ export default function SettingsPage() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "保存失败");
     }
+  }
+  async function saveCloudPreferences() {
+    setPreferenceBusy(true); setPreferenceMessage(""); setPreferenceError("");
+    try {
+    const read = (key: string) => window.localStorage.getItem(key);
+    const metrics = (() => { try { return JSON.parse(read("moonclean-performance-debug-metrics-v1") || "null"); } catch { return null; } })();
+    const preferences = {
+      language: read("moonclean-language-v1") || language,
+      theme: document.documentElement.dataset.theme === "night" ? "night" : "day",
+      font: read("moonclean-font-preference-v1") === "system" ? "system" : "oppo",
+      motion: ["refined", "standard", "simple"].includes(read("moonclean-motion-level-v1") || "") ? read("moonclean-motion-level-v1") : "standard",
+      pageTransition: read("moonclean-page-transition-style-v1") === "blur-fade" ? "blur-fade" : "blur-lift",
+      notificationStyle: ["glass", "capsule", "adaptive"].includes(read("moonclean-notification-style-v1") || "") ? read("moonclean-notification-style-v1") : "glass",
+      notificationMotion: ["soft", "expand", "directional"].includes(read("moonclean-notification-motion-v1") || "") ? read("moonclean-notification-motion-v1") : "soft",
+      notificationSpeed: ["fast", "balanced", "elegant"].includes(read("moonclean-notification-speed-v1") || "") ? read("moonclean-notification-speed-v1") : "balanced",
+      debugEnabled: read("moonclean-performance-debug-v1") === "true",
+      debugMetrics: Array.isArray(metrics) ? metrics : ["fps", "memory", "viewport", "network", "longtasks", "vitals", "workspace"],
+    };
+      const response = await fetch("/api/account/preferences", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "保存云端偏好失败");
+      setPreferenceMessage("当前语言、主题、字体和动效偏好已保存到账号云端。");
+    } catch (cause) { setPreferenceError(cause instanceof Error ? cause.message : "保存失败，请稍后重试。"); }
+    finally { setPreferenceBusy(false); }
+  }
+  async function restoreCloudPreferences() {
+    setPreferenceBusy(true); setPreferenceMessage(""); setPreferenceError("");
+    try {
+      const response = await fetch("/api/account/preferences", { credentials: "same-origin", cache: "no-store" });
+      const result = await response.json().catch(() => ({})) as { error?: string; preferences?: Record<string, unknown> };
+      if (!response.ok) throw new Error(result.error || "读取云端偏好失败");
+      const saved = result.preferences || {};
+      if (!Object.keys(saved).length) throw new Error("账号云端还没有保存过偏好，请先点击“保存到云端”。");
+      const entries: Array<[string, unknown]> = [
+        ["moonclean-language-v1", saved.language], ["moonclean-theme-v1", saved.theme], ["moonclean-font-preference-v1", saved.font],
+        ["moonclean-motion-level-v1", saved.motion], ["moonclean-page-transition-style-v1", saved.pageTransition],
+        ["moonclean-notification-style-v1", saved.notificationStyle], ["moonclean-notification-motion-v1", saved.notificationMotion], ["moonclean-notification-speed-v1", saved.notificationSpeed],
+        ["moonclean-performance-debug-v1", typeof saved.debugEnabled === "boolean" ? String(saved.debugEnabled) : undefined],
+        ["moonclean-performance-debug-metrics-v1", Array.isArray(saved.debugMetrics) ? JSON.stringify(saved.debugMetrics) : undefined],
+      ];
+      for (const [key, value] of entries) if (typeof value === "string") window.localStorage.setItem(key, value);
+      setPreferenceMessage("已恢复云端偏好，正在刷新界面…");
+      window.setTimeout(() => window.location.reload(), 350);
+    } catch (cause) { setPreferenceError(cause instanceof Error ? cause.message : "恢复失败，请稍后重试。"); setPreferenceBusy(false); }
   }
   async function downloadFullBackup() {
     setBackupBusy(true);
@@ -213,6 +262,14 @@ export default function SettingsPage() {
               </button>
             </div>
           </SectionCard>
+          {mode === "cloud" && <SectionCard title="云端偏好" sub="清理浏览器缓存后，一键恢复语言、主题、字体和动效等界面偏好。仅保存到当前登录账号。" action={<CloudUpload size={19} className="text-primary" />}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button className="justify-start" variant="outline" disabled={preferenceBusy} onClick={() => void saveCloudPreferences()}><CloudUpload size={16}/>{preferenceBusy ? "处理中…" : "一键保存到云端"}</Button>
+              <Button className="justify-start" variant="outline" disabled={preferenceBusy} onClick={() => void restoreCloudPreferences()}><CloudDownload size={16}/>{preferenceBusy ? "处理中…" : "一键恢复云端偏好"}</Button>
+            </div>
+            {preferenceMessage && <p role="status" className="mt-3 text-xs text-[var(--mc-color-success)]">{preferenceMessage}</p>}
+            {preferenceError && <p role="alert" className="mt-3 text-xs text-[var(--mc-color-danger)]">{preferenceError}</p>}
+          </SectionCard>}
           <SectionCard title="动效设置" sub="统一管理全站动效档位、页面切换方式及系统动态效果偏好。" action={<Sparkles size={19} className="text-primary" />}>
             <Link href="/motion" className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 transition-colors hover:bg-card sm:p-4">
               <span><strong className="block text-sm text-foreground">打开动效设置模块</strong><span className="mt-1 block text-xs text-muted-foreground">动效档位、页面切换和系统减少动态效果状态</span></span>

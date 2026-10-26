@@ -36,6 +36,7 @@ type ChatMessage = { id: string; role: "user" | "assistant"; content: string; cr
 const chatCategories = ["未分类", "随便聊聊", "学习", "创作", "灵感", "工作"] as const;
 type ChatCategory = typeof chatCategories[number];
 type ChatConversation = { id: string; title: string; category: ChatCategory; createdAt: string; updatedAt: string; messages: ChatMessage[]; pinned?: boolean; archivedAt?: string | null };
+type HistorySource = "local" | "cloud";
 const chatKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-v1:${userId}:${storeId}`;
 const historyKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-history-v1:${userId}:${storeId}`;
 const preferenceKey = (storeId: string, userId: string) => `moonclean-free-ai-chat-preferences-v1:${userId}:${storeId}`;
@@ -71,6 +72,8 @@ export default function AiChatPage() {
   const userId = user?.id || "anonymous";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [history, setHistory] = useState<ChatConversation[]>([]);
+  const [historySource, setHistorySource] = useState<HistorySource>("local");
+  const [historyBusy, setHistoryBusy] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState("");
   const [category, setCategory] = useState<ChatCategory>("随便聊聊");
   const [loadedStoreId, setLoadedStoreId] = useState("");
@@ -118,6 +121,7 @@ export default function AiChatPage() {
       if (!activeStoreId || mode !== "cloud") {
         setMessages([]); setConfigured(false); setLoadedStoreId(""); return;
       }
+      if (historySource === "cloud") return;
       setLoadedStoreId("");
       const conversations = readHistory(historyKey(activeStoreId, userId), chatKey(activeStoreId, userId));
       historyRef.current = conversations;
@@ -134,22 +138,31 @@ export default function AiChatPage() {
       setLoadedStoreId(activeStoreId);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeStoreId, mode, userId]);
+  }, [activeStoreId, historySource, mode, userId]);
+
+  useEffect(() => {
+    if (historySource !== "cloud" || !activeStoreId || mode !== "cloud") return;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) setHistoryBusy(true);
+      return fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/free-ai-chat`, { credentials: "same-origin", cache: "no-store" });
+    })
+      .then(async (response) => { const result = await response.json().catch(() => ({})) as { error?: string; conversations?: ChatConversation[] }; if (!response.ok) throw new Error(result.error || "读取云端对话失败"); return result; })
+      .then((result) => { if (!cancelled) { const rows = Array.isArray(result.conversations) ? result.conversations : []; historyRef.current = rows; setHistory(rows); setLoadedStoreId(activeStoreId); } })
+      .catch((cause) => { if (!cancelled) setError(cause instanceof Error ? cause.message : "读取云端对话失败"); })
+      .finally(() => { if (!cancelled) setHistoryBusy(false); });
+    return () => { cancelled = true; };
+  }, [activeStoreId, historySource, mode]);
 
   useEffect(() => {
     if (!loadedStoreId || loadedStoreId !== activeStoreId || !activeConversationId || !messages.length) return;
     const firstQuestion = messages.find((message) => message.role === "user")?.content || "新对话";
     const conversation: ChatConversation = { id: activeConversationId, title: firstQuestion.slice(0, 60), category, createdAt: messages[0]?.createdAt || new Date().toISOString(), updatedAt: messages.at(-1)?.createdAt || new Date().toISOString(), messages };
-    const timer = window.setTimeout(() => {
-      setHistory((current) => {
-        const next = upsertConversation(current, conversation);
-        historyRef.current = next;
-        try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory if storage is full. */ }
-        return next;
-      });
-    }, 200);
+    const timer = window.setTimeout(() => persistHistory(upsertConversation(historyRef.current, conversation)), 200);
     return () => window.clearTimeout(timer);
-  }, [activeConversationId, activeStoreId, category, loadedStoreId, messages, userId]);
+    // persistHistory synchronizes the latest conversation state for this render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConversationId, activeStoreId, category, historySource, loadedStoreId, messages, userId]);
 
   useEffect(() => {
     if (!activeStoreId || mode !== "cloud") {
@@ -225,18 +238,32 @@ export default function AiChatPage() {
     if (!messages.length || !activeConversationId) return;
     const title = messages.find((message) => message.role === "user")?.content || "新对话";
     const current: ChatConversation = { id: activeConversationId, title: title.slice(0, 60), category, createdAt: messages[0]?.createdAt || new Date().toISOString(), updatedAt: messages.at(-1)?.createdAt || new Date().toISOString(), messages };
-    setHistory((rows) => {
-      const next = upsertConversation(rows, current);
-      historyRef.current = next;
-      if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep the active conversation in memory. */ }
-      return next;
-    });
+    persistHistory(upsertConversation(historyRef.current, current));
   }
 
   function persistHistory(next: ChatConversation[]) {
+    const previous = historyRef.current;
     historyRef.current = next;
     setHistory(next);
-    if (activeStoreId) try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory when local storage is full. */ }
+    if (!activeStoreId) return;
+    if (historySource === "local") {
+      try { localStorage.setItem(historyKey(activeStoreId, userId), JSON.stringify(next)); } catch { /* Keep history available in memory when local storage is full. */ }
+      return;
+    }
+    const previousById = new Map(previous.map((item) => [item.id, item]));
+    const nextById = new Map(next.map((item) => [item.id, item]));
+    for (const item of next) if (JSON.stringify(previousById.get(item.id)) !== JSON.stringify(item)) {
+      void fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/free-ai-chat`, { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(item) }).then(async (response) => { if (!response.ok) { const result = await response.json().catch(() => ({})) as { error?: string }; setError(result.error || "保存云端对话失败"); } }).catch(() => setError("网络异常，云端对话未能保存。"));
+    }
+    for (const item of previous) if (!nextById.has(item.id)) void fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/free-ai-chat?id=${encodeURIComponent(item.id)}`, { method: "DELETE", credentials: "same-origin" }).catch(() => setError("网络异常，云端对话未能删除。"));
+  }
+
+  function switchHistorySource(next: HistorySource) {
+    if (next === historySource) return;
+    saveCurrentConversation();
+    setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError("");
+    historyRef.current = []; setHistory([]); setLoadedStoreId("");
+    setHistorySource(next);
   }
 
   function togglePinnedConversation(id: string) {
@@ -273,7 +300,7 @@ export default function AiChatPage() {
       setMessages([]); setActiveConversationId(crypto.randomUUID()); setCategory("随便聊聊"); setError("");
     }
     setDeleteHistoryId("");
-    notifyFeedback({ kind: "success", title: "对话已删除", description: deletedConversation ? `“${deletedConversation.title}”已从本设备移除。` : "聊天记录已从本设备移除。" });
+    notifyFeedback({ kind: "success", title: "对话已删除", description: deletedConversation ? `“${deletedConversation.title}”已从${historySource === "cloud" ? "云端" : "本设备"}移除。` : "聊天记录已移除。" });
   }
 
   function startNewChat() {
@@ -504,9 +531,14 @@ export default function AiChatPage() {
       <DialogContent className="max-h-[min(86dvh,760px)] overflow-hidden rounded-[24px] border border-border bg-card p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-border px-5 py-4">
           <DialogTitle>聊天历史</DialogTitle>
-          <DialogDescription>记录仅保存在这台设备和当前店铺。归档可撤销；删除前会二次确认，删除后无法恢复。</DialogDescription>
+          <DialogDescription>{historySource === "cloud" ? "云端对话保存到当前账号和店铺，可在其他设备继续查看。" : "本机对话只保存在当前浏览器；清理浏览器数据后可能无法恢复。"}归档可撤销；删除前会二次确认。</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 border-b border-border p-3 sm:p-4">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1" role="group" aria-label="对话保存位置">
+            <button type="button" aria-pressed={historySource === "local"} onClick={() => switchHistorySource("local")} className={`min-h-9 rounded-lg px-3 text-xs font-medium ${historySource === "local" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>本机对话</button>
+            <button type="button" aria-pressed={historySource === "cloud"} onClick={() => switchHistorySource("cloud")} className={`min-h-9 rounded-lg px-3 text-xs font-medium ${historySource === "cloud" ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>云端对话</button>
+          </div>
+          {historyBusy && <p role="status" className="text-xs text-muted-foreground">正在加载云端对话…</p>}
           <label className="relative block">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/>
             <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="搜索标题或聊天内容" aria-label="搜索聊天历史" className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary"/>
