@@ -18,7 +18,7 @@ describe("workspace memory cache", () => {
     const userId = `user-${suffix}`;
     const storeId = `store-${suffix}`;
     setWorkspaceCache(userId, storeId, "notes", [{ id: "previous" } as WorkspaceRow]);
-    const largeRows = Array.from({ length: 40 }, (_, index) => ({ id: `large-${index}`, body_markdown: "x".repeat(100_000) } as WorkspaceRow));
+    const largeRows = Array.from({ length: 40 }, (_, index) => ({ id: `large-${index}`, body_markdown: "x".repeat(800_000) } as WorkspaceRow));
 
     setWorkspaceCache(userId, storeId, "notes", largeRows);
     expect(getWorkspaceCache(userId, storeId, "notes")).toBeNull();

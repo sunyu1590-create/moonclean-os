@@ -1,10 +1,11 @@
-export type CacheIntensity = "auto" | "low" | "standard" | "high";
+export type CacheIntensity = "auto" | "low" | "standard" | "high" | "ultra" | "custom";
 export type CachePreferences = {
   enabled: boolean;
   startup: boolean;
   modules: boolean;
   data: boolean;
   intensity: CacheIntensity;
+  customMegabytes: number;
 };
 
 export const CACHE_PREFERENCES_KEY = "moonclean-cache-preferences-v1";
@@ -15,22 +16,45 @@ export const DEFAULT_CACHE_PREFERENCES: CachePreferences = {
   modules: true,
   data: true,
   intensity: "auto",
+  customMegabytes: 24,
 };
 
+const MB = 1024 * 1024;
+const MAX_CUSTOM_MB = 6 * 1024;
+const INTENSITY_MEGABYTES = { low: 8, standard: 24, high: 48, ultra: 1024 } as const;
+
+function profileForMegabytes(megabytes: number) {
+  const maxBytes = Math.round(megabytes * MB);
+  return {
+    maxBytes,
+    hotBytes: Math.floor(maxBytes * 0.75),
+    coldBytes: Math.ceil(maxBytes * 0.25),
+    maxEntries: Math.max(1, Math.min(256, Math.ceil(megabytes / 2))),
+    maxEntryBytes: Math.floor(maxBytes * 0.75),
+    dataBytes: Math.floor(maxBytes * 0.25),
+    ttlMs: megabytes >= 1024 ? 5 * 60_000 : megabytes >= 48 ? 2 * 60_000 : megabytes >= 24 ? 60_000 : 30_000,
+    aiResultTtlMs: megabytes >= 1024 ? 24 * 60 * 60_000 : megabytes >= 48 ? 4 * 60 * 60_000 : megabytes >= 24 ? 2 * 60 * 60_000 : 60 * 60_000,
+  };
+}
+
 export const CACHE_PROFILES = {
-  low: { maxBytes: 1024 * 1024, hotBytes: 768 * 1024, coldBytes: 256 * 1024, maxEntries: 6, maxEntryBytes: 768 * 1024, dataBytes: 512 * 1024, ttlMs: 15_000, aiResultTtlMs: 10 * 60_000 },
-  standard: { maxBytes: 4 * 1024 * 1024, hotBytes: 3 * 1024 * 1024, coldBytes: 1024 * 1024, maxEntries: 12, maxEntryBytes: 3 * 1024 * 1024, dataBytes: 2 * 1024 * 1024, ttlMs: 30_000, aiResultTtlMs: 30 * 60_000 },
-  high: { maxBytes: 12 * 1024 * 1024, hotBytes: 8 * 1024 * 1024, coldBytes: 4 * 1024 * 1024, maxEntries: 24, maxEntryBytes: 6 * 1024 * 1024, dataBytes: 4 * 1024 * 1024, ttlMs: 60_000, aiResultTtlMs: 60 * 60_000 },
+  low: profileForMegabytes(INTENSITY_MEGABYTES.low),
+  standard: profileForMegabytes(INTENSITY_MEGABYTES.standard),
+  high: profileForMegabytes(INTENSITY_MEGABYTES.high),
+  ultra: profileForMegabytes(INTENSITY_MEGABYTES.ultra),
 } as const;
 
-export function suggestedCacheIntensity(memoryGiB: number | null | undefined): Exclude<CacheIntensity, "auto"> {
+export type PresetCacheIntensity = "low" | "standard" | "high" | "ultra";
+
+export function suggestedCacheIntensity(memoryGiB: number | null | undefined): PresetCacheIntensity {
   if (typeof memoryGiB === "number" && memoryGiB <= 1) return "low";
   if (typeof memoryGiB === "number" && memoryGiB >= 6) return "high";
   return "standard";
 }
 
-export function resolveCacheIntensity(intensity: CacheIntensity, memoryGiB?: number | null): Exclude<CacheIntensity, "auto"> {
-  return intensity === "auto" ? suggestedCacheIntensity(memoryGiB) : intensity;
+export function resolveCacheIntensity(intensity: CacheIntensity, memoryGiB?: number | null): PresetCacheIntensity {
+  if (intensity === "auto") return suggestedCacheIntensity(memoryGiB);
+  return intensity === "custom" ? "standard" : intensity;
 }
 
 export function parseCachePreferences(value: unknown): CachePreferences {
@@ -41,7 +65,8 @@ export function parseCachePreferences(value: unknown): CachePreferences {
     startup: typeof saved.startup === "boolean" ? saved.startup : DEFAULT_CACHE_PREFERENCES.startup,
     modules: typeof saved.modules === "boolean" ? saved.modules : DEFAULT_CACHE_PREFERENCES.modules,
     data: typeof saved.data === "boolean" ? saved.data : DEFAULT_CACHE_PREFERENCES.data,
-    intensity: ["auto", "low", "standard", "high"].includes(saved.intensity || "") ? saved.intensity as CacheIntensity : DEFAULT_CACHE_PREFERENCES.intensity,
+    intensity: ["auto", "low", "standard", "high", "ultra", "custom"].includes(saved.intensity || "") ? saved.intensity as CacheIntensity : DEFAULT_CACHE_PREFERENCES.intensity,
+    customMegabytes: typeof saved.customMegabytes === "number" && Number.isFinite(saved.customMegabytes) ? Math.max(0, Math.min(MAX_CUSTOM_MB, Math.round(saved.customMegabytes))) : DEFAULT_CACHE_PREFERENCES.customMegabytes,
   };
 }
 
@@ -135,12 +160,14 @@ export function writeBoundedAiCache(key: string, value: unknown): boolean {
 }
 
 export function getCacheProfile(preferences = readCachePreferences(), memoryGiB?: number | null) {
+  if (preferences.intensity === "custom") return profileForMegabytes(preferences.customMegabytes);
   const resolvedMemory = memoryGiB === undefined ? detectDeviceMemory() : memoryGiB;
-  return CACHE_PROFILES[resolveCacheIntensity(preferences.intensity, resolvedMemory)];
+  const resolved = resolveCacheIntensity(preferences.intensity, resolvedMemory);
+  return resolved === "ultra" ? CACHE_PROFILES.ultra : CACHE_PROFILES[resolved];
 }
 
 export function isCacheEnabled(kind: "startup" | "modules" | "data", preferences = readCachePreferences()) {
-  return preferences.enabled && preferences[kind];
+  return preferences.enabled && preferences[kind] && getCacheProfile(preferences).maxBytes > 0;
 }
 
 export function detectDeviceMemory(): number | null {

@@ -72,7 +72,7 @@ export default function SettingsPage() {
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [preferenceMessage, setPreferenceMessage] = useState("");
   const [preferenceError, setPreferenceError] = useState("");
-  const [cachePreferences, setCachePreferences] = useState<CachePreferences>({ enabled: true, startup: true, modules: true, data: true, intensity: "auto" });
+  const [cachePreferences, setCachePreferences] = useState<CachePreferences>({ enabled: true, startup: true, modules: true, data: true, intensity: "auto", customMegabytes: 24 });
   const [deviceMemory, setDeviceMemory] = useState<number | null>(null);
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
@@ -160,6 +160,7 @@ export default function SettingsPage() {
       moduleCache: cachePreferences.modules,
       dataCache: cachePreferences.data,
       cacheIntensity: cachePreferences.intensity,
+      cacheCustomMegabytes: cachePreferences.customMegabytes,
     };
       const response = await fetch("/api/account/preferences", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
       const result = await response.json().catch(() => ({})) as { error?: string };
@@ -184,13 +185,14 @@ export default function SettingsPage() {
         ["moonclean-performance-debug-metrics-v1", Array.isArray(saved.debugMetrics) ? JSON.stringify(saved.debugMetrics) : undefined],
       ];
       for (const [key, value] of entries) if (typeof value === "string") window.localStorage.setItem(key, value);
-      if (["cacheEnabled", "startupCache", "moduleCache", "dataCache", "cacheIntensity"].some(key => key in saved)) {
+      if (["cacheEnabled", "startupCache", "moduleCache", "dataCache", "cacheIntensity", "cacheCustomMegabytes"].some(key => key in saved)) {
         const nextCache: CachePreferences = {
           enabled: typeof saved.cacheEnabled === "boolean" ? saved.cacheEnabled : cachePreferences.enabled,
           startup: typeof saved.startupCache === "boolean" ? saved.startupCache : cachePreferences.startup,
           modules: typeof saved.moduleCache === "boolean" ? saved.moduleCache : cachePreferences.modules,
           data: typeof saved.dataCache === "boolean" ? saved.dataCache : cachePreferences.data,
-          intensity: ["auto", "low", "standard", "high"].includes(String(saved.cacheIntensity)) ? saved.cacheIntensity as CacheIntensity : cachePreferences.intensity,
+          intensity: ["auto", "low", "standard", "high", "ultra", "custom"].includes(String(saved.cacheIntensity)) ? saved.cacheIntensity as CacheIntensity : cachePreferences.intensity,
+          customMegabytes: typeof saved.cacheCustomMegabytes === "number" ? saved.cacheCustomMegabytes : cachePreferences.customMegabytes,
         };
         writeCachePreferences(nextCache);
       }
@@ -314,10 +316,11 @@ export default function SettingsPage() {
               <button type="button" role="switch" aria-label="启用应用缓存" aria-checked={cachePreferences.enabled} onClick={() => changeCachePreferences({ enabled: !cachePreferences.enabled })} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${cachePreferences.enabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${cachePreferences.enabled ? "translate-x-6" : "translate-x-1"}`} /></button>
             </div>
             <div className={`mt-3 rounded-2xl border border-border bg-card p-3.5 sm:p-4 ${cachePreferences.enabled ? "" : "opacity-55"}`}>
-              <div className="mb-2 flex items-center justify-between gap-3"><div><strong className="text-sm text-foreground">缓存强度</strong><p className="mt-1 text-xs text-muted-foreground">{deviceMemory ? `浏览器报告设备内存约 ${deviceMemory} GB；自动档建议 ${getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024 >= 8 ? "高" : getCacheProfile(cachePreferences, deviceMemory).maxBytes <= 1024 * 1024 ? "低" : "标准"}。` : "当前浏览器未提供内存数据；自动档使用标准容量。"} 当前上限 {Math.round(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024)} MB · {Math.round(getCacheProfile(cachePreferences, deviceMemory).ttlMs / 1000)} 秒检查。</p></div><Layers3 size={17} className="shrink-0 text-primary"/></div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="缓存强度">
-                {([{ id: "auto", label: "自动", detail: "按设备建议" }, { id: "low", label: "低", detail: "约 1 MB" }, { id: "standard", label: "标准", detail: "约 4 MB" }, { id: "high", label: "高", detail: "约 12 MB" }] as const).map(option => <button key={option.id} type="button" disabled={!cachePreferences.enabled} aria-pressed={cachePreferences.intensity === option.id} onClick={() => changeCachePreferences({ intensity: option.id })} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition-colors disabled:cursor-not-allowed ${cachePreferences.intensity === option.id ? "border-primary/30 bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-background text-muted-foreground hover:bg-[var(--mc-tint-blue)]"}`}><strong className="block text-xs">{option.label}</strong><span className="mt-0.5 block text-[10px]">{option.detail}</span></button>)}
+              <div className="mb-2 flex items-center justify-between gap-3"><div><strong className="text-sm text-foreground">缓存容量</strong><p className="mt-1 text-xs text-muted-foreground">{deviceMemory ? `设备内存约 ${deviceMemory} GB；自动档建议 ${deviceMemory >= 6 ? "高" : deviceMemory <= 1 ? "低" : "中"}。` : "当前浏览器未提供内存数据；自动档使用中档容量。"} 当前模块内存缓存上限 {getCacheProfile(cachePreferences, deviceMemory).maxBytes >= 1024 ** 3 ? `${(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 ** 3).toFixed(getCacheProfile(cachePreferences, deviceMemory).maxBytes % 1024 ** 3 ? 1 : 0)} GB` : `${Math.round(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024)} MB`}。</p></div><Layers3 size={17} className="shrink-0 text-primary"/></div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="缓存容量">
+                {([{ id: "auto", label: "自动", detail: "按设备建议" }, { id: "low", label: "低", detail: "8 MB" }, { id: "standard", label: "中", detail: "24 MB" }, { id: "high", label: "高", detail: "48 MB" }, { id: "ultra", label: "超高", detail: "1 GB" }, { id: "custom", label: "自定义", detail: "0 MB–6 GB" }] as const).map(option => <button key={option.id} type="button" disabled={!cachePreferences.enabled} aria-pressed={cachePreferences.intensity === option.id} onClick={() => changeCachePreferences({ intensity: option.id })} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition-colors disabled:cursor-not-allowed ${cachePreferences.intensity === option.id ? "border-primary/30 bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-background text-muted-foreground hover:bg-[var(--mc-tint-blue)]"}`}><strong className="block text-xs">{option.label}</strong><span className="mt-0.5 block text-[10px]">{option.detail}</span></button>)}
               </div>
+              {cachePreferences.intensity === "custom" && <div className="mt-3 rounded-xl border border-border bg-background p-3"><div className="mb-2 flex items-center justify-between gap-3"><label htmlFor="custom-cache-size" className="text-xs font-medium text-foreground">自定义缓存容量</label><span className="text-xs tabular-nums text-primary">{cachePreferences.customMegabytes >= 1024 ? `${(cachePreferences.customMegabytes / 1024).toFixed(cachePreferences.customMegabytes % 1024 ? 2 : 0)} GB` : `${cachePreferences.customMegabytes} MB`}</span></div><input id="custom-cache-size" type="range" min="0" max="6144" step="1" value={cachePreferences.customMegabytes} onChange={event => changeCachePreferences({ customMegabytes: Number(event.target.value) })} className="w-full accent-primary" aria-label="自定义缓存容量，0 到 6144 MB"/><div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>0 MB</span><span>3 GB</span><span>6 GB</span></div><p className="mt-2 text-[10px] leading-4 text-muted-foreground">0 MB 表示关闭缓存。启动快照与 AI 结果另受浏览器本地存储空间限制。</p></div>}
             </div>
             <div className={`mt-3 space-y-2 ${cachePreferences.enabled ? "" : "opacity-55"}`}>
               {([

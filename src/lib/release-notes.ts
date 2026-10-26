@@ -1,6 +1,16 @@
-export const APP_VERSION = "1.1.67";
+export const APP_VERSION = "1.1.68";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.68",
+    date: "2026-10-26",
+    title: "缓存容量档位与自定义上限",
+    changes: [
+      "缓存预设调整为低 8 MB、中 24 MB、高 48 MB、超高 1 GB；自动档会结合浏览器报告的设备内存选择建议档位。",
+      "新增 0 MB 至 6 GB 的自定义容量滑块，0 MB 会关闭所有应用缓存；自定义容量会随云端偏好一键保存和恢复。",
+      "工作区内存缓存及 AI 建议缓存根据新容量档位调整上限；启动快照和 AI 结果仍受浏览器本地存储配额约束。",
+    ],
+  },
   {
     version: "1.1.67",
     date: "2026-10-26",

@@ -17,7 +17,8 @@ const schema = z.object({
   startupCache: z.boolean().optional(),
   moduleCache: z.boolean().optional(),
   dataCache: z.boolean().optional(),
-  cacheIntensity: z.enum(["auto", "low", "standard", "high"]).optional(),
+  cacheIntensity: z.enum(["auto", "low", "standard", "high", "ultra", "custom"]).optional(),
+  cacheCustomMegabytes: z.number().int().min(0).max(6144).optional(),
 }).strict();
 
 export async function GET() {
