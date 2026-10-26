@@ -20,7 +20,7 @@ import { operationsRequest } from "@/lib/operations";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { applyAiNoteContent, parsePrivateAttachmentMarkdown, privateAttachmentMarkdown } from "@/lib/note-markdown";
 import type { AppData } from "@/lib/model";
-import { getLatestWorkspaceCacheTime, pruneWorkspaceCache, refreshWorkspacePage, WORKSPACE_CACHE_UPDATED_EVENT } from "@/lib/workspace-cache";
+import { getLatestWorkspaceCacheTime, getWorkspaceCacheTtl, pruneWorkspaceCache, refreshWorkspacePage, WORKSPACE_CACHE_UPDATED_EVENT } from "@/lib/workspace-cache";
 import { trackWorkspaceInteraction, type WorkspaceFeature } from "@/lib/workspace-usage";
 import { readAiTextStream } from "@/lib/read-ai-stream";
 import { AiStreamStatus } from "@/components/ai-stream-status";
@@ -260,7 +260,7 @@ export function WorkspacePage({module,initialQuestion,initialCompetitorId,initia
  }
  return <div onClickCapture={()=>{trackWorkspaceInteraction(module);pruneWorkspaceCache();}}>
   {mode==="cloud"&&<div className="mb-2 flex items-center justify-end gap-2 px-1 text-[10px] text-muted-foreground sm:mb-3">
-   <span>{lastUpdated?`最近同步 ${new Date(lastUpdated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})} · 30 秒自动检查`:"云端缓存 · 30 秒自动检查"}</span>
+   <span>{lastUpdated?`最近同步 ${new Date(lastUpdated).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})} · ${Math.round(getWorkspaceCacheTtl()/1000)} 秒自动检查`:`云端缓存 · ${Math.round(getWorkspaceCacheTtl()/1000)} 秒自动检查`}</span>
    <Button size="xs" variant="outline" disabled={refreshing} onClick={()=>void refresh()}><RefreshCw size={12} className={refreshing?"animate-spin":""}/>{refreshing?"刷新中":"手动刷新"}</Button>
   </div>}
   {content}

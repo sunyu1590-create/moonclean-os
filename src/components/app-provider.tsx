@@ -14,6 +14,7 @@ import { createEmptyLocalData } from "@/lib/seed";
 import { setDisplayCurrency } from "@/lib/finance";
 import { notifyFeedback } from "@/lib/feedback";
 import { getBrowserDeviceId } from "@/lib/browser-device-id";
+import { isCacheEnabled } from "@/lib/cache-preferences";
 import { clearBrowserSessionPolicy, createBrowserSupabaseClient, getBrowserSessionPolicyExpiry } from "@/lib/supabase/browser";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import {
@@ -101,6 +102,7 @@ function readPersistedDataMode(): "local" | "cloud" | null {
   } catch { return null; }
 }
 function readCoreSnapshot(userId: string, storeId: string): AppData | null {
+  if (!isCacheEnabled("startup")) return null;
   try {
     const cache = JSON.parse(localStorage.getItem(`${CORE_CACHE_KEY}:${userId}:${storeId}`) || "null") as { data?: unknown } | null;
     if (!cache?.data) return null;
@@ -108,6 +110,10 @@ function readCoreSnapshot(userId: string, storeId: string): AppData | null {
   } catch { return null; }
 }
 function writeCoreSnapshot(userId: string, storeId: string, data: AppData) {
+  if (!isCacheEnabled("startup")) {
+    try { localStorage.removeItem(`${CORE_CACHE_KEY}:${userId}:${storeId}`); } catch { /* Continue without a startup snapshot. */ }
+    return;
+  }
   try { localStorage.setItem(`${CORE_CACHE_KEY}:${userId}:${storeId}`, JSON.stringify({ savedAt: Date.now(), data })); } catch { /* The cloud remains the source of truth if the local cache is unavailable. */ }
 }
 export function AppProvider({ children }: { children: React.ReactNode }) {

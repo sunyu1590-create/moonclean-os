@@ -1,5 +1,6 @@
 import type { WorkspaceResource, WorkspaceRow } from "@/lib/workspace";
 import { getWorkspaceHotFeature, type WorkspaceFeature } from "@/lib/workspace-usage";
+import { CACHE_PREFERENCES_EVENT, getCacheProfile, isCacheEnabled } from "@/lib/cache-preferences";
 
 export const WORKSPACE_CACHE_TTL = 30_000;
 export const WORKSPACE_REFRESH_EVENT = "moonclean:workspace-refresh";
@@ -9,12 +10,6 @@ type CacheEntry = { rows: WorkspaceRow[]; updatedAt: number; bytes: number; feat
 type RefreshEventDetail = { refreshers: Array<() => Promise<void>> };
 type UpdatedEventDetail = { storeId: string; userId: string; updatedAt: number };
 
-const BASE_CACHE_BYTES = 3 * 1024 * 1024;
-const MAX_CACHE_BYTES = 4 * 1024 * 1024;
-const MAX_HOT_FEATURE_BYTES = 3 * 1024 * 1024;
-const MAX_COLD_FEATURE_BYTES = 1 * 1024 * 1024;
-const MAX_CACHE_ENTRY_BYTES = 3 * 1024 * 1024;
-const MAX_CACHE_ENTRIES = 12;
 const cache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<WorkspaceRow[]>>();
 let cacheBytes = 0;
@@ -50,7 +45,12 @@ function cacheKey(userId: string, storeId: string, resource: WorkspaceResource) 
   return `${userId}:${storeId}:${resource}`;
 }
 
-function estimateBytes(value: unknown, limit = MAX_CACHE_BYTES): number {
+export function clearAllWorkspaceCache() {
+  cache.clear();
+  cacheBytes = 0;
+}
+
+function estimateBytes(value: unknown, limit: number): number {
   const pending: unknown[] = [value];
   const seen = new Set<object>();
   let bytes = 0;
@@ -62,14 +62,15 @@ function estimateBytes(value: unknown, limit = MAX_CACHE_BYTES): number {
       if (seen.has(item)) continue;
       seen.add(item);
       bytes += 32;
-      if (Array.isArray(item)) pending.push(...item);
-      else pending.push(...Object.values(item));
+      if (Array.isArray(item)) for (const child of item) pending.push(child);
+      else for (const child of Object.values(item)) pending.push(child);
     }
   }
   return bytes;
 }
 
 export function getWorkspaceCache(userId: string, storeId: string, resource: WorkspaceResource, feature?: WorkspaceFeature) {
+  if (!isCacheEnabled("modules")) return null;
   const key = cacheKey(userId, storeId, resource);
   const entry = cache.get(key);
   if (!entry) return null;
@@ -86,8 +87,10 @@ export function setWorkspaceCache(userId: string, storeId: string, resource: Wor
   if (old) cacheBytes -= old.bytes;
   cache.delete(key);
 
-  const bytes = estimateBytes(rows);
-  if (bytes > MAX_CACHE_ENTRY_BYTES) {
+  if (!isCacheEnabled("modules")) return;
+  const profile = getCacheProfile();
+  const bytes = estimateBytes(rows, profile.maxBytes);
+  if (bytes > profile.maxEntryBytes) {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent<UpdatedEventDetail>(WORKSPACE_CACHE_UPDATED_EVENT, { detail: { storeId, userId, updatedAt } }));
     }
@@ -103,6 +106,8 @@ export function setWorkspaceCache(userId: string, storeId: string, resource: Wor
 }
 
 export function pruneWorkspaceCache() {
+  if (!isCacheEnabled("modules")) { clearAllWorkspaceCache(); return; }
+  const profile = getCacheProfile();
   const hotFeature = getWorkspaceHotFeature()?.feature ?? null;
   const measure = () => {
     let hotBytes = 0;
@@ -115,11 +120,10 @@ export function pruneWorkspaceCache() {
   };
   while (cache.size > 0) {
     const { hotBytes, coldBytes } = measure();
-    const tooMany = cache.size > MAX_CACHE_ENTRIES;
     const tooLarge = hotFeature
-      ? cacheBytes > MAX_CACHE_BYTES || hotBytes > MAX_HOT_FEATURE_BYTES || coldBytes > MAX_COLD_FEATURE_BYTES
-      : cacheBytes > BASE_CACHE_BYTES;
-    if (!tooMany && !tooLarge) break;
+      ? cacheBytes > profile.maxBytes || hotBytes > profile.hotBytes || coldBytes > profile.coldBytes
+      : cacheBytes > profile.maxBytes;
+    if (cache.size <= profile.maxEntries && !tooLarge) break;
     const oldestCold = hotFeature
       ? [...cache.entries()].find(([, entry]) => entry.feature !== hotFeature)
       : undefined;
@@ -128,6 +132,14 @@ export function pruneWorkspaceCache() {
     cache.delete(oldestKey);
     cacheBytes -= oldest.bytes;
   }
+}
+
+export function getWorkspaceCacheTtl() {
+  return getCacheProfile().ttlMs;
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener(CACHE_PREFERENCES_EVENT, () => pruneWorkspaceCache());
 }
 
 export function getLatestWorkspaceCacheTime(userId: string, storeId: string) {

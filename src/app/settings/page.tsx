@@ -19,6 +19,10 @@ import {
   Type,
   CloudDownload,
   CloudUpload,
+  Gauge,
+  MemoryStick,
+  Database,
+  Layers3,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { TeamPanel } from "@/components/team-panel";
@@ -44,6 +48,8 @@ import { notifyFeedback } from "@/lib/feedback";
 import { AttachmentBackup } from "@/components/attachment-backup";
 import { useLanguage } from "@/components/language-provider";
 import { readOppoSansEnabled, setOppoSansEnabled } from "@/lib/font-preferences";
+import { clearPersistentCache, detectDeviceMemory, getCacheProfile, readCachePreferences, writeCachePreferences, type CacheIntensity, type CachePreferences } from "@/lib/cache-preferences";
+import { clearAllWorkspaceCache } from "@/lib/workspace-cache";
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
@@ -66,6 +72,8 @@ export default function SettingsPage() {
   const [preferenceBusy, setPreferenceBusy] = useState(false);
   const [preferenceMessage, setPreferenceMessage] = useState("");
   const [preferenceError, setPreferenceError] = useState("");
+  const [cachePreferences, setCachePreferences] = useState<CachePreferences>({ enabled: true, startup: true, modules: true, data: true, intensity: "auto" });
+  const [deviceMemory, setDeviceMemory] = useState<number | null>(null);
   const canManage = mode === "local" || role === "owner" || role === "admin";
   useEffect(() => {
     if (data) queueMicrotask(() => setDraft(structuredClone(data.settings)));
@@ -94,6 +102,10 @@ export default function SettingsPage() {
   }, []);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setOppoSansEnabledState(readOppoSansEnabled()));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => { setCachePreferences(readCachePreferences()); setDeviceMemory(detectDeviceMemory()); });
     return () => window.cancelAnimationFrame(frame);
   }, []);
   if (!data || !draft) return <p>正在加载数据…</p>;
@@ -143,11 +155,16 @@ export default function SettingsPage() {
       notificationSpeed: ["fast", "balanced", "elegant"].includes(read("moonclean-notification-speed-v1") || "") ? read("moonclean-notification-speed-v1") : "balanced",
       debugEnabled: read("moonclean-performance-debug-v1") === "true",
       debugMetrics: Array.isArray(metrics) ? metrics : ["fps", "memory", "viewport", "network", "longtasks", "vitals", "workspace"],
+      cacheEnabled: cachePreferences.enabled,
+      startupCache: cachePreferences.startup,
+      moduleCache: cachePreferences.modules,
+      dataCache: cachePreferences.data,
+      cacheIntensity: cachePreferences.intensity,
     };
       const response = await fetch("/api/account/preferences", { method: "PUT", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
       const result = await response.json().catch(() => ({})) as { error?: string };
       if (!response.ok) throw new Error(result.error || "保存云端偏好失败");
-      setPreferenceMessage("当前语言、主题、字体和动效偏好已保存到账号云端。");
+      setPreferenceMessage("当前界面与缓存偏好已保存到账号云端。");
     } catch (cause) { setPreferenceError(cause instanceof Error ? cause.message : "保存失败，请稍后重试。"); }
     finally { setPreferenceBusy(false); }
   }
@@ -167,9 +184,30 @@ export default function SettingsPage() {
         ["moonclean-performance-debug-metrics-v1", Array.isArray(saved.debugMetrics) ? JSON.stringify(saved.debugMetrics) : undefined],
       ];
       for (const [key, value] of entries) if (typeof value === "string") window.localStorage.setItem(key, value);
+      if (["cacheEnabled", "startupCache", "moduleCache", "dataCache", "cacheIntensity"].some(key => key in saved)) {
+        const nextCache: CachePreferences = {
+          enabled: typeof saved.cacheEnabled === "boolean" ? saved.cacheEnabled : cachePreferences.enabled,
+          startup: typeof saved.startupCache === "boolean" ? saved.startupCache : cachePreferences.startup,
+          modules: typeof saved.moduleCache === "boolean" ? saved.moduleCache : cachePreferences.modules,
+          data: typeof saved.dataCache === "boolean" ? saved.dataCache : cachePreferences.data,
+          intensity: ["auto", "low", "standard", "high"].includes(String(saved.cacheIntensity)) ? saved.cacheIntensity as CacheIntensity : cachePreferences.intensity,
+        };
+        writeCachePreferences(nextCache);
+      }
       setPreferenceMessage("已恢复云端偏好，正在刷新界面…");
       window.setTimeout(() => window.location.reload(), 350);
     } catch (cause) { setPreferenceError(cause instanceof Error ? cause.message : "恢复失败，请稍后重试。"); setPreferenceBusy(false); }
+  }
+  function changeCachePreferences(patch: Partial<CachePreferences>) {
+    const next = { ...cachePreferences, ...patch };
+    setCachePreferences(next);
+    writeCachePreferences(next);
+  }
+  function clearCurrentCache() {
+    clearPersistentCache("all");
+    clearAllWorkspaceCache();
+    setPreferenceMessage("已清理本机启动快照、工作区内存缓存和 AI 建议缓存。页面中的当前数据仍可正常操作。");
+    setPreferenceError("");
   }
   async function downloadFullBackup() {
     setBackupBusy(true);
@@ -262,7 +300,7 @@ export default function SettingsPage() {
               </button>
             </div>
           </SectionCard>
-          {mode === "cloud" && <SectionCard title="云端偏好" sub="清理浏览器缓存后，一键恢复语言、主题、字体和动效等界面偏好。仅保存到当前登录账号。" action={<CloudUpload size={19} className="text-primary" />}>
+          {mode === "cloud" && <SectionCard title="云端偏好" sub="清理浏览器缓存后，一键恢复语言、主题、字体、动效与缓存档位。仅保存到当前登录账号。" action={<CloudUpload size={19} className="text-primary" />}>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button className="justify-start" variant="outline" disabled={preferenceBusy} onClick={() => void saveCloudPreferences()}><CloudUpload size={16}/>{preferenceBusy ? "处理中…" : "一键保存到云端"}</Button>
               <Button className="justify-start" variant="outline" disabled={preferenceBusy} onClick={() => void restoreCloudPreferences()}><CloudDownload size={16}/>{preferenceBusy ? "处理中…" : "一键恢复云端偏好"}</Button>
@@ -270,6 +308,26 @@ export default function SettingsPage() {
             {preferenceMessage && <p role="status" className="mt-3 text-xs text-[var(--mc-color-success)]">{preferenceMessage}</p>}
             {preferenceError && <p role="alert" className="mt-3 text-xs text-[var(--mc-color-danger)]">{preferenceError}</p>}
           </SectionCard>}
+          <SectionCard title="缓存与运行速度" sub="控制 MoonClean OS 管理的启动快照、功能模块数据与 AI 建议缓存。强度只决定缓存容量上限，不会预占手机内存。" action={<Gauge size={19} className="text-primary" />}>
+            <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 sm:p-4">
+              <div className="flex min-w-0 items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary"><MemoryStick size={17}/></span><span><strong className="block text-sm text-foreground">应用缓存总开关</strong><span className="mt-1 block text-xs leading-5 text-muted-foreground">关闭后停止使用启动快照、模块缓存和 AI 建议缓存，并清理已有缓存。</span></span></div>
+              <button type="button" role="switch" aria-label="启用应用缓存" aria-checked={cachePreferences.enabled} onClick={() => changeCachePreferences({ enabled: !cachePreferences.enabled })} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${cachePreferences.enabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${cachePreferences.enabled ? "translate-x-6" : "translate-x-1"}`} /></button>
+            </div>
+            <div className={`mt-3 rounded-2xl border border-border bg-card p-3.5 sm:p-4 ${cachePreferences.enabled ? "" : "opacity-55"}`}>
+              <div className="mb-2 flex items-center justify-between gap-3"><div><strong className="text-sm text-foreground">缓存强度</strong><p className="mt-1 text-xs text-muted-foreground">{deviceMemory ? `浏览器报告设备内存约 ${deviceMemory} GB；自动档建议 ${getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024 >= 8 ? "高" : getCacheProfile(cachePreferences, deviceMemory).maxBytes <= 1024 * 1024 ? "低" : "标准"}。` : "当前浏览器未提供内存数据；自动档使用标准容量。"} 当前上限 {Math.round(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024)} MB · {Math.round(getCacheProfile(cachePreferences, deviceMemory).ttlMs / 1000)} 秒检查。</p></div><Layers3 size={17} className="shrink-0 text-primary"/></div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="缓存强度">
+                {([{ id: "auto", label: "自动", detail: "按设备建议" }, { id: "low", label: "低", detail: "约 1 MB" }, { id: "standard", label: "标准", detail: "约 4 MB" }, { id: "high", label: "高", detail: "约 12 MB" }] as const).map(option => <button key={option.id} type="button" disabled={!cachePreferences.enabled} aria-pressed={cachePreferences.intensity === option.id} onClick={() => changeCachePreferences({ intensity: option.id })} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition-colors disabled:cursor-not-allowed ${cachePreferences.intensity === option.id ? "border-primary/30 bg-[var(--mc-tint-blue)] text-primary" : "border-border bg-background text-muted-foreground hover:bg-[var(--mc-tint-blue)]"}`}><strong className="block text-xs">{option.label}</strong><span className="mt-0.5 block text-[10px]">{option.detail}</span></button>)}
+              </div>
+            </div>
+            <div className={`mt-3 space-y-2 ${cachePreferences.enabled ? "" : "opacity-55"}`}>
+              {([
+                { key: "startup", title: "启动快照", description: "登录后先显示上次保存的首页数据，再从云端同步。", Icon: Database },
+                { key: "modules", title: "功能模块缓存", description: "备忘录、实验、竞品、客服与 Copilot 切页时复用内存数据。", Icon: Layers3 },
+                { key: "data", title: "AI 建议缓存", description: "复用当前店铺已生成的建议；缓存按强度自动过期。", Icon: Sparkles },
+              ] as const).map(item => <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5"><div className="flex min-w-0 items-center gap-2.5"><item.Icon size={15} className="shrink-0 text-primary"/><span className="min-w-0"><strong className="block text-xs text-foreground">{item.title}</strong><span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">{item.description}</span></span></div><button type="button" role="switch" aria-label={item.title} aria-checked={cachePreferences[item.key]} disabled={!cachePreferences.enabled} onClick={() => changeCachePreferences({ [item.key]: !cachePreferences[item.key] })} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed ${cachePreferences[item.key] ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-4 rounded-full bg-card shadow-sm transition-transform ${cachePreferences[item.key] ? "translate-x-5" : "translate-x-1"}`} /></button></div>)}
+            </div>
+            <Button className="mt-3 w-full justify-start" variant="outline" onClick={clearCurrentCache}><RotateCcw size={15}/>立即清理应用缓存</Button>
+          </SectionCard>
           <SectionCard title="动效设置" sub="统一管理全站动效档位、页面切换方式及系统动态效果偏好。" action={<Sparkles size={19} className="text-primary" />}>
             <Link href="/motion" className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 transition-colors hover:bg-card sm:p-4">
               <span><strong className="block text-sm text-foreground">打开动效设置模块</strong><span className="mt-1 block text-xs text-muted-foreground">动效档位、页面切换和系统减少动态效果状态</span></span>

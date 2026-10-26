@@ -12,6 +12,7 @@ import { MarkdownContent } from "@/components/markdown-content";
 import { readAiTextStream } from "@/lib/read-ai-stream";
 import { AiStreamStatus } from "@/components/ai-stream-status";
 import { useLanguage } from "@/components/language-provider";
+import { CACHE_PREFERENCES_EVENT, getCacheProfile, isCacheEnabled, writeBoundedAiCache } from "@/lib/cache-preferences";
 
 type Feature = "dashboard" | "exceptions" | "advertising" | "products" | "finance" | "data" | "orders" | "inventory" | "tasks" | "pricing" | "product-insights" | "reports" | "integrations";
 type InsightValue = number | boolean | "数据不足" | "成本数据不足" | "未填写";
@@ -30,8 +31,16 @@ export function AiInsightPanel({ feature, context, autoRefresh = false, connecte
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
+  const [cachePolicyRevision, setCachePolicyRevision] = useState(0);
   const contextKey = JSON.stringify(context);
   const cacheKey = activeStoreId ? `moonclean-ai-insight-v2:${activeStoreId}:${feature}` : "";
+  const dataCacheEnabled = isCacheEnabled("data");
+
+  useEffect(() => {
+    const update = () => setCachePolicyRevision(value => value + 1);
+    window.addEventListener(CACHE_PREFERENCES_EVENT, update);
+    return () => window.removeEventListener(CACHE_PREFERENCES_EVENT, update);
+  }, []);
 
   async function generate(apiKey?: string) {
     if (mode !== "cloud" || !activeStoreId || busy) return;
@@ -61,10 +70,10 @@ export function AiInsightPanel({ feature, context, autoRefresh = false, connecte
       );
       if (!streamed.trim() || typeof result?.generatedAt !== "string") throw new Error("AI 建议生成失败，请稍后重试。");
       setGeneratedAt(result.generatedAt);
-      if (cacheKey) {
+      if (cacheKey && dataCacheEnabled) {
         const entry: CacheEntry = { suggestion: streamed, generatedAt: result.generatedAt, contextKey };
-        try { localStorage.setItem(cacheKey, JSON.stringify(entry)); } catch { /* Current session still displays the result. */ }
-      }
+        writeBoundedAiCache(cacheKey, entry);
+      } else if (cacheKey) try { localStorage.removeItem(cacheKey); } catch { /* Keep the generated result in the current page. */ }
       notifyFeedback({ kind: "success", title: "AI 建议已生成", description: "建议已显示在当前页面。" });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "AI 建议生成失败，请稍后重试。";
@@ -76,18 +85,19 @@ export function AiInsightPanel({ feature, context, autoRefresh = false, connecte
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       let cached: CacheEntry | null = null;
-      if (cacheKey) {
+      if (cacheKey && dataCacheEnabled) {
         try {
           const parsed = JSON.parse(localStorage.getItem(cacheKey) || "null") as CacheEntry | null;
-          if (parsed && typeof parsed.suggestion === "string" && typeof parsed.generatedAt === "string" && (autoRefresh || parsed.contextKey === contextKey)) cached = parsed;
+          const age = parsed ? Date.now() - Date.parse(parsed.generatedAt) : Infinity;
+          if (parsed && typeof parsed.suggestion === "string" && typeof parsed.generatedAt === "string" && age >= 0 && age < getCacheProfile().aiResultTtlMs && (autoRefresh || parsed.contextKey === contextKey)) cached = parsed;
         } catch { /* Ignore malformed local cache and request a fresh suggestion. */ }
-      }
+      } else if (cacheKey) try { localStorage.removeItem(cacheKey); } catch { /* The AI result is not reused when caching is disabled. */ }
       if (cached) { setSuggestion(cached.suggestion); setGeneratedAt(cached.generatedAt); }
       else { setSuggestion(""); setGeneratedAt(""); }
     });
     return () => window.cancelAnimationFrame(frame);
   // contextKey intentionally represents the serialized, non-sensitive metric snapshot.
-  }, [activeStoreId, autoRefresh, cacheKey, contextKey, feature, mode]);
+  }, [activeStoreId, autoRefresh, cacheKey, contextKey, feature, mode, dataCacheEnabled, cachePolicyRevision]);
 
   const formattedTime = generatedAt ? new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit" }).format(new Date(generatedAt)) : "";
   return <section aria-label="DeepSeek 智能建议" className={connected ? "rounded-none border-0 border-t border-border bg-card p-4 shadow-none md:p-5" : "mb-5 rounded-[20px] border border-border bg-[linear-gradient(135deg,var(--mc-tint-blue),var(--card)_62%,var(--mc-tint-blue))] p-4 shadow-[0_8px_26px_rgba(39,86,129,.055)] md:p-5"}>

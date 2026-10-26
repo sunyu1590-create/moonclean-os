@@ -13,6 +13,11 @@ const schema = z.object({
   notificationSpeed: z.enum(["fast", "balanced", "elegant"]).optional(),
   debugEnabled: z.boolean().optional(),
   debugMetrics: z.array(z.enum(["fps", "memory", "viewport", "network", "longtasks", "vitals", "workspace"])).max(7).optional(),
+  cacheEnabled: z.boolean().optional(),
+  startupCache: z.boolean().optional(),
+  moduleCache: z.boolean().optional(),
+  dataCache: z.boolean().optional(),
+  cacheIntensity: z.enum(["auto", "low", "standard", "high"]).optional(),
 }).strict();
 
 export async function GET() {

@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-provider";
 import { notifyFeedback } from "@/lib/feedback";
-import { dedupeWorkspaceRequest, getWorkspaceCache, setWorkspaceCache, WORKSPACE_CACHE_TTL, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
+import { dedupeWorkspaceRequest, getWorkspaceCache, getWorkspaceCacheTtl, setWorkspaceCache, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
+import { CACHE_PREFERENCES_EVENT } from "@/lib/cache-preferences";
 import type { WorkspaceFeature } from "@/lib/workspace-usage";
 import { localWorkspaceKey, resourceSchemas, workspacePatchSchema, type WorkspaceResource, type WorkspaceRow } from "@/lib/workspace";
 
@@ -41,7 +42,7 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
     if (cached && activeKeyRef.current === requestKey) {
       commitRows(cached.rows);
       setLastUpdated(cached.updatedAt);
-      if (!force && Date.now() - cached.updatedAt < WORKSPACE_CACHE_TTL) {
+      if (!force && Date.now() - cached.updatedAt < getWorkspaceCacheTtl()) {
         setError(""); setLoading(false); setRefreshing(false); return true;
       }
     }
@@ -91,20 +92,28 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
       const detail = (event as CustomEvent<{refreshers: Array<() => Promise<void>>}>).detail;
       detail?.refreshers.push(async()=>{if(!await refresh(true))throw new Error("部分模块数据未能刷新");});
     };
-    const timer = window.setInterval(() => {
+    let timer = 0;
+    const scheduleRefresh = () => {
+      window.clearInterval(timer);
+      timer = window.setInterval(() => {
       if (mode === "cloud" && document.visibilityState === "visible") void refresh(true);
-    },WORKSPACE_CACHE_TTL);
+      }, getWorkspaceCacheTtl());
+    };
+    scheduleRefresh();
+    const onCachePreferences = () => { scheduleRefresh(); void refresh(true); };
     const onVisibilityChange = () => {
       if (document.visibilityState !== "visible" || mode !== "cloud" || !activeStoreId || !userId) return;
       const cached = getWorkspaceCache(userId,activeStoreId,resource);
-      if (!cached || Date.now() - cached.updatedAt >= WORKSPACE_CACHE_TTL) void refresh(true);
+      if (!cached || Date.now() - cached.updatedAt >= getWorkspaceCacheTtl()) void refresh(true);
     };
     window.addEventListener(WORKSPACE_REFRESH_EVENT,onRefresh);
+    window.addEventListener(CACHE_PREFERENCES_EVENT,onCachePreferences);
     document.addEventListener("visibilitychange",onVisibilityChange);
     return () => {
       window.cancelAnimationFrame(frame);
       window.clearInterval(timer);
       window.removeEventListener(WORKSPACE_REFRESH_EVENT,onRefresh);
+      window.removeEventListener(CACHE_PREFERENCES_EVENT,onCachePreferences);
       document.removeEventListener("visibilitychange",onVisibilityChange);
     };
   },[activeStoreId,commitRows,feature,mode,refresh,resource,userId]);
