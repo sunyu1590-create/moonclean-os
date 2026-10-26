@@ -80,12 +80,23 @@ export function CloudLoadTest() {
         if (cancelled) return;
         setUserId(data.user.id);
         const savedRunId = localStorage.getItem(`moonclean-load-test:${data.user.id}`) || "";
-        if (!savedRunId) return;
-        const { data: files, error: listError } = await client.storage.from(BUCKET).list(`${data.user.id}/${savedRunId}`, { limit: 10 });
-        if (listError) throw listError;
-        if (cancelled) return;
-        if (PART_NAMES.every((name) => files?.some((file) => file.name === name))) setRunId(savedRunId);
-        else localStorage.removeItem(`moonclean-load-test:${data.user.id}`);
+        const { data: folders, error: foldersError } = await client.storage.from(BUCKET).list(data.user.id, { limit: 100 });
+        if (foldersError) throw foldersError;
+        const candidates = [...new Set([
+          savedRunId,
+          ...(folders || []).map((folder) => folder.name).filter((name) => /^[0-9a-f-]{36}$/i.test(name)),
+        ].filter(Boolean))];
+        for (const candidate of candidates) {
+          const { data: files, error: listError } = await client.storage.from(BUCKET).list(`${data.user.id}/${candidate}`, { limit: 10 });
+          if (listError) throw listError;
+          if (cancelled) return;
+          if (PART_NAMES.every((name) => files?.some((file) => file.name === name))) {
+            setRunId(candidate);
+            localStorage.setItem(`moonclean-load-test:${data.user.id}`, candidate);
+            return;
+          }
+        }
+        localStorage.removeItem(`moonclean-load-test:${data.user.id}`);
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "无法连接云端测试存储。");
       }

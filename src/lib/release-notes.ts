@@ -1,6 +1,14 @@
-export const APP_VERSION = "1.1.70";
+export const APP_VERSION = "1.1.71";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.71",
+    date: "2026-10-26",
+    title: "跨设备恢复云端测试文件",
+    changes: [
+      "云端加载能力测试会从当前账号的私有测试空间发现已有测试数据；更换浏览器登录后也可直接读取和删除，无需重新上传。",
+    ],
+  },
   {
     version: "1.1.70",
     date: "2026-10-26",
