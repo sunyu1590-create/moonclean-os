@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.69";
+export const APP_VERSION = "1.1.70";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.70",
+    date: "2026-10-26",
+    title: "云端文件加载能力测试",
+    changes: [
+      "系统设置新增 200 MB 虚拟数据上传与云端读取计时，使用四个 50 MB 分片和 Supabase 可续传上传，显示平均下载速度。",
+      "测试文件写入独立私有存储桶并按登录账号隔离，可在测试后删除；不写入或修改业务数据。",
+    ],
+  },
   {
     version: "1.1.69",
     date: "2026-10-26",

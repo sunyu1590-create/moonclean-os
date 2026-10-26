@@ -51,6 +51,7 @@ import { useLanguage } from "@/components/language-provider";
 import { readOppoSansEnabled, setOppoSansEnabled } from "@/lib/font-preferences";
 import { clearPersistentCache, detectDeviceMemory, getCacheProfile, readCachePreferences, writeCachePreferences, type CacheIntensity, type CachePreferences } from "@/lib/cache-preferences";
 import { clearAllWorkspaceCache } from "@/lib/workspace-cache";
+import { CloudLoadTest } from "@/components/cloud-load-test";
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
   const { data, update, reset, mode, role, saving, exportBackup } = useApp();
@@ -541,6 +542,7 @@ export default function SettingsPage() {
                   <AttachmentBackup />
                 </div>
               )}
+              {mode === "cloud" && <CloudLoadTest />}
               {backupMessage && (
                 <p role="status" className="text-xs text-[var(--mc-color-success)]">
                   {backupMessage}
