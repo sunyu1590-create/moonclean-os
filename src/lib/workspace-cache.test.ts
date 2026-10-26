@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getLatestWorkspaceCacheTime, getWorkspaceCache, setWorkspaceCache } from "./workspace-cache";
+import { clearWorkspaceCacheForUser, dedupeWorkspaceRequest, getLatestWorkspaceCacheTime, getWorkspaceCache, setWorkspaceCache } from "./workspace-cache";
 import type { WorkspaceRow } from "./workspace";
 
 describe("workspace memory cache", () => {
@@ -22,5 +22,37 @@ describe("workspace memory cache", () => {
 
     setWorkspaceCache(userId, storeId, "notes", largeRows);
     expect(getWorkspaceCache(userId, storeId, "notes")).toBeNull();
+  });
+
+  it("deduplicates concurrent reads for the same user scope", async () => {
+    const calls: string[] = [];
+    let resolveRequest!: (rows: WorkspaceRow[]) => void;
+    const request = () => {
+      calls.push("request");
+      return new Promise<WorkspaceRow[]>((resolve) => { resolveRequest = resolve; });
+    };
+    const first = dedupeWorkspaceRequest("user:store:notes", request);
+    const second = dedupeWorkspaceRequest("user:store:notes", request);
+
+    expect(calls).toHaveLength(1);
+    resolveRequest([{ id: "note-1" } as WorkspaceRow]);
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      [{ id: "note-1" }],
+      [{ id: "note-1" }],
+    ]);
+  });
+
+  it("clears one user's memory cache without affecting another", () => {
+    const suffix = `${Date.now()}-${Math.random()}`;
+    const userId = `user-${suffix}`;
+    const otherUserId = `other-${suffix}`;
+    const storeId = `store-${suffix}`;
+    setWorkspaceCache(userId, storeId, "notes", [{ id: "private" } as WorkspaceRow]);
+    setWorkspaceCache(otherUserId, storeId, "notes", [{ id: "other" } as WorkspaceRow]);
+
+    clearWorkspaceCacheForUser(userId);
+
+    expect(getWorkspaceCache(userId, storeId, "notes")).toBeNull();
+    expect(getWorkspaceCache(otherUserId, storeId, "notes")?.rows[0]?.id).toBe("other");
   });
 });

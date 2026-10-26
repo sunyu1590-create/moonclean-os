@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PERFORMANCE_DEBUG_EVENT, PERFORMANCE_DEBUG_METRICS_EVENT, readPerformanceDebugEnabled, readPerformanceDebugMetrics, type DebugMetricId } from "@/lib/debug-preferences";
 import { APP_VERSION } from "@/lib/release-notes";
 import type { MotionLevel } from "@/components/motion-preferences";
+import { readWebVitals, WEB_VITALS_EVENT, type WebVitalName, type WebVitalSample } from "@/components/web-vitals-monitor";
 
 type DebugMetrics = {
   fps: number | null;
@@ -21,13 +22,14 @@ type DebugMetrics = {
   network: string;
   longTasks: number | null;
   firstPaint: number | null;
+  webVitals: Partial<Record<WebVitalName, WebVitalSample>>;
 };
 type NavigatorConnection = { effectiveType?: string; downlink?: number; rtt?: number; saveData?: boolean };
 type ExtendedNavigator = Navigator & { deviceMemory?: number; hardwareConcurrency?: number; connection?: NavigatorConnection };
 type ExtendedPerformance = Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } };
 const emptyMetrics: DebugMetrics = {
   fps: null, frameMs: null, heapUsed: null, heapLimit: null, viewport: "—", dpr: 1,
-  deviceMemory: null, cores: null, displayHz: null, online: true, network: "不可用", longTasks: null, firstPaint: null,
+  deviceMemory: null, cores: null, displayHz: null, online: true, network: "不可用", longTasks: null, firstPaint: null, webVitals: {},
 };
 const motionLabels: Record<MotionLevel, string> = { refined: "Max", standard: "Standard", simple: "Low" };
 const formatBytes = (bytes: number | null) => bytes === null ? "浏览器未开放" : `${(bytes / 1024 / 1024).toFixed(0)} MB`;
@@ -39,7 +41,6 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
   const [copyError, setCopyError] = useState("");
   const [metrics, setMetrics] = useState<DebugMetrics>(emptyMetrics);
   const [visibleMetrics, setVisibleMetrics] = useState<DebugMetricId[]>([]);
-
   useEffect(() => {
     const update = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
@@ -51,17 +52,28 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
       const detail = (event as CustomEvent<unknown>).detail;
       setVisibleMetrics(Array.isArray(detail) ? detail as DebugMetricId[] : readPerformanceDebugMetrics());
     };
-    const frame = window.requestAnimationFrame(() => setEnabled(readPerformanceDebugEnabled()));
+    const frame = window.requestAnimationFrame(() => {
+      setEnabled(readPerformanceDebugEnabled());
+      const initialVitals = readWebVitals();
+      if (initialVitals) setMetrics((current) => ({ ...current, webVitals: { ...initialVitals } }));
+    });
     const metricsFrame = window.requestAnimationFrame(() => setVisibleMetrics(readPerformanceDebugMetrics()));
     window.addEventListener("storage", update);
     window.addEventListener(PERFORMANCE_DEBUG_EVENT, update);
     window.addEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
+    const updateVitals = (event: Event) => {
+      const detail = (event as CustomEvent<{ name: WebVitalName; value: number; rating: string }>).detail;
+      if (!detail || !["LCP", "INP", "CLS", "TTFB"].includes(detail.name)) return;
+      setMetrics((current) => ({ ...current, webVitals: { ...current.webVitals, [detail.name]: { value: detail.value, rating: detail.rating } } }));
+    };
+    window.addEventListener(WEB_VITALS_EVENT, updateVitals);
     return () => {
       window.cancelAnimationFrame(frame);
       window.cancelAnimationFrame(metricsFrame);
       window.removeEventListener("storage", update);
       window.removeEventListener(PERFORMANCE_DEBUG_EVENT, update);
       window.removeEventListener(PERFORMANCE_DEBUG_METRICS_EVENT, updateMetrics);
+      window.removeEventListener(WEB_VITALS_EVENT, updateVitals);
     };
   }, []);
 
@@ -157,6 +169,7 @@ export function PerformanceDebugCapsule({ motionLevel, dataMode }: { motionLevel
         {show("refresh") && <DebugMetric label="屏幕刷新率" value={metrics.displayHz === null ? "浏览器未开放" : `${metrics.displayHz} Hz`} detail={metrics.fps === null ? "页面 FPS 正在采样" : `页面当前约 ${metrics.fps} FPS`} icon={<Activity size={15}/>} />}
         {show("network") && <DebugMetric label="网络连接" value={metrics.online ? "在线" : "离线"} detail={metrics.network} icon={<Network size={15}/>} />}
         {show("longtasks") && <DebugMetric label="长任务监测" value={metrics.longTasks === null ? "浏览器未开放" : `${metrics.longTasks} 次`} detail={metrics.firstPaint === null ? "FCP 暂不可用" : `首次内容绘制 ${Math.round(metrics.firstPaint)} ms`} icon={<Activity size={15}/>} />}
+        {show("vitals") && <DebugMetric label="Core Web Vitals" value={`LCP ${metrics.webVitals.LCP ? `${Math.round(metrics.webVitals.LCP.value)} ms` : "采集中"} · INP ${metrics.webVitals.INP ? `${Math.round(metrics.webVitals.INP.value)} ms` : "采集中"}`} detail={`CLS ${metrics.webVitals.CLS?.value.toFixed(3) ?? "采集中"} · TTFB ${metrics.webVitals.TTFB ? `${Math.round(metrics.webVitals.TTFB.value)} ms` : "采集中"} · ${metrics.webVitals.LCP?.rating || metrics.webVitals.INP?.rating || "等待浏览器指标"}`} icon={<Activity size={15}/>} />}
         {show("workspace") && <DebugMetric label="当前工作区" value={dataMode === "cloud" ? "云端数据" : "本地数据"} detail={`动效：${motionLabels[motionLevel]}`} icon={<Network size={15}/>} />}
       </div>
       {visibleMetrics.length === 0 && <p className="rounded-xl bg-[var(--mc-tint-blue)] p-3 text-xs text-muted-foreground">尚未选择指标。请前往系统设置，自定义要显示的诊断信息。</p>}

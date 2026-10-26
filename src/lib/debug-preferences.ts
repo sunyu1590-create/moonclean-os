@@ -9,6 +9,7 @@ export const DEBUG_METRICS = [
   { id: "refresh", label: "屏幕刷新率" },
   { id: "network", label: "网络连接" },
   { id: "longtasks", label: "长任务与首次绘制" },
+  { id: "vitals", label: "LCP、INP、CLS 与 TTFB" },
   { id: "workspace", label: "工作区与动效档位" },
 ] as const;
 export type DebugMetricId = (typeof DEBUG_METRICS)[number]["id"];

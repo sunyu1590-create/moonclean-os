@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Archive, ArrowLeft, Bold, Check, CheckSquare, ChevronDown, Clock3, Code2, Download, FileText, Heading1, Heading2, Heading3, ImagePlus, Italic, LayoutGrid, Link2, List, ListOrdered, LoaderCircle, Maximize2, Minimize2, MoreHorizontal, Pin, Quote, Redo2, RotateCcw, Save, Sparkles, Strikethrough, Table2, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,17 @@ import { notifyFeedback } from "@/lib/feedback";
 import { operationsRequest } from "@/lib/operations";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { removeNoteDraft, saveNoteDraft, type NoteDraft, type NoteSnapshot } from "@/lib/note-center-drafts";
-import { NoteRichEditor, type NoteEditorInstance } from "@/components/notes/note-rich-editor";
+import type { NoteEditorInstance } from "@/components/notes/note-rich-editor";
 import type { WorkspaceRow } from "@/lib/workspace";
 import type { AppData } from "@/lib/model";
 
 const BUCKET = "moonclean-service-attachments";
+const NoteRichEditor = dynamic(
+  () => import("@/components/notes/note-rich-editor").then((module) => module.NoteRichEditor),
+  {
+    loading: () => <div aria-hidden="true" className="note-editor-canvas min-h-[300px] rounded-xl border border-border bg-card/60" />,
+  },
+);
 type EditorLayout = "standard" | "wide" | "immersive";
 const buttons = "grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-[var(--mc-tint-blue)] hover:text-primary disabled:opacity-40";
 function derivedTitle(body: string) {

@@ -68,6 +68,7 @@ import { FeedbackViewport } from "@/components/feedback-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMotionPreferences } from "@/components/motion-preferences";
 import { isRestorableAppRoute, LAST_VISITED_ROUTE_COOKIE } from "@/lib/last-visited-route";
+import { clearWorkspaceCacheForUser } from "@/lib/workspace-cache";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
@@ -311,6 +312,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const { error } = await createBrowserSupabaseClient().auth.signOut({ scope: "local" });
       if (error) throw error;
       clearBrowserSessionPolicy();
+      if (user?.id) {
+        clearWorkspaceCacheForUser(user.id);
+        const cachePrefix = `moonclean-core-snapshot-v1:${user.id}:`;
+        try {
+          for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+            const key = localStorage.key(index);
+            if (key?.startsWith(cachePrefix)) localStorage.removeItem(key);
+          }
+        } catch { /* Session ends even if browser storage is unavailable. */ }
+      }
       window.location.replace("/login");
     } catch (cause) {
       setLogoutError(cause instanceof Error ? cause.message : "退出失败，请重试");

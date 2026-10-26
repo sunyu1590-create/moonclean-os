@@ -16,7 +16,35 @@ const MAX_COLD_FEATURE_BYTES = 1 * 1024 * 1024;
 const MAX_CACHE_ENTRY_BYTES = 3 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 12;
 const cache = new Map<string, CacheEntry>();
+const inFlightRequests = new Map<string, Promise<WorkspaceRow[]>>();
 let cacheBytes = 0;
+
+/** Merge concurrent reads for the same authenticated user, store and resource. */
+export function dedupeWorkspaceRequest(
+  key: string,
+  request: () => Promise<WorkspaceRow[]>,
+): Promise<WorkspaceRow[]> {
+  const existing = inFlightRequests.get(key);
+  if (existing) return existing;
+
+  const pending = request().finally(() => {
+    if (inFlightRequests.get(key) === pending) inFlightRequests.delete(key);
+  });
+  inFlightRequests.set(key, pending);
+  return pending;
+}
+
+export function clearWorkspaceCacheForUser(userId: string) {
+  const prefix = `${userId}:`;
+  for (const [key, entry] of cache) {
+    if (!key.startsWith(prefix)) continue;
+    cache.delete(key);
+    cacheBytes -= entry.bytes;
+  }
+  for (const key of inFlightRequests.keys()) {
+    if (key.startsWith(prefix)) inFlightRequests.delete(key);
+  }
+}
 
 function cacheKey(userId: string, storeId: string, resource: WorkspaceResource) {
   return `${userId}:${storeId}:${resource}`;

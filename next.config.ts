@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/fonts/OPPOSans4-SC-6b9ec61a.woff2",
+        source: "/fonts/OPPOSans4-SC-a76d3265.woff2",
         headers: [
           {
             key: "Cache-Control",

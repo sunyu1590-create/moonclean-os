@@ -1,6 +1,17 @@
-export const APP_VERSION = "1.1.64";
+export const APP_VERSION = "1.1.65";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.65",
+    date: "2026-10-26",
+    title: "减少首屏资源与重复工作区请求",
+    changes: [
+      "将 OPPOSans 字体资源从约 13.72 MB 缩减到约 443 KB；保留界面常用中英文，未包含的动态文本由系统字体回退显示。",
+      "富文本编辑器与竞品价格图改为实际打开时按需加载，减少普通页面的 JavaScript 负载。",
+      "合并同一用户、店铺和资源的并发工作区读取；退出登录时清除该用户的工作区缓存与本机首页快照。",
+      "使用现有性能诊断面板查看 LCP、INP、CLS 与 TTFB；指标仅保存在当前浏览器会话，不发送到外部服务。",
+    ],
+  },
   {
     version: "1.1.64",
     date: "2026-10-25",

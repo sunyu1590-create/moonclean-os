@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-provider";
 import { notifyFeedback } from "@/lib/feedback";
-import { getWorkspaceCache, setWorkspaceCache, WORKSPACE_CACHE_TTL, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
+import { dedupeWorkspaceRequest, getWorkspaceCache, setWorkspaceCache, WORKSPACE_CACHE_TTL, WORKSPACE_REFRESH_EVENT } from "@/lib/workspace-cache";
 import type { WorkspaceFeature } from "@/lib/workspace-usage";
 import { localWorkspaceKey, resourceSchemas, workspacePatchSchema, type WorkspaceResource, type WorkspaceRow } from "@/lib/workspace";
 
@@ -11,8 +11,6 @@ function readLocal(storeId: string, resource: WorkspaceResource): WorkspaceRow[]
   catch { return []; }
 }
 function writeLocal(storeId: string, resource: WorkspaceResource, rows: WorkspaceRow[]) { localStorage.setItem(localWorkspaceKey(storeId,resource),JSON.stringify(rows)); }
-type PendingRequest = { key: string; promise: Promise<void> };
-
 export function useWorkspaceResource(resource: WorkspaceResource, feature: WorkspaceFeature) {
   const { mode, activeStoreId, user } = useApp();
   const userId = user?.id || "";
@@ -23,7 +21,6 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
   const [lastUpdated,setLastUpdated] = useState<number | null>(null);
   const rowsRef = useRef(rows);
   const activeKeyRef = useRef("");
-  const pendingRef = useRef<PendingRequest | null>(null);
 
   const commitRows = useCallback((next: WorkspaceRow[]) => {
     rowsRef.current = next;
@@ -39,7 +36,7 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
     }
     if (!userId) { setLoading(false); return false; }
 
-    const requestKey = `${mode}:${userId}:${activeStoreId}:${resource}`;
+    const requestKey = `${userId}:${activeStoreId}:${resource}`;
     const cached = getWorkspaceCache(userId,activeStoreId,resource,feature);
     if (cached && activeKeyRef.current === requestKey) {
       commitRows(cached.rows);
@@ -48,18 +45,16 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
         setError(""); setLoading(false); setRefreshing(false); return true;
       }
     }
-    if (pendingRef.current?.key === requestKey) {
-      try { await pendingRef.current.promise; return true; } catch { return false; }
-    }
-
     setError("");
     setRefreshing(true);
     if (!cached) setLoading(true);
-    const promise = (async () => {
+    try {
+      const next = await dedupeWorkspaceRequest(requestKey, async () => {
       const response = await fetch(`/api/stores/${encodeURIComponent(activeStoreId)}/workspace/${resource}`,{cache:"no-store"});
       const result = await response.json() as {rows?:WorkspaceRow[];error?:string};
       if (!response.ok) throw new Error(result.error||"云端数据加载失败");
-      const next = result.rows || [];
+        return result.rows || [];
+      });
       if (activeKeyRef.current === requestKey) {
         commitRows(next);
         const updatedAt = Date.now();
@@ -67,22 +62,19 @@ export function useWorkspaceResource(resource: WorkspaceResource, feature: Works
         setError("");
         setWorkspaceCache(userId,activeStoreId,resource,next,updatedAt,feature);
       }
-    })();
-    const pending = { key: requestKey, promise };
-    pendingRef.current = pending;
-    try { await promise; return true; }
+      return true;
+    }
     catch(cause) {
       if (activeKeyRef.current === requestKey) setError(cause instanceof Error?cause.message:"读取失败");
       return false;
     }
     finally {
-      if (pendingRef.current === pending) pendingRef.current = null;
       if (activeKeyRef.current === requestKey) { setLoading(false); setRefreshing(false); }
     }
   },[activeStoreId,commitRows,feature,mode,resource,userId]);
 
   useEffect(()=>{
-    const requestKey = `${mode}:${userId}:${activeStoreId || ""}:${resource}`;
+    const requestKey = `${userId}:${activeStoreId || ""}:${resource}`;
     activeKeyRef.current = requestKey;
     const frame=window.requestAnimationFrame(()=>{
       if(activeKeyRef.current!==requestKey)return;
