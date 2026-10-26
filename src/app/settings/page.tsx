@@ -29,6 +29,7 @@ import { TeamPanel } from "@/components/team-panel";
 import { VersionPanel } from "@/components/version-panel";
 import { PageHead, SectionCard, downloadText } from "@/components/common";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -297,9 +298,7 @@ export default function SettingsPage() {
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">{oppoSansEnabled ? t("当前使用 OPPOSans 字体。") : t("当前使用设备系统字体。")}</p>
                 <p className="mt-1 truncate text-sm text-foreground">MoonClean OS · 经营数据清晰可读</p>
               </div>
-              <button type="button" role="switch" aria-label={t("启用 OPPOSans 字体")} aria-checked={oppoSansEnabled} onClick={() => { const next = !oppoSansEnabled; setOppoSansEnabledState(next); setOppoSansEnabled(next); notifyFeedback({ kind: "success", title: next ? t("已启用 OPPOSans") : t("已切换到系统字体"), description: next ? t("页面将使用 OPPOSans 显示。") : t("页面将使用设备系统默认字体显示。") }); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${oppoSansEnabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}>
-                <span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${oppoSansEnabled ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
+              <Switch label={t("启用 OPPOSans 字体")} checked={oppoSansEnabled} onCheckedChange={next => { setOppoSansEnabledState(next); setOppoSansEnabled(next); notifyFeedback({ kind: "success", title: next ? t("已启用 OPPOSans") : t("已切换到系统字体"), description: next ? t("页面将使用 OPPOSans 显示。") : t("页面将使用设备系统默认字体显示。") }); }} />
             </div>
           </SectionCard>
           {mode === "cloud" && <SectionCard title="云端偏好" sub="清理浏览器缓存后，一键恢复语言、主题、字体、动效与缓存档位。仅保存到当前登录账号。" action={<CloudUpload size={19} className="text-primary" />}>
@@ -313,7 +312,7 @@ export default function SettingsPage() {
           <SectionCard title="缓存与运行速度" sub="控制 MoonClean OS 管理的启动快照、功能模块数据与 AI 建议缓存。强度只决定缓存容量上限，不会预占手机内存。" action={<Gauge size={19} className="text-primary" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3.5 sm:p-4">
               <div className="flex min-w-0 items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-card text-primary"><MemoryStick size={17}/></span><span><strong className="block text-sm text-foreground">应用缓存总开关</strong><span className="mt-1 block text-xs leading-5 text-muted-foreground">关闭后停止使用启动快照、模块缓存和 AI 建议缓存，并清理已有缓存。</span></span></div>
-              <button type="button" role="switch" aria-label="启用应用缓存" aria-checked={cachePreferences.enabled} onClick={() => changeCachePreferences({ enabled: !cachePreferences.enabled })} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${cachePreferences.enabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${cachePreferences.enabled ? "translate-x-6" : "translate-x-1"}`} /></button>
+              <Switch label="启用应用缓存" checked={cachePreferences.enabled} onCheckedChange={enabled => changeCachePreferences({ enabled })} />
             </div>
             <div className={`mt-3 rounded-2xl border border-border bg-card p-3.5 sm:p-4 ${cachePreferences.enabled ? "" : "opacity-55"}`}>
               <div className="mb-2 flex items-center justify-between gap-3"><div><strong className="text-sm text-foreground">缓存容量</strong><p className="mt-1 text-xs text-muted-foreground">{deviceMemory ? `设备内存约 ${deviceMemory} GB；自动档建议 ${deviceMemory >= 6 ? "高" : deviceMemory <= 1 ? "低" : "中"}。` : "当前浏览器未提供内存数据；自动档使用中档容量。"} 当前模块内存缓存上限 {getCacheProfile(cachePreferences, deviceMemory).maxBytes >= 1024 ** 3 ? `${(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 ** 3).toFixed(getCacheProfile(cachePreferences, deviceMemory).maxBytes % 1024 ** 3 ? 1 : 0)} GB` : `${Math.round(getCacheProfile(cachePreferences, deviceMemory).maxBytes / 1024 / 1024)} MB`}。</p></div><Layers3 size={17} className="shrink-0 text-primary"/></div>
@@ -327,7 +326,7 @@ export default function SettingsPage() {
                 { key: "startup", title: "启动快照", description: "登录后先显示上次保存的首页数据，再从云端同步。", Icon: Database },
                 { key: "modules", title: "功能模块缓存", description: "备忘录、实验、竞品、客服与 Copilot 切页时复用内存数据。", Icon: Layers3 },
                 { key: "data", title: "AI 建议缓存", description: "复用当前店铺已生成的建议；缓存按强度自动过期。", Icon: Sparkles },
-              ] as const).map(item => <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5"><div className="flex min-w-0 items-center gap-2.5"><item.Icon size={15} className="shrink-0 text-primary"/><span className="min-w-0"><strong className="block text-xs text-foreground">{item.title}</strong><span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">{item.description}</span></span></div><button type="button" role="switch" aria-label={item.title} aria-checked={cachePreferences[item.key]} disabled={!cachePreferences.enabled} onClick={() => changeCachePreferences({ [item.key]: !cachePreferences[item.key] })} className={`relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed ${cachePreferences[item.key] ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-4 rounded-full bg-card shadow-sm transition-transform ${cachePreferences[item.key] ? "translate-x-5" : "translate-x-1"}`} /></button></div>)}
+              ] as const).map(item => <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5"><div className="flex min-w-0 items-center gap-2.5"><item.Icon size={15} className="shrink-0 text-primary"/><span className="min-w-0"><strong className="block text-xs text-foreground">{item.title}</strong><span className="mt-0.5 block text-[10px] leading-4 text-muted-foreground">{item.description}</span></span></div><Switch label={item.title} checked={cachePreferences[item.key]} disabled={!cachePreferences.enabled} onCheckedChange={checked => changeCachePreferences({ [item.key]: checked })} /></div>)}
             </div>
             <Button className="mt-3 w-full justify-start" variant="outline" onClick={clearCurrentCache}><RotateCcw size={15}/>立即清理应用缓存</Button>
           </SectionCard>
@@ -346,7 +345,7 @@ export default function SettingsPage() {
           <SectionCard title="性能调试浮窗" sub="仅在当前浏览器显示，不会上传店铺业务数据。默认收起调试内容，点击悬浮胶囊查看。" action={<Activity size={19} className="text-primary" />}>
             <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-[var(--mc-tint-blue)] p-3 sm:p-4">
               <div className="min-w-0"><strong className="block text-sm text-foreground">悬浮运行状态胶囊</strong><p className="mt-1 text-[10px] leading-4 text-muted-foreground sm:text-xs">显示页面帧率、JS 堆、视口、网络、长任务与动效档位；硬件刷新率按浏览器能力显示。</p></div>
-              <button type="button" role="switch" aria-label="启用性能调试浮窗" aria-checked={debugEnabled} onClick={() => { const next = !readPerformanceDebugEnabled(); setPerformanceDebugEnabled(next); notifyFeedback({ kind: "success", title: next ? "性能调试已开启" : "性能调试已关闭", description: next ? "悬浮胶囊已显示，面板默认收起。" : "当前设备的调试浮窗已隐藏。" }); }} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${debugEnabled ? "bg-primary" : "bg-[var(--mc-tint-blue)]"}`}><span className={`absolute top-1 size-5 rounded-full bg-card shadow-sm transition-transform ${debugEnabled ? "translate-x-6" : "translate-x-1"}`}/></button>
+              <Switch label="启用性能调试浮窗" checked={debugEnabled} onCheckedChange={next => { setPerformanceDebugEnabled(next); notifyFeedback({ kind: "success", title: next ? "性能调试已开启" : "性能调试已关闭", description: next ? "悬浮胶囊已显示，面板默认收起。" : "当前设备的调试浮窗已隐藏。" }); }} />
             </div>
             <button type="button" aria-expanded={debugOptionsOpen} onClick={() => setDebugOptionsOpen((open) => !open)} className="mt-3 flex min-h-10 w-full items-center justify-between rounded-xl border border-border bg-card px-3 text-left text-xs font-medium text-muted-foreground hover:bg-[var(--mc-tint-blue)]">
               <span>{debugOptionsOpen ? "收起调试选项" : "调试选项（自定义显示内容）"}</span>

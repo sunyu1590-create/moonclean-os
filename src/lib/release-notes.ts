@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.68";
+export const APP_VERSION = "1.1.69";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.69",
+    date: "2026-10-26",
+    title: "AI Markdown 代码与图表显示",
+    changes: [
+      "AI 聊天及其他 Markdown 内容支持语法高亮代码块、复制代码、表格、图片、LaTeX 公式和 Mermaid 图表；旧式 \\(…\\) 与 \\[ … \\] 数学定界符也会正常渲染。",
+      "全站设置开关、AI 联网搜索等 role=switch 控件统一为 iOS 风格的灰色关闭与绿色开启样式，保留原有开关操作和可访问性。",
+    ],
+  },
   {
     version: "1.1.68",
     date: "2026-10-26",

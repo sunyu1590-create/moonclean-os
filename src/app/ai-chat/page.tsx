@@ -10,6 +10,7 @@ import { DeepSeekUnlockDialog } from "@/components/deepseek-unlock-dialog";
 import { MarkdownContent } from "@/components/markdown-content";
 import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getCachedDeepSeekKey } from "@/lib/deepseek-key";
@@ -509,7 +510,7 @@ export default function AiChatPage() {
               <div className={`web-search-setting ${webSearch ? "is-enabled" : ""}`} data-enabled={webSearch}>
                 <span className="web-search-icon" aria-hidden="true"><Search size={16}/><i/></span>
                 <span className="min-w-0 flex-1"><span className="flex items-center gap-1.5 text-xs font-semibold">联网搜索{webSearch && <span className="web-search-live">实时</span>}</span><span className="mt-0.5 block truncate text-[10px] leading-4 text-muted-foreground">搜索网页并附来源 · 可能产生额外费用</span></span>
-                <button type="button" role="switch" aria-label="联网搜索" aria-checked={webSearch} disabled={busy} onClick={() => setWebSearch((enabled) => !enabled)} className="web-search-switch" data-state={webSearch ? "on" : "off"}><span/></button>
+                <Switch label="联网搜索" checked={webSearch} disabled={busy} onCheckedChange={setWebSearch} />
               </div>
               <fieldset disabled={busy}>
                 <legend className="mb-1.5 flex w-full items-center justify-between text-[10px] font-medium text-muted-foreground"><span>推理强度</span><span>{efforts.find((item) => item.id === effort)?.detail}</span></legend>
