@@ -79,3 +79,29 @@ export function buildExceptionsFallback(context: Record<string, InsightValue>) {
   }
   return lines.join("\n\n");
 }
+
+export function buildDataQualityFallback(context: Record<string, InsightValue>) {
+  const lines = ["**整体判断**"];
+  const records = Number(context.recordCount);
+  const salesDays = Number(context.daysWithProductSales);
+  const missingCosts = Number(context.daysMissingCosts);
+  if (Number.isFinite(records) && Number.isFinite(salesDays) && Number.isFinite(missingCosts)) {
+    lines.push(`当前汇总显示有 ${records} 条经营记录，其中 ${salesDays} 天有商品销量记录，成本缺失记录为 ${missingCosts} 天。就已提供的字段而言，成本覆盖完整，销量记录覆盖与总记录数相符；但汇总数量不能单独证明日期连续、没有重复记录，或金额与平台来源完全一致。`);
+  } else {
+    lines.push("当前页面提供的数据质量指标不完整，暂时无法判断覆盖范围。请先检查日报覆盖和成本录入状态，再依据原始来源核对金额。");
+  }
+
+  lines.push("**建议按以下顺序复核**");
+  lines.push("1. **先检查日期覆盖。** 按日期查看首尾记录及中间缺口，并留意重复导入；记录数与有销量记录的天数只能说明汇总覆盖，不能排除缺日和重复相抵。核对后再用相同日期范围比较趋势。");
+  lines.push("2. **再抽查成本来源。** 页面显示的缺失情况反映的是是否录入，不等于金额已经核实。抽查商品、包装、物流和平台费用是否来自当前有效数据；如有更新，补录后再判断利润或推广保本表现。");
+  if (context.latest7DaysSales !== undefined || context.latest7DaysOrders !== undefined) {
+    const recent = [
+      context.latest7DaysSales !== undefined ? `近期销售额为 ${displayValue(context.latest7DaysSales)}` : "",
+      context.latest7DaysOrders !== undefined ? `订单数为 ${displayValue(context.latest7DaysOrders)}` : "",
+    ].filter(Boolean).join("，");
+    lines.push(`3. **核对近期汇总。** 页面${recent}。对照对应日期的报表或导入来源，确认销售额、订单数采用相同口径；发现差异时先修正源记录，再重新生成建议。`);
+  } else {
+    lines.push("3. **抽查近期来源。** 选择近期日报，对照原始经营报表核验销售额、订单和商品销量口径；发现差异时先修正源记录，再重新生成建议。");
+  }
+  return lines.join("\n\n");
+}

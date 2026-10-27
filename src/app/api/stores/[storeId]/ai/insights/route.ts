@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStore } from "@/lib/supabase/auth";
 import { streamDeepSeekText } from "@/lib/ai-stream";
-import { buildExceptionsFallback, containsRawMetricName, containsUnsupportedNumber, formatInsightFacts } from "@/lib/ai-insight-context";
+import { buildDataQualityFallback, buildExceptionsFallback, containsRawMetricName, containsUnsupportedNumber, formatInsightFacts } from "@/lib/ai-insight-context";
 
 const featureSchema = z.enum(["dashboard", "exceptions", "advertising", "products", "finance", "data", "orders", "inventory", "tasks", "pricing", "product-insights", "reports", "integrations"]);
 const safeValue = z.union([
@@ -59,17 +59,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
 
   try {
   const systemPrompt = parsed.data.language === "en-US"
-    ? "You are MoonClean OS's e-commerce operations analyst. Use only the facts listed in the user message; never recalculate, invent, or guess numbers, products, plans, or causes. First assess data coverage and cost completeness. If fewer daily reports are available than the selected period, state that the sample is incomplete; call out missing today's data separately. If costs are incomplete, do not assess profit, margin, or break-even ROAS; recommend completing costs before evaluating them. The refund rate is based on store-wide daily reports for the last 7 days, while refund-risk product counts are SKU aggregates for the last 30 days; these scopes differ and must not be described as contradictory. Estimates and alert thresholds are not causal findings or industry standards. Reply in concise, user-facing English Markdown with no more than three actions. For each action, state the evidence and next check. Do not show field names, JSON, code, backticks, or internal reasoning. Use summary metrics only; never request or expose personal information, secrets, or credentials."
+    ? "You are MoonClean OS's e-commerce operations analyst. Use only the supplied facts; never recalculate, invent, or guess numbers, products, plans, or causes. First assess coverage, period, and cost completeness. If coverage is incomplete, say exactly what is missing and how that limits the conclusion. If costs are incomplete, do not assess profit, margin, or break-even ROAS; recommend checking the source cost records first. The refund rate is based on store-wide daily reports for the last 7 days, while refund-risk product counts are SKU aggregates for the last 30 days; these scopes differ and must not be described as contradictory. Estimates and alert thresholds are not causal findings or industry standards. Give a short overall assessment followed by two or three prioritized actions. For each action, use clear labels for evidence, what it means or cannot establish, the next concrete check, and what to do after checking. Explain the important point instead of merely restating metrics; make each action specific enough to follow, while avoiding repetition and unsupported certainty. Use concise but useful Markdown, normally about 180–350 words total. Do not show field names, JSON, code, backticks, or internal reasoning. Use summary metrics only; never request or expose personal information, secrets, or credentials."
     : parsed.data.feature === "exceptions"
-      ? "你是 MoonClean OS 的中国电商经营助手，负责解读经营异常中心。只根据用户消息中列出的中文事实作答，不要重算、补造或猜测任何数字、商品、计划或原因。先判断数据覆盖和成本完整度，再决定哪些经营结论目前可用。若日报覆盖天数少于分析周期，明确这是不完整样本，不把它称为完整一周趋势；今日缺失要单独说明。只要成本不完整，就不得判断利润盈亏、利润率高低或推广是否达到保本，只建议补齐成本后再评估。退款率是近7天全店日报退款金额/成交额，退款提示商品数是近30天按SKU汇总；两者统计范围和粒度不同，不得说它们互相矛盾。所有估算和提示线都不是因果结论或行业标准。简体中文回答，最多三条行动建议；每条写清数据依据和下一步核查，不得给出超出数据支持的经营决策。只输出面向用户的简洁 Markdown，不展示字段名、JSON、代码、反引号或内部推理。"
-      : "你是 MoonClean OS 的中国电商经营助手。只根据用户消息列出的中文事实作答，不要重算、补造或猜测数字、商品或原因。先说最值得关注且数据足以支持的一点，再给最多三条核查或行动建议。若覆盖不足或缺少关键指标，明确写出限制，不据此给出确定结论；不同周期、统计范围和指标口径不可直接互相比较。用简体中文和简洁 Markdown，不得输出字段名、JSON、代码、反引号或内部推理。只依据汇总数据，不要求或输出个人信息、密钥或凭据。";
+      ? "你是 MoonClean OS 的中国电商经营助手，负责解读经营异常中心。只根据用户消息中列出的中文事实作答，不要重算、补造或猜测任何数字、商品、计划或原因。先判断数据覆盖、日期范围和成本完整度，再区分哪些结论有依据、哪些仍待核实。若日报覆盖天数少于分析周期，明确这是不完整样本，不把它称为完整趋势；今日缺失要单独说明。只要成本不完整，就不得判断利润盈亏、利润率高低或推广是否达到保本，只建议补齐并核对成本后再评估。退款率是近7天全店日报退款金额/成交额，退款提示商品数是近30天按SKU汇总；两者统计范围和粒度不同，不得说它们互相矛盾。所有估算和提示线都不是因果结论或行业标准。先用两三句给出总体判断，再按优先级给出两至三条行动建议。每条建议都写清“数据依据”“这说明什么/不能说明什么”“下一步核查”和“核查后怎么处理”，把检查步骤写具体，避免只重复指标或给出空泛口号。使用简体中文 Markdown，内容完整、易执行，通常控制在约 180 至 350 字；不要为了简短省略关键限制，也不要重复铺陈。不得给出超出数据支持的经营决策。只展示面向用户的结论，不展示字段名、JSON、代码、反引号或内部推理。"
+      : "你是 MoonClean OS 的中国电商经营助手。只根据用户消息列出的中文事实作答，不要重算、补造或猜测任何数字、商品、计划或原因。先评估数据覆盖、日期范围和成本完整度，再判断能支持什么结论。若覆盖不足或缺少关键指标，明确说明限制及其影响；不同周期、统计范围和指标口径不可直接互相比较。先写简短的总体判断，再按优先级给出两至三条建议。每条建议都包含“数据依据”“这说明什么/不能说明什么”“下一步核查”和“核查后怎么处理”；行动要具体到查看哪类页面数据、来源记录或口径，避免泛泛地说继续关注，也不要只复述数字。使用简体中文 Markdown，通常控制在约 180 至 350 字；保留关键限制，不重复堆叠背景。不得给出数据无法支持的确定结论。只使用汇总数据，不要求或输出个人信息、密钥或凭据；不要展示字段名、JSON、代码、反引号或内部推理。";
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
         temperature: 0.15,
-        max_tokens: 380,
+        max_tokens: 760,
         stream: true,
         messages: [
           { role: "system", content: systemPrompt },
@@ -94,6 +94,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ sto
           return parsed.data.language === "en-US"
             ? `Data coverage is limited: ${facts.split("\n").slice(0, 3).join("; ")}. Complete the missing daily records and costs before drawing conclusions about profit or break-even performance. Review refund definitions and date ranges before acting on the alert. The available summary does not support a more specific conclusion.`
             : buildExceptionsFallback(context);
+        }
+        if (parsed.data.feature === "data" && (leakedField || unsupportedNumber)) {
+          return buildDataQualityFallback(context);
         }
         if (leakedField || unsupportedNumber) {
           return parsed.data.language === "en-US"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExceptionsFallback, containsRawMetricName, containsUnsupportedNumber, formatInsightFacts } from "./ai-insight-context";
+import { buildDataQualityFallback, buildExceptionsFallback, containsRawMetricName, containsUnsupportedNumber, formatInsightFacts } from "./ai-insight-context";
 
 describe("AI 经营建议事实整理", () => {
   it("用人类可读的指标名称代替 JSON 字段名", () => {
@@ -35,5 +35,14 @@ describe("AI 经营建议事实整理", () => {
     expect(answer).toContain("仅 3 天有日报记录");
     expect(answer).toContain("统计范围不同，不能据此判定矛盾");
     expect(answer).not.toContain("estimatedProfit");
+  });
+
+  it("经营数据质量兜底包含结论、限制和具体复核步骤", () => {
+    const answer = buildDataQualityFallback({ recordCount: 365, daysMissingCosts: 0, daysWithProductSales: 365, latest7DaysSales: 12800, latest7DaysOrders: 92 });
+    expect(answer).toContain("成本覆盖完整");
+    expect(answer).toContain("不能单独证明日期连续");
+    expect(answer).toContain("抽查成本来源");
+    expect(answer).toContain("近期销售额为 12800");
+    expect(answer).toContain("对照对应日期的报表或导入来源");
   });
 });
