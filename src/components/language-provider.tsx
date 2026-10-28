@@ -6,7 +6,7 @@ export type AppLanguage = "zh-CN" | "en-US";
 const LANGUAGE_KEY = "moonclean-language-v1";
 
 const en: Record<string, string> = {
-  "经营总览": "Overview", "推广分析": "Advertising", "商品管理": "Products", "订单中心": "Orders",
+  "经营总览": "Overview", "历史经营": "Business History", "推广分析": "Advertising", "商品管理": "Products", "订单中心": "Orders",
   "OVERVIEW / 经营总览": "OVERVIEW / BUSINESS SUMMARY", "PERFORMANCE / 推广分析": "PERFORMANCE / ADVERTISING",
   "FINANCE / 财务利润": "FINANCE / PROFIT", "INVENTORY / 库存管理": "INVENTORY / STOCK CONTROL",
   "ORDERS / 订单中心": "ORDERS / ORDER CENTER", "TASKS / 运营待办": "TASKS / OPERATIONS",

@@ -7,6 +7,7 @@ export const BACKUP_STORE_TABLES = [
   "sku_daily_metrics",
   "product_daily_sales",
   "audit_logs",
+  "business_metric_revisions",
   "migration_records",
   "platform_connections",
   "external_products",

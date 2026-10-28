@@ -2,6 +2,7 @@ export const LAST_VISITED_ROUTE_COOKIE = "moonclean-last-visited-route";
 
 const appRoutes = new Set([
   "/dashboard",
+  "/history",
   "/advertising",
   "/products",
   "/orders",

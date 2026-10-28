@@ -15,6 +15,7 @@ import { setDisplayCurrency } from "@/lib/finance";
 import { notifyFeedback } from "@/lib/feedback";
 import { getBrowserDeviceId } from "@/lib/browser-device-id";
 import { isCacheEnabled } from "@/lib/cache-preferences";
+import { appendLocalBusinessRevisions, ensureLocalBusinessBaselines } from "@/lib/business-history";
 import { clearBrowserSessionPolicy, createBrowserSupabaseClient, getBrowserSessionPolicyExpiry } from "@/lib/supabase/browser";
 import { localDemoEnabled, supabaseConfig } from "@/lib/supabase/config";
 import {
@@ -257,6 +258,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     queueMicrotask(() => void refresh());
   }, [isAuthRoute, modeReady, mode, refresh]);
   useEffect(() => {
+    if (mode === "local" && data && activeStoreId) ensureLocalBusinessBaselines(activeStoreId, data);
+  }, [mode, data, activeStoreId]);
+  useEffect(() => {
     if (mode !== "cloud" || !user?.id || isAuthRoute) return;
     const register = () => {
       const deviceId = getBrowserDeviceId();
@@ -425,6 +429,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = fn(current);
       if (mode === "local") {
         repository.save(next);
+        appendLocalBusinessRevisions(current.settings.store.id, current, next);
         setActiveStoreId(next.settings.store.id);
         applyData(next);
       } else {
@@ -453,6 +458,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const reset = async () => {
     if (mode !== "local") throw new Error("云端数据不能重置为模拟数据");
     const empty = createEmptyLocalData();
+    if (dataRef.current) appendLocalBusinessRevisions(dataRef.current.settings.store.id, dataRef.current, empty);
     await repository.save(empty);
     setActiveStoreId(empty.settings.store.id);
     applyData(empty);

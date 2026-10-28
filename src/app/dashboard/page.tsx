@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Target,
   Wallet,
+  FileClock,
 } from "lucide-react";
 import { useApp } from "@/components/app-provider";
 import { useLanguage } from "@/components/language-provider";
@@ -94,7 +95,7 @@ export default function Dashboard() {
         title={greeting}
         description="从销售、推广到利润，掌握店铺经营节奏。"
         action={
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-1">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card p-1">
             {([7, 30] as const).map((v) => (
               <Button
                 key={v}
@@ -105,6 +106,7 @@ export default function Dashboard() {
                 {v} 天
               </Button>
             ))}
+            <Link href="/history" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-[var(--mc-tint-blue)] hover:text-primary"><FileClock size={14}/>历史记录</Link>
           </div>
         }
       />

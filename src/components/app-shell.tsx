@@ -40,6 +40,7 @@ import {
   SearchCheck,
   Headset,
   MessageCircle,
+  CalendarClock,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ import { isRestorableAppRoute, LAST_VISITED_ROUTE_COOKIE } from "@/lib/last-visi
 import { clearWorkspaceCacheForUser } from "@/lib/workspace-cache";
 const nav = [
   { href: "/dashboard", label: "经营总览", icon: LayoutDashboard },
+  { href: "/history", label: "历史经营", icon: CalendarClock },
   { href: "/advertising", label: "推广分析", icon: Megaphone },
   { href: "/products", label: "商品管理", icon: Package },
   { href: "/orders", label: "订单中心", icon: ShoppingCart },
