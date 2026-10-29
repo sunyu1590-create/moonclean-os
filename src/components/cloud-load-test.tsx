@@ -6,6 +6,7 @@ import { Activity, CloudDownload, CloudUpload, LoaderCircle, Trash2 } from "luci
 import { Button } from "@/components/ui/button";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { supabaseConfig } from "@/lib/supabase/config";
+import { matchesCloudLoadTestGrant } from "@/lib/cloud-load-test-access";
 
 const BUCKET = "moonclean-load-test";
 const PART_BYTES = 50_000_000;
@@ -60,8 +61,8 @@ function uploadPart(file: Blob, path: string, accessToken: string, onProgress: (
   });
 }
 
-export function CloudLoadTest() {
-  const [userId, setUserId] = useState("");
+export function CloudLoadTest({ userId }: { userId: string }) {
+  const [accessGranted, setAccessGranted] = useState(false);
   const [runId, setRunId] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -71,38 +72,43 @@ export function CloudLoadTest() {
 
   useEffect(() => {
     let cancelled = false;
+    if (!userId) return () => { cancelled = true; };
     void (async () => {
       try {
         const client = createBrowserSupabaseClient();
-        const { data, error: authError } = await client.auth.getUser();
-        if (authError) throw authError;
-        if (!data.user) throw new Error("登录状态已失效，请重新登录后再测试。");
+        const { data: access, error: accessError } = await client
+          .from("moonclean_load_test_access")
+          .select("user_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (accessError) throw accessError;
+        if (!matchesCloudLoadTestGrant(userId, access?.user_id)) return;
         if (cancelled) return;
-        setUserId(data.user.id);
-        const savedRunId = localStorage.getItem(`moonclean-load-test:${data.user.id}`) || "";
-        const { data: folders, error: foldersError } = await client.storage.from(BUCKET).list(data.user.id, { limit: 100 });
+        setAccessGranted(true);
+        const savedRunId = localStorage.getItem(`moonclean-load-test:${userId}`) || "";
+        const { data: folders, error: foldersError } = await client.storage.from(BUCKET).list(userId, { limit: 100 });
         if (foldersError) throw foldersError;
         const candidates = [...new Set([
           savedRunId,
           ...(folders || []).map((folder) => folder.name).filter((name) => /^[0-9a-f-]{36}$/i.test(name)),
         ].filter(Boolean))];
         for (const candidate of candidates) {
-          const { data: files, error: listError } = await client.storage.from(BUCKET).list(`${data.user.id}/${candidate}`, { limit: 10 });
+          const { data: files, error: listError } = await client.storage.from(BUCKET).list(`${userId}/${candidate}`, { limit: 10 });
           if (listError) throw listError;
           if (cancelled) return;
           if (PART_NAMES.every((name) => files?.some((file) => file.name === name))) {
             setRunId(candidate);
-            localStorage.setItem(`moonclean-load-test:${data.user.id}`, candidate);
+            localStorage.setItem(`moonclean-load-test:${userId}`, candidate);
             return;
           }
         }
-        localStorage.removeItem(`moonclean-load-test:${data.user.id}`);
+        localStorage.removeItem(`moonclean-load-test:${userId}`);
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "无法连接云端测试存储。");
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId]);
 
   async function deleteRun(targetRunId: string) {
     if (!userId || !targetRunId) return;
@@ -183,6 +189,8 @@ export function CloudLoadTest() {
       setBusy(false);
     }
   }
+
+  if (!accessGranted || !userId) return null;
 
   return (
     <section className="rounded-xl border border-border bg-card p-3" aria-labelledby="cloud-load-test-title">

@@ -54,7 +54,7 @@ import { clearAllWorkspaceCache } from "@/lib/workspace-cache";
 import { CloudLoadTest } from "@/components/cloud-load-test";
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
-  const { data, update, reset, mode, role, saving, exportBackup } = useApp();
+  const { data, update, reset, mode, role, saving, exportBackup, user } = useApp();
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -542,7 +542,7 @@ export default function SettingsPage() {
                   <AttachmentBackup />
                 </div>
               )}
-              {mode === "cloud" && <CloudLoadTest />}
+              {mode === "cloud" && user?.id ? <CloudLoadTest key={user.id} userId={user.id} /> : null}
               {backupMessage && (
                 <p role="status" className="text-xs text-[var(--mc-color-success)]">
                   {backupMessage}

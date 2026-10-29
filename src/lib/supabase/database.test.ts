@@ -23,10 +23,13 @@ const migrations = [
   "20261025114815_stabilize_device_sessions.sql",
   "20261025115811_secure_device_session_updates.sql",
   "20261025122433_enforce_remembered_session_deadline.sql",
+  "20261026132311_moonclean_load_test_bucket.sql",
+  "20261029070331_cloud_load_test_account_allowlist.sql",
 ];
 const repeatableMigrations = migrations.filter((name) => ![
   "20261023110000_user_device_sessions.sql",
   "20261023111500_restrict_revoked_device_sessions.sql",
+  "20261026132311_moonclean_load_test_bucket.sql",
 ].includes(name));
 const file = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 let db: PGlite;
@@ -36,6 +39,7 @@ beforeAll(async () => {
     create table auth.users(id uuid primary key,instance_id uuid,aud text,role text,email text,encrypted_password text,email_confirmed_at timestamptz,raw_app_meta_data jsonb default '{}'::jsonb,raw_user_meta_data jsonb default '{}'::jsonb);
     create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text);
+    alter table storage.objects enable row level security;
     create function storage.foldername(text) returns text[] language sql immutable as $$ select string_to_array($1,'/') $$;
     grant usage on schema storage to authenticated,anon; grant select,insert,delete on storage.objects to authenticated; grant select,insert,update on storage.buckets to authenticated;
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
@@ -166,5 +170,8 @@ describe("PostgreSQL 迁移与权限", () => {
     } finally {
       await db.exec("reset role");
     }
+  }, 15_000);
+  it("200 MB 云端加载测试仅允许白名单账号读写", async () => {
+    await db.exec(file("supabase/tests/cloud_load_test_access.sql"));
   }, 15_000);
 });

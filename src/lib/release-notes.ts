@@ -1,6 +1,15 @@
-export const APP_VERSION = "1.1.73";
+export const APP_VERSION = "1.1.74";
 
 export const RELEASE_NOTES = [
+  {
+    version: "1.1.74",
+    date: "2026-10-29",
+    title: "200 MB 云端测试仅对测试账号开放",
+    changes: [
+      "云端加载测试入口仅在已授权的测试账号中显示；其他账号不再显示相关入口。",
+      "云端测试存储的上传、读取和删除权限也限制到白名单账号，普通账号无法绕过界面直接访问测试文件。",
+    ],
+  },
   {
     version: "1.1.73",
     date: "2026-10-28",
